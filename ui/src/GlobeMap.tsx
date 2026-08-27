@@ -4,14 +4,21 @@ import {
   Map as MapLibreMap,
   Marker,
   NavigationControl,
+  setWorkerUrl,
   type GeoJSONSource,
   type MapMouseEvent,
 } from "maplibre-gl";
+import mapLibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import countriesTopologyJson from "world-atlas/countries-110m.json";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { ProminenceMode, RegionDominance, StoryCluster } from "./types";
+
+// Vite's production bundle cannot safely use MapLibre's implicit blob worker:
+// it starts, but GeoJSON messages never complete. A separately bundled module
+// worker keeps source processing identical in development and production.
+setWorkerUrl(mapLibreWorkerUrl);
 
 export interface CoverageHeatPoint {
   id: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { Map as MapLibreMap } from "maplibre-gl";
+import { getWorkerUrl, type Map as MapLibreMap } from "maplibre-gl";
 import {
   applyLightBasemapContrast,
   createReferenceGraticule,
@@ -60,6 +60,10 @@ describe("light basemap contrast", () => {
 });
 
 describe("bundled reference geography", () => {
+  it("routes production GeoJSON processing through the separately bundled worker", () => {
+    expect(getWorkerUrl()).toContain("maplibre-gl-worker");
+  });
+
   it("is present in the initial style without waiting for remote tiles or news data", () => {
     const style = createReferenceMapStyle();
 
