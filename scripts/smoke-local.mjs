@@ -16,6 +16,7 @@ const expected = {
   observedHeatClusters: optionalInteger("ATLAS_EXPECTED_OBSERVED_HEAT_CLUSTERS"),
 };
 const checks = [];
+let firstClusterId = null;
 
 function assertSecurityHeaders(response) {
   assert.match(
@@ -28,6 +29,12 @@ function assertSecurityHeaders(response) {
     response.headers.get("strict-transport-security"),
     new URL(base).protocol === "https:" ? "max-age=31536000; includeSubDomains" : null,
   );
+}
+
+function assertPublicOutletCountContract(value, label) {
+  const serialized = JSON.stringify(value);
+  assert.ok(serialized.includes('"unique_outlet_count":'), `${label} must expose unique_outlet_count`);
+  assert.ok(!serialized.includes('"unique_publisher_count"'), `${label} must not expose the legacy publisher-count name`);
 }
 
 function optionalInteger(name) {
@@ -145,6 +152,25 @@ await check("24h normalized intelligence", "/api/v1/intelligence?window=24h&prom
   }
 });
 
+await check("REST story list outlet semantics", "/api/stories?metric=normalized&limit=2", undefined, ({ response, text }) => {
+  assert.equal(response.status, 200);
+  const body = JSON.parse(text);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.stories.length, 2);
+  firstClusterId = body.data.stories[0].cluster_id;
+  assertPublicOutletCountContract(body, "REST story list");
+});
+
+if (firstClusterId !== null) {
+  await check("REST story detail outlet semantics", `/api/stories/${encodeURIComponent(firstClusterId)}`, undefined, ({ response, text }) => {
+    assert.equal(response.status, 200);
+    const body = JSON.parse(text);
+    assert.equal(body.ok, true);
+    assert.equal(body.data.cluster_id, firstClusterId);
+    assertPublicOutletCountContract(body, "REST story detail");
+  });
+}
+
 await check("docs HTML", "/docs", { headers: { Accept: "text/html" } }, ({ response, text, contentType }) => {
   assert.equal(response.status, 200);
   assert.match(contentType, /^text\/html\b/);
@@ -224,6 +250,42 @@ await check("MCP tools/list", "/mcp", {
   assert.ok(body.result.tools.every((tool) => tool.annotations.destructiveHint === false));
 });
 
+await check("MCP story query outlet semantics", "/mcp", {
+  method: "POST",
+  headers: jsonHeaders,
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: "smoke-mcp-query",
+    method: "tools/call",
+    params: { name: "atlas.query_dominant_stories", arguments: { metric: "normalized", limit: 2 } },
+  }),
+}, ({ response, text }) => {
+  assert.equal(response.status, 200);
+  const body = JSON.parse(text);
+  assert.equal(body.result.isError, false);
+  assert.equal(body.result.structuredContent.stories.length, 2);
+  assertPublicOutletCountContract(body, "MCP story query");
+});
+
+if (firstClusterId !== null) {
+  await check("MCP story detail outlet semantics", "/mcp", {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: "smoke-mcp-explain",
+      method: "tools/call",
+      params: { name: "atlas.explain_story_cluster", arguments: { cluster_id: firstClusterId } },
+    }),
+  }, ({ response, text }) => {
+    assert.equal(response.status, 200);
+    const body = JSON.parse(text);
+    assert.equal(body.result.isError, false);
+    assert.equal(body.result.structuredContent.cluster_id, firstClusterId);
+    assertPublicOutletCountContract(body, "MCP story detail");
+  });
+}
+
 await check("A2A Agent Card", "/.well-known/agent-card.json", undefined, ({ response, text }) => {
   assert.equal(response.status, 200);
   const body = JSON.parse(text);
@@ -263,6 +325,28 @@ await check("A2A JSON-RPC SendMessage", "/a2a", {
   assert.equal(body.result.message.parts[0].data.operation, "pipeline_health");
 });
 
+await check("A2A JSON-RPC story query outlet semantics", "/a2a", {
+  method: "POST",
+  headers: { ...jsonHeaders, "A2A-Version": "1.0" },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: "smoke-a2a-query",
+    method: "SendMessage",
+    params: {
+      message: {
+        messageId: "smoke-a2a-query-message",
+        role: "ROLE_USER",
+        parts: [{ data: { operation: "query_stories", metric: "normalized", limit: 2 }, mediaType: "application/json" }],
+      },
+    },
+  }),
+}, ({ response, text }) => {
+  assert.equal(response.status, 200);
+  const body = JSON.parse(text);
+  assert.equal(body.result.message.parts[0].data.count, 2);
+  assertPublicOutletCountContract(body, "A2A JSON-RPC story query");
+});
+
 await check("A2A message:send query", "/a2a/message:send", {
   method: "POST",
   headers: { ...jsonHeaders, "A2A-Version": "1.0" },
@@ -281,6 +365,29 @@ await check("A2A message:send query", "/a2a/message:send", {
   assert.equal(data.operation, "query_stories");
   assert.equal(data.count, 2);
   assert.equal(data.stories.length, 2);
+  assertPublicOutletCountContract(data, "A2A HTTP+JSON story query");
+});
+
+await check("A2A v0.3 story query outlet semantics", "/a2a", {
+  method: "POST",
+  headers: jsonHeaders,
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: "smoke-a2a-v03-query",
+    method: "message/send",
+    params: {
+      message: {
+        messageId: "smoke-a2a-v03-query-message",
+        role: "user",
+        parts: [{ kind: "data", data: { operation: "query_stories", metric: "normalized", limit: 2 } }],
+      },
+    },
+  }),
+}, ({ response, text }) => {
+  assert.equal(response.status, 200);
+  const body = JSON.parse(text);
+  assert.equal(body.result.parts[0].data.count, 2);
+  assertPublicOutletCountContract(body, "A2A v0.3 story query");
 });
 
 await check("malformed percent cluster route", "/api/stories/%E0%A4%A", undefined, ({ response, text }) => {
@@ -297,6 +404,37 @@ await check("missing route", "/definitely-missing", undefined, ({ response, text
   assert.equal(body.ok, false);
   assert.equal(body.error.kind, "not_found");
 });
+
+if (new URL(base).protocol === "https:") {
+  const httpUrl = new URL(base);
+  httpUrl.protocol = "http:";
+  const startedAt = new Date().toISOString();
+  try {
+    const response = await fetch(`${httpUrl.toString().replace(/\/$/, "")}/`, { method: "HEAD", redirect: "manual" });
+    assert.equal(response.status, 308);
+    assert.equal(response.headers.get("location"), `${base}/`);
+    assert.equal(response.headers.get("strict-transport-security"), null);
+    checks.push({
+      name: "HTTP to HTTPS redirect",
+      method: "HEAD",
+      route: `${httpUrl.toString().replace(/\/$/, "")}/`,
+      status: response.status,
+      location: response.headers.get("location"),
+      hstsAbsentOnHttp: true,
+      startedAt,
+      outcome: "pass",
+    });
+  } catch (error) {
+    checks.push({
+      name: "HTTP to HTTPS redirect",
+      method: "HEAD",
+      route: `${httpUrl.toString().replace(/\/$/, "")}/`,
+      startedAt,
+      outcome: "fail",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 const receipt = { base, completedAt: new Date().toISOString(), checks };
 const serializedReceipt = `${JSON.stringify(receipt, null, 2)}\n`;
