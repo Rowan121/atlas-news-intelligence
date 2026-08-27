@@ -69,6 +69,13 @@ event location or publisher origin. A heat-market coordinate is `null` unless
 the editorial-market assessment itself supplies one; when present, the point
 retains the assessment's confidence, method, and evidence.
 
+Public story and prominence payloads name a distinct outlet-domain count
+`unique_outlet_count`. They do not present that value as an independent
+publisher/network count: multiple outlet editions may share the same
+`publisher_name`. The existing D1 storage column retains its historical name
+for migration safety, but the storage adapter aliases it before any REST, MCP,
+A2A, or browser payload is built.
+
 ## Surface schema migration
 
 Fresh databases use `surface/schema/schema.sql`. A database created from the
