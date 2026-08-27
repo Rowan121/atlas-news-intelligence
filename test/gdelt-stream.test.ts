@@ -260,6 +260,34 @@ describe("GDELT 2.x stream loader", () => {
     expect(validateIntelligenceSnapshot(snapshot)).toEqual([]);
   });
 
+  it("adds documented outlet editorial market without substituting event or publisher geography", () => {
+    const outletUrl = "https://www.albuquerqueexpress.com/news/nepal-floods";
+    const manifest = fixtureManifest();
+    const snapshot = buildIntelligenceSnapshot({
+      manifest,
+      events: parseEventsTsv(eventRow(), 10),
+      mentions: parseMentionsTsv(mentionRow({ url: outletUrl }), 10),
+      gkg: parseGkgTsv(gkgRow({ url: outletUrl }), 10),
+      generatedAt: NOW,
+      limits: tinyLimits(),
+      gates: {
+        mentionType: 1,
+        inRawText: true,
+        minimumConfidence: 80,
+        requireActionGeoCoordinates: true,
+        requireGkgPageTitle: true,
+      },
+    });
+    const article = snapshot.clusters[0]!.articles[0]!;
+    expect(snapshot.clusters[0]!.eventLocations[0]!.countryCode).toBe("JA");
+    expect(article.publisher.origin?.countryCode).toBe("AU");
+    expect(article.sameStory.editorialMarket).toMatchObject({
+      status: "observed",
+      value: { regionCode: "US-NM-ABQ" },
+      method: "documented_outlet_market",
+    });
+  });
+
   it("deterministically merges duplicate event ids and recomputes prominence", () => {
     const secondUrl = "https://second-wire.example/world/tokyo-event";
     const snapshot = buildIntelligenceSnapshot({

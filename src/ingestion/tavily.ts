@@ -1,4 +1,5 @@
 import { sameStorySourceContext, type Article } from "../schema/types.js";
+import { resolveOutletEditorialProfile } from "../editorial-market/registry.js";
 import {
   canonicalizeUrl,
   domainFromUrl,
@@ -59,6 +60,7 @@ function mapRecord(record: TavilyResultRecord, retrievedAt: string): Article | u
   const summary = stringValue(record.content);
   const publishedAt = parseDate(record.published_date);
   const providerScore = typeof record.score === "number" && Number.isFinite(record.score) ? record.score : undefined;
+  const editorialProfile = resolveOutletEditorialProfile(domain);
   return {
     id: stableId("article", canonicalUrl),
     url,
@@ -69,6 +71,7 @@ function mapRecord(record: TavilyResultRecord, retrievedAt: string): Article | u
       id: stableId("publisher", domain),
       name: domain,
       domain,
+      ...(editorialProfile === undefined ? {} : { origin: editorialProfile.publisherOrigin }),
     },
     ...(publishedAt === undefined ? {} : { publishedAt }),
     retrievedAt,
@@ -76,7 +79,10 @@ function mapRecord(record: TavilyResultRecord, retrievedAt: string): Article | u
       provider: "tavily",
       ...(providerScore === undefined ? {} : { providerScore }),
     },
-    sameStory: sameStorySourceContext(),
+    sameStory: sameStorySourceContext(
+      editorialProfile?.publisherOrigin,
+      editorialProfile?.editorialMarket,
+    ),
   };
 }
 

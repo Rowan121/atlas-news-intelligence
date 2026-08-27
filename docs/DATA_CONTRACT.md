@@ -11,19 +11,26 @@ The truth layer deliberately separates **where an event happened** from **where 
 
 ## SAME-STORY source comparison
 
-Every article carries five independent assessments: `publisherOrigin`,
-`coverageMarkets`, `audienceExposure`, `framing`, and `tone`. An observed
+Every article carries four independent assessments: `publisherOrigin`,
+`editorialMarket`, `framing`, and `tone`. An observed
 assessment includes a value, confidence, method, and evidence references. An
 unknown assessment has `value:null`, `confidence:null`, `method:"unavailable"`,
 an empty evidence array, and a human-readable reason.
 
 These fields are not interchangeable. Publisher origin is where an outlet is
-based. Coverage market is a cited market the outlet serves. Audience exposure
-requires first-party telemetry or a named audience-measurement provider. Atlas
-never turns publisher headquarters, an article language, a URL domain, or an
-event location into readership geography. GDELT's raw Events/Mentions/GKG
-stream does not provide verified coverage-market or audience-exposure data, so
-those fields remain explicitly unknown for the current live feed.
+based. Editorial market is the single primary geographic market the outlet is
+editorially organized to serve. It is observed only from direct outlet-market
+documentation, or from the combination of documented outlet language and
+publisher location at a lower confidence. Publisher location alone, language
+alone, URL/domain wording, and event location are never sufficient. Evidence
+is typed as `outlet_market_documentation`, `outlet_language`, or
+`publisher_location`, and every observed value carries confidence, method,
+source URL, and quote. Audience/readership telemetry is out of scope and is not
+part of the public contract.
+
+The built-in registry is deliberately narrow: it contains only primary-source
+documented outlet profiles needed by the current real same-story slice. All
+other outlets remain explicitly unknown rather than receiving a guessed market.
 
 Conflict is detected only when evidence-backed stances on the same normalized
 claim come from distinct publishers. With no extracted claims—or claims from
@@ -52,12 +59,13 @@ For each event region the pipeline reports:
 The normalized score is the mean of article share and source-normalized share. Denominators are always included so the UI can explain the number and avoid presenting it as audience reach.
 
 Every prominence record declares `basis:"event_location"`. The UI's separate
-`coverageHeat` is computed only from observed `coverageMarkets`; when none are
-available it is `unavailable` with an empty market list. Coverage heat is never
-derived from event locations, publisher origin, region labels, or audience
-exposure. A heat-market coordinate is `null` unless the coverage-market
-assessment itself supplied coordinates; when present, the coordinate retains
-that assessment's confidence, method, and evidence.
+`coverageHeat` declares `basis:"editorial_market"` and is computed only from
+observed per-outlet `editorialMarket` assessments; when none are available it
+is `unavailable` with an empty market list. Heat is observed article/outlet
+coverage by editorial market, not reader exposure. It is never derived from an
+event location or publisher origin. A heat-market coordinate is `null` unless
+the editorial-market assessment itself supplies one; when present, the point
+retains the assessment's confidence, method, and evidence.
 
 ## Surface schema migration
 

@@ -10,6 +10,7 @@ import type {
   ValidationIssue,
 } from "../../schema/types.js";
 import { sameStorySourceContext, validateStoryCluster } from "../../schema/types.js";
+import { resolveOutletEditorialProfile } from "../../editorial-market/registry.js";
 import type { ArticleClusterDraft } from "../../clustering/engine.js";
 import { canonicalizeUrl, domainFromUrl, stableId } from "../sources.js";
 import { computeRegionalProminence } from "../../prominence/metrics.js";
@@ -301,6 +302,7 @@ function articleFromJoin(joined: JoinedDocument, generatedAt: string): Article |
     return undefined;
   }
   const language = sourceLanguage(joined.gkg.translationInfo ?? joined.mention.translationInfo);
+  const editorialProfile = resolveOutletEditorialProfile(domain);
   return {
     id: stableId("article", canonicalUrl),
     url: joined.mention.mentionIdentifier,
@@ -310,6 +312,7 @@ function articleFromJoin(joined: JoinedDocument, generatedAt: string): Article |
       id: stableId("publisher", domain),
       name: joined.gkg.sourceCommonName || joined.mention.mentionSourceName || domain,
       domain,
+      ...(editorialProfile === undefined ? {} : { origin: editorialProfile.publisherOrigin }),
     },
     ...(language === undefined ? {} : { language }),
     publishedAt: joined.gkg.publishedAt,
@@ -319,7 +322,10 @@ function articleFromJoin(joined: JoinedDocument, generatedAt: string): Article |
       providerRecordId: joined.gkg.recordId,
       providerScore: joined.mention.confidence / 100,
     },
-    sameStory: sameStorySourceContext(),
+    sameStory: sameStorySourceContext(
+      editorialProfile?.publisherOrigin,
+      editorialProfile?.editorialMarket,
+    ),
   };
 }
 

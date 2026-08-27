@@ -110,6 +110,31 @@ describe("source ingestion", () => {
     if (result.ok) expect(result.articles[0]!.summary).toBe("A sourced summary.");
   });
 
+  it("attaches a documented primary editorial market without using publisher location as the market", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({
+        results: [{
+          title: "Nepal floods update",
+          url: "https://www.australiannews.net/news/nepal-floods",
+          content: "A sourced report.",
+          published_date: "2026-08-27T00:15:00Z",
+          score: 0.9,
+        }],
+      }), { status: 200 }),
+    );
+    const result = await new TavilyClient({ apiKey: "tvly-test-secret", fetch: fetchMock, clock }).search(query);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const article = result.articles[0]!;
+    expect(article.publisher.origin?.countryCode).toBe("AE");
+    expect(article.sameStory.editorialMarket).toMatchObject({
+      status: "observed",
+      value: { regionCode: "AU", label: "Australia" },
+      method: "documented_outlet_market",
+    });
+    expect(article.sameStory).not.toHaveProperty("audienceExposure");
+  });
+
   it("classifies rejected Tavily credentials without echoing them", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response("denied", { status: 401 }));
     const result = await new TavilyClient({ apiKey: "tvly-never-print", fetch: fetchMock, clock }).search(query);

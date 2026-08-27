@@ -26,8 +26,7 @@ describe("GDELT snapshot to D1 seed", () => {
       source_normalized_share: 1,
     });
     expect(dataset.clusters[0]!.articles[0]!.same_story).toMatchObject({
-      coverageMarkets: { status: "unknown", value: null },
-      audienceExposure: { status: "unknown", value: null },
+      editorialMarket: { status: "unknown", value: null },
       framing: { status: "unknown", value: null },
       tone: { status: "unknown", value: null },
     });
@@ -124,7 +123,7 @@ describe("GDELT snapshot to D1 seed", () => {
     expect(db.prepare("SELECT basis, regional_outlet_count, source_normalized_share FROM regional_prominence").get())
       .toEqual({ basis: "event_location", regional_outlet_count: 2, source_normalized_share: 1 });
     const sameStory = db.prepare("SELECT same_story_json FROM articles LIMIT 1").get() as { same_story_json: string };
-    expect(JSON.parse(sameStory.same_story_json)).toMatchObject({ audienceExposure: { status: "unknown" } });
+    expect(JSON.parse(sameStory.same_story_json)).toMatchObject({ editorialMarket: { status: "unknown" } });
     expect(db.prepare("SELECT COUNT(*) AS count FROM pipeline_runs WHERE run_id = 'gdelt:other-batch'").get()).toEqual({ count: 1 });
     db.close();
   });

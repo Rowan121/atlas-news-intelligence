@@ -36,7 +36,7 @@ describe("story-cluster schema", () => {
     );
   });
 
-  it("keeps publisher origin separate from coverage markets and measured audience", () => {
+  it("keeps publisher origin separate from the primary editorial market", () => {
     const article = makeArticle({
       id: "origin-separated",
       url: "https://origin.example/story",
@@ -57,21 +57,44 @@ describe("story-cluster schema", () => {
       status: "observed",
       value: { regionCode: "OR", label: "Originland" },
     });
-    expect(article.sameStory.coverageMarkets).toMatchObject({ status: "unknown", value: null });
-    expect(article.sameStory.audienceExposure).toMatchObject({ status: "unknown", value: null });
+    expect(article.sameStory.editorialMarket).toMatchObject({ status: "unknown", value: null });
+    expect(article.sameStory).not.toHaveProperty("audienceExposure");
   });
 
-  it("requires evidence for an observed coverage market", () => {
+  it("requires direct evidence for a documented primary editorial market", () => {
     const cluster = structuredClone(makeValidCluster());
-    cluster.articles[0]!.sameStory.coverageMarkets = {
+    cluster.articles[0]!.sameStory.editorialMarket = {
       status: "observed",
-      value: [{ regionCode: "JP", label: "Japan" }],
+      value: { regionCode: "JP", label: "Japan" },
       confidence: 0.8,
-      method: "provider_coverage_metadata",
+      method: "documented_outlet_market",
       evidence: [],
       reason: null,
     };
     expect(validateStoryCluster(cluster).map((issue) => issue.code)).toContain("missing_assessment_evidence");
+    expect(validateStoryCluster(cluster).map((issue) => issue.code)).toContain(
+      "editorial_market_method_evidence_mismatch",
+    );
+  });
+
+  it("requires both language and publisher-location evidence for a triangulated editorial market", () => {
+    const cluster = structuredClone(makeValidCluster());
+    cluster.articles[0]!.sameStory.editorialMarket = {
+      status: "observed",
+      value: { regionCode: "JP", label: "Japan" },
+      confidence: 0.7,
+      method: "language_and_publisher_location",
+      evidence: [{
+        kind: "outlet_language",
+        articleId: cluster.articles[0]!.id,
+        url: cluster.articles[0]!.url,
+        quote: "Japanese-language edition",
+      }],
+      reason: null,
+    };
+    expect(validateStoryCluster(cluster).map((issue) => issue.code)).toContain(
+      "editorial_market_method_evidence_mismatch",
+    );
   });
 
   it("requires an explicit event-location prominence basis", () => {

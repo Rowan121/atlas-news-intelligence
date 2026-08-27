@@ -58,11 +58,6 @@ export interface MarketRegion {
   coordinates?: Coordinates;
 }
 
-export interface AudienceRegionExposure extends MarketRegion {
-  /** Share of observed audience when the upstream measurement reports one. */
-  share?: number;
-}
-
 export interface UnknownAssessment {
   status: "unknown";
   value: null;
@@ -85,19 +80,34 @@ export type PublisherOriginAssessment =
   | UnknownAssessment
   | ObservedAssessment<MarketRegion, PublisherOrigin["evidenceSource"]>;
 
-export type CoverageMarketsAssessment =
-  | UnknownAssessment
-  | ObservedAssessment<
-      MarketRegion[],
-      "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed"
-    >;
+export type EditorialMarketEvidenceKind =
+  | "outlet_market_documentation"
+  | "outlet_language"
+  | "publisher_location";
 
-export type AudienceExposureAssessment =
+export interface EditorialMarketEvidence {
+  kind: EditorialMarketEvidenceKind;
+  url: string;
+  quote: string;
+  /** Present only when the evidence is the article record itself. */
+  articleId?: ArticleId;
+}
+
+export type EditorialMarketMethod =
+  | "documented_outlet_market"
+  | "language_and_publisher_location"
+  | "manual_confirmed";
+
+export type EditorialMarketAssessment =
   | UnknownAssessment
-  | ObservedAssessment<
-      AudienceRegionExposure[],
-      "first_party_audience_telemetry" | "provider_audience_measurement" | "manual_confirmed"
-    >;
+  | {
+      status: "observed";
+      value: MarketRegion;
+      confidence: number;
+      method: EditorialMarketMethod;
+      evidence: EditorialMarketEvidence[];
+      reason: null;
+    };
 
 export type FramingValue = "supports" | "disputes" | "straight_report" | "mixed" | "unclear";
 export type FramingAssessment =
@@ -111,13 +121,13 @@ export type ToneAssessment =
 
 /**
  * SAME-STORY comparison metadata. These dimensions are intentionally
- * independent: a publisher's origin is neither its coverage market nor proof
- * of where an article was actually read.
+ * independent: a publisher's origin is not its editorial market, and neither
+ * dimension is evidence of where an article was read. Audience/readership
+ * telemetry is deliberately out of scope.
  */
 export interface SameStorySourceContext {
   publisherOrigin: PublisherOriginAssessment;
-  coverageMarkets: CoverageMarketsAssessment;
-  audienceExposure: AudienceExposureAssessment;
+  editorialMarket: EditorialMarketAssessment;
   framing: FramingAssessment;
   tone: ToneAssessment;
 }
@@ -135,6 +145,7 @@ function unknownAssessment(reason: string): UnknownAssessment {
 
 export function sameStorySourceContext(
   publisherOrigin?: PublisherOrigin,
+  editorialMarket?: EditorialMarketAssessment,
 ): SameStorySourceContext {
   const originCode = publisherOrigin?.countryCode ?? publisherOrigin?.countryName;
   return {
@@ -152,11 +163,8 @@ export function sameStorySourceContext(
           evidence: [],
           reason: null,
         },
-    coverageMarkets: unknownAssessment(
-      "No evidence-backed outlet coverage-market metadata was supplied.",
-    ),
-    audienceExposure: unknownAssessment(
-      "No first-party or measured audience geography was supplied; publisher origin is not used as a proxy.",
+    editorialMarket: editorialMarket ?? unknownAssessment(
+      "No evidence-backed primary editorial market was supplied; event location, publisher location, and readership are not substitutes.",
     ),
     framing: unknownAssessment("No evidence-backed framing assessment was produced."),
     tone: unknownAssessment("No evidence-backed tone assessment was produced."),
@@ -316,6 +324,38 @@ function validateEvidence(
   }
 }
 
+function validateEditorialMarketEvidence(
+  evidence: EditorialMarketEvidence,
+  path: string,
+  articleIds: Set<string>,
+  issues: ValidationIssue[],
+): void {
+  if (![
+    "outlet_market_documentation",
+    "outlet_language",
+    "publisher_location",
+  ].includes(evidence.kind)) {
+    issues.push({
+      code: "invalid_editorial_market_evidence_kind",
+      path: `${path}.kind`,
+      message: "Editorial-market evidence must describe the outlet market, outlet language, or publisher location.",
+    });
+  }
+  if (!isHttpUrl(evidence.url)) {
+    issues.push({ code: "invalid_url", path: `${path}.url`, message: "Must be HTTP(S)." });
+  }
+  if (evidence.quote.trim().length === 0) {
+    issues.push({ code: "empty_quote", path: `${path}.quote`, message: "Evidence quote is required." });
+  }
+  if (evidence.articleId !== undefined && !articleIds.has(evidence.articleId)) {
+    issues.push({
+      code: "unknown_evidence_article",
+      path: `${path}.articleId`,
+      message: "Article evidence must reference an article in the cluster.",
+    });
+  }
+}
+
 function validateRegion(
   region: MarketRegion,
   path: string,
@@ -450,37 +490,68 @@ export function validateStoryCluster(cluster: StoryCluster): ValidationIssue[] {
       (region) => validateRegion(region, `${path}.publisherOrigin.value`, issues),
       false,
     );
-    validateAssessment(
-      sameStory.coverageMarkets,
-      `${path}.coverageMarkets`,
-      articleIds,
-      issues,
-      (regions) => {
-        if (regions.length === 0) {
-          issues.push({ code: "empty_coverage_markets", path: `${path}.coverageMarkets.value`, message: "Observed coverage markets cannot be empty." });
-        }
-        regions.forEach((region, regionIndex) => validateRegion(region, `${path}.coverageMarkets.value[${regionIndex}]`, issues));
-      },
-      true,
-    );
-    validateAssessment(
-      sameStory.audienceExposure,
-      `${path}.audienceExposure`,
-      articleIds,
-      issues,
-      (regions) => {
-        if (regions.length === 0) {
-          issues.push({ code: "empty_audience_exposure", path: `${path}.audienceExposure.value`, message: "Observed audience exposure cannot be empty." });
-        }
-        regions.forEach((region, regionIndex) => {
-          validateRegion(region, `${path}.audienceExposure.value[${regionIndex}]`, issues);
-          if (region.share !== undefined) {
-            validateConfidence(region.share, `${path}.audienceExposure.value[${regionIndex}].share`, issues);
-          }
+    const editorialMarket = sameStory.editorialMarket;
+    if (editorialMarket === undefined) {
+      issues.push({
+        code: "missing_assessment",
+        path: `${path}.editorialMarket`,
+        message: "Primary editorial-market assessment is required.",
+      });
+    } else if (editorialMarket.status === "unknown") {
+      if (editorialMarket.reason.trim().length === 0) {
+        issues.push({
+          code: "missing_unknown_reason",
+          path: `${path}.editorialMarket.reason`,
+          message: "Unknown assessments require a reason.",
         });
-      },
-      true,
-    );
+      }
+      if (editorialMarket.evidence.length > 0) {
+        issues.push({
+          code: "unexpected_unknown_evidence",
+          path: `${path}.editorialMarket.evidence`,
+          message: "Unknown assessments cannot carry evidence.",
+        });
+      }
+    } else {
+      validateConfidence(editorialMarket.confidence, `${path}.editorialMarket.confidence`, issues);
+      validateRegion(editorialMarket.value, `${path}.editorialMarket.value`, issues);
+      if (editorialMarket.evidence.length === 0) {
+        issues.push({
+          code: "missing_assessment_evidence",
+          path: `${path}.editorialMarket.evidence`,
+          message: "Observed editorial markets require evidence.",
+        });
+      }
+      editorialMarket.evidence.forEach((evidence, evidenceIndex) => {
+        validateEditorialMarketEvidence(
+          evidence,
+          `${path}.editorialMarket.evidence[${evidenceIndex}]`,
+          articleIds,
+          issues,
+        );
+      });
+      const evidenceKinds = new Set(editorialMarket.evidence.map((evidence) => evidence.kind));
+      if (
+        editorialMarket.method === "documented_outlet_market"
+        && !evidenceKinds.has("outlet_market_documentation")
+      ) {
+        issues.push({
+          code: "editorial_market_method_evidence_mismatch",
+          path: `${path}.editorialMarket.method`,
+          message: "Documented outlet markets require direct outlet-market documentation.",
+        });
+      }
+      if (
+        editorialMarket.method === "language_and_publisher_location"
+        && (!evidenceKinds.has("outlet_language") || !evidenceKinds.has("publisher_location"))
+      ) {
+        issues.push({
+          code: "editorial_market_method_evidence_mismatch",
+          path: `${path}.editorialMarket.method`,
+          message: "This inference requires both outlet-language and publisher-location evidence.",
+        });
+      }
+    }
     validateAssessment(
       sameStory.framing,
       `${path}.framing`,

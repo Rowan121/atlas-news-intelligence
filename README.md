@@ -1,6 +1,6 @@
 # Atlas News Intelligence
 
-Atlas is an analyst-grade public explorer for current global news. It maps real stories to event locations, clusters related coverage across outlets, compares publisher geography, and exposes raw versus source-normalized regional prominence, undercoverage, disagreement, freshness, and confidence.
+Atlas is an analyst-grade public explorer for current global news. It maps real stories to event locations, clusters the same event across outlets, and compares how much and how differently outlets in distinct primary editorial markets cover it, with raw/source-normalized prominence, disagreement, freshness, and evidence confidence.
 
 ## Release status
 
@@ -116,6 +116,8 @@ The first command reads the latest public GDELT stream once. The second performs
 ## Truth and uncertainty rules
 
 - Event location is the primary mapped geography. Publisher origin is a separate comparison layer and is never substituted for event location.
+- Same-story heat is based only on each outlet's single evidence-backed primary editorial market. Direct outlet-market documentation is preferred; language plus publisher location may support a lower-confidence assessment. Event location never fills the heatmap.
+- Audience/readership exposure is out of scope; Atlas makes no reader-location claim.
 - Every mapped claim retains source identity, retrieval time, evidence, and geolocation method. Unsupported location precision remains unknown instead of being guessed.
 - GDELT's documented event-country codes are preserved as provider codes; they are not silently relabeled as ISO-3166.
 - Cluster membership keeps a reason and confidence. Related coverage is an analytical grouping, not a claim that every article makes the same assertion.

@@ -95,7 +95,7 @@ await check("24h normalized intelligence", "/api/v1/intelligence?window=24h&prom
   assert.ok(body.clusters.some((cluster) => cluster.sources.length > 1));
   assert.ok(body.clusters.every((cluster) => cluster.eventLocations.length > 0));
   assert.ok(body.clusters.every((cluster) => cluster.prominence.basis === "event_location"));
-  assert.ok(body.clusters.every((cluster) => cluster.coverageHeat.basis === "coverage_market"));
+  assert.ok(body.clusters.every((cluster) => cluster.coverageHeat.basis === "editorial_market"));
   if (expected.clusters !== undefined) assert.equal(body.clusters.length, expected.clusters);
   if (expected.regions !== undefined) assert.equal(body.regions.length, expected.regions);
   if (expected.coverageStatus !== undefined) {

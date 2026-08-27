@@ -13,7 +13,7 @@ This is the canonical coordination ledger for the project. Every agent must read
 Build a production-quality global news intelligence tool that:
 
 - maps current real stories to their **event locations** on a polished interactive globe;
-- distinguishes event location from publisher origin and audience region;
+- distinguishes event location, publisher origin, and the outlet's primary editorial market;
 - clusters coverage of the same event across outlets and languages;
 - shows raw and normalized regional prominence;
 - exposes source disagreement, coverage gaps, and confidence/evidence;
@@ -79,7 +79,7 @@ Every story cluster must preserve:
 
 - `cluster_id`, canonical title, and first/last observed timestamps;
 - event locations with latitude/longitude, location type, confidence, and supporting source spans;
-- publisher identity, publisher origin, article language, URL, publication time, and retrieval time;
+- publisher identity, publisher origin, article language, primary editorial market with evidence/confidence, URL, publication time, and retrieval time;
 - cluster membership confidence and the features/evidence that caused the match;
 - raw outlet/article count and normalized regional prominence;
 - extracted conflicting claims with links and verbatim snippets kept within legal quotation limits;
@@ -156,6 +156,7 @@ No open product-choice questions. Pause only if a genuinely required credential 
 | 2026-08-26 | Analyst-grade public explorer, rolling 24h default, raw + normalized prominence | Rowan | Explicit approval |
 | 2026-08-26 | GitHub repository is public `rowan121/atlas-news-intelligence` | Rowan | Explicit approval |
 | 2026-08-26 | Telegram removed; do not spend more time obtaining API keys | Rowan | Explicit instruction |
+| 2026-08-27 | Regional coverage means the outlet's primary editorial market; readership telemetry is out of scope and event location is never a proxy | Rowan | Explicit P0 clarification |
 | 2026-08-26 | Four hosted agents launched: `atlas_data`, `globe_ui`, `surface_runtime`, `proof_gate` | Main | Cotal Graph reports all four working on approved Nebius variants |
 | 2026-08-26 | Fixed access matrix frozen at `docs/API_ACCESS.md` | Main | Bounded audit; no critical live-news key missing |
 

@@ -32,11 +32,15 @@ every distinct article and cited event location is retained, membership and
 location evidence are unioned, and prominence is recomputed over the merged
 corpus. Headline similarity by itself is never a merge gate.
 
-The raw stream does not provide verified outlet coverage markets, actual
-audience geography, framing, or tone. Atlas emits typed unknown assessments for
-all four rather than inferring them from `ActionGeo`, language, publisher name,
-or domain. `ActionGeo` remains cited provider event-geotag evidence; when a
-cluster has multiple cited event-location candidates, the Surface selects one
+The raw stream does not itself provide verified primary editorial markets,
+framing, or tone. Atlas emits typed unknown assessments rather than inferring
+them from `ActionGeo`, publisher name, or domain. A deliberately narrow outlet
+registry may add a primary editorial market only when it retains direct market
+documentation, or both documented language and publisher location, plus a
+method and confidence. Publisher location or language alone is insufficient;
+audience/readership telemetry is out of scope. `ActionGeo` remains cited
+provider event-geotag evidence and is never market evidence; when a cluster
+has multiple cited event-location candidates, the Surface selects one
 primary deterministically by confidence, evidence count, then location id and
 retains the remaining candidates for inspection.
 

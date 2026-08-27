@@ -1,4 +1,5 @@
 import { sameStorySourceContext, type Article } from "../schema/types.js";
+import { resolveOutletEditorialProfile } from "../editorial-market/registry.js";
 import {
   canonicalizeUrl,
   domainFromUrl,
@@ -69,13 +70,15 @@ function mapRecord(record: GdeltArticleRecord, retrievedAt: string): Article | u
   const countryName = stringValue(record.sourcecountry);
   const publishedAt = parseGdeltDate(record.seendate);
   const language = stringValue(record.language);
-  const publisherOrigin = countryName === undefined
+  const providerPublisherOrigin = countryName === undefined
     ? undefined
     : {
         countryName,
         confidence: 0.8,
         evidenceSource: "provider_metadata" as const,
       };
+  const editorialProfile = resolveOutletEditorialProfile(domain);
+  const publisherOrigin = editorialProfile?.publisherOrigin ?? providerPublisherOrigin;
   return {
     id: stableId("article", canonicalUrl),
     url,
@@ -91,7 +94,7 @@ function mapRecord(record: GdeltArticleRecord, retrievedAt: string): Article | u
     ...(publishedAt === undefined ? {} : { publishedAt }),
     retrievedAt,
     source: { provider: "gdelt" },
-    sameStory: sameStorySourceContext(publisherOrigin),
+    sameStory: sameStorySourceContext(publisherOrigin, editorialProfile?.editorialMarket),
   };
 }
 
