@@ -58,7 +58,7 @@ After this candidate:
 ## Remaining deployment gates
 
 1. Agent D must independently pass the frozen P0 candidate before any refreshed D1 write or Worker deployment.
-2. The valid refreshed seed is `artifacts/p0-editorial-market-final.sql` (SHA-256 `4cde8920229744e4de0ffeb584069836b92a22234700af116a3681755c8c102b`), derived deterministically from source JSON SHA-256 `fff27207417aba310ada64a0653d944e391224b15973be7102fafda40a19c94c` and the tracked checksum manifest. Production writes must use this pair, not the legacy f7 proof or the superseded v2 P0 artifact.
+2. The verified generated seed is `artifacts/p0-editorial-market-final.sql` (SHA-256 `4cde8920229744e4de0ffeb584069836b92a22234700af116a3681755c8c102b`), derived deterministically from source JSON SHA-256 `fff27207417aba310ada64a0653d944e391224b15973be7102fafda40a19c94c` and the tracked checksum manifest. The only valid production write is the reproducibly composed `artifacts/p0-editorial-market-production.sql` (SHA-256 `27bab7330daf7ae944af731be61c89aa6076bf647a68b73ef5493f759d14802c`). It loads that seed and atomically retires only `gdelt:20260827091500`, because mixing the old and new independently normalized runs would corrupt rankings and retain obsolete stories.
 3. Production still needs the refreshed remote row-count/health receipt and the P0 Worker deploy/version receipt, followed by live HTTPS REST/MCP/A2A/browser checks.
 4. Runtype still needs truthful product/surface/eval activation and before/after usage receipts. A local definition alone is not sponsor usage evidence.
 5. No live Tavily, Tenki, Runtype, Mitosis, or Cotal/Nebius usage should be claimed unless a sanitized receipt exists. Configuration or account balance alone is not evidence of use.
@@ -68,7 +68,7 @@ None of these blockers justifies creating an account, hunting for a key, attachi
 
 ## Current evidence profile
 
-The P0 proof is a checksum-replayed real GDELT batch `20260827170000`: 111 stored clusters, 123 unique articles, and 143 article-linked event-location evidence rows. The read-only intelligence route returns its deterministic 100-cluster cap across 42 event regions. One 11-article same-story cluster has 11 observed, cited, distinct primary editorial markets and therefore an observed editorial-market heatmap; 99 returned clusters remain truthfully unavailable. The 11 station publisher-origin assessments carry no coordinates because the cited publisher addresses and editorial-market anchors are not interchangeable. Framing, tone, and omission remain unavailable where evidence does not support them, and no reader-location claim is made.
+The P0 proof is a checksum-replayed real GDELT batch `20260827170000`: 111 stored clusters, 123 cluster-scoped article records representing 121 distinct canonical URLs, and 143 article-linked event-location evidence rows. The read-only intelligence route returns its deterministic 100-cluster cap across 42 event regions. One 11-article same-story cluster has 11 observed, cited, distinct primary editorial markets and therefore an observed editorial-market heatmap; 99 returned clusters remain truthfully unavailable. The 11 station publisher-origin assessments carry no coordinates because the cited publisher addresses and editorial-market anchors are not interchangeable. Framing, tone, and omission remain unavailable where evidence does not support them, and no reader-location claim is made.
 
 ## Sponsor receipt contract
 
@@ -97,16 +97,16 @@ If a provider does not expose usage, `usage` is `null`; never invent a numeric d
 
 ```text
 npm --prefix surface run check
-60 tests passed; Surface typecheck passed
+61 tests passed; Surface typecheck passed
 
 npm run typecheck
 passed
 
 npm test
-83 tests passed
+85 tests passed
 
 npm --prefix ui test
-28 tests passed; UI build passed
+29 tests passed; UI build passed
 
 npm audit
 npm --prefix ui audit
@@ -126,7 +126,7 @@ npm run verify:release
 all install, typecheck, test, build, and Wrangler dry-run gates passed
 ```
 
-The P0 product/code candidate is `6433723734a07cd5cdcbcf4e044719e8ad610f01`; the later ledger/freeze commits do not change product logic. The valid P0 source and SQL hashes are recorded above. The source contains no fabricated sponsor receipt; sponsor claims require separate sanitized integration evidence.
+The P0 product/code candidate is `55f9627d6c7c5baf1d165be8e0ffb3dec7de0bb0`; the later ledger/freeze commit does not change product logic. The valid P0 source, generated-seed, and production-refresh hashes are recorded above. The source contains no fabricated sponsor receipt; sponsor claims require separate sanitized integration evidence.
 
 Full `npm run verify:release` remains the merge/deploy preflight because it also builds the changing UI and performs the Wrangler bundle dry-run.
 

@@ -1,5 +1,7 @@
 # Atlas News Intelligence — final independent verification
 
+> **Historical record only.** This verdict covers the earlier `f7e7a6c` candidate and does not certify the current editorial-market P0 candidate. See `README.md`; a new Agent D predeploy verdict and a final production verdict are required.
+
 Verdict: **PASS for the local pre-production release gate**
 
 - Frozen product/code candidate: **f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650**

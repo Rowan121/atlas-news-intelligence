@@ -4,7 +4,7 @@ This is the current local receipt for the Atlas P0 editorial-market candidate. I
 
 ## Candidate and runtime
 
-- Product/code candidate: `6433723734a07cd5cdcbcf4e044719e8ad610f01`
+- Product/code candidate: `55f9627d6c7c5baf1d165be8e0ffb3dec7de0bb0`
 - Candidate worktree: `/tmp/atlas-news-ui-correction`
 - Isolated local D1 persistence: `/tmp/atlas-p0-final-smoke.2CIdVh`
 - Local origin: `http://127.0.0.1:8791`
@@ -21,21 +21,23 @@ The later ledger and release-freeze commits do not change product logic. Their d
 | `artifacts/gdelt-20260827170000.manifest.txt` | `09a7ed399857bf1f4703b7c82564a3499fb8d23064bade21a35dccddb136574b` |
 | `artifacts/p0-editorial-market-final.json` | `fff27207417aba310ada64a0653d944e391224b15973be7102fafda40a19c94c` |
 | `artifacts/p0-editorial-market-final.sql` | `4cde8920229744e4de0ffeb584069836b92a22234700af116a3681755c8c102b` |
+| `artifacts/p0-editorial-market-production.sql` | `27bab7330daf7ae944af731be61c89aa6076bf647a68b73ef5493f759d14802c` |
 | `artifacts/p0-editorial-market-final-smoke.json` | `5a3eb51627a170aa6bdf8765fed51fe629f5682a20a88667e75633151e9e02e1` |
-| `ui/dist/index.html` | `7855101eb21ffde8e95ea5c47ee91e1f80d8d02d99fadf2711f48fcc691c5b72` |
-| `ui/dist/assets/index-CyuNfEuD.js` | `35a6f887e297f3b47bdc61bec2303a6f191681b0e15804a8a3e5e7d12b796134` |
+| `ui/dist/index.html` | `ceec0225ba1c2a80baf8d0c671160296298c7f05823f80788acdffe40ed954b0` |
+| `ui/dist/assets/index-tzW11bZK.js` | `fded7c02262150672a61471f8fcc1f31cbe62011a5fa1cc5aa3b1db3124c59c0` |
 | `ui/dist/assets/index-DXU3S9Il.css` | `6266713fc302878c9a41cb8407d5af9074cbae7cc8a9d279994c2a46c9c5e5d0` |
+| `ui/dist/assets/maplibre-gl-worker-Bml_7JYB.js` | `ed345860ff896d2baf568b1ee4765ab4f3527413115d23896a68230b0c70ff2d` |
 
-The tracked manifest pins the exact real GDELT batch inputs and checksums used to regenerate the source JSON. The final SQL is derived from that validated JSON. The source contains no Cotal receipt, so the imported run exposes `cotal_receipt: null`; this receipt makes no Cotal, Nebius, or other sponsor-usage claim.
+The tracked manifest pins the exact real GDELT batch inputs and checksums used to regenerate the source JSON. The generated seed is derived from that validated JSON. The production refresh is a reproducible composition of the verified seed plus one explicit retirement of the superseded production run; it prevents incomparable per-run prominence scores from being mixed by the current read queries. The source contains no Cotal receipt, so the imported run exposes `cotal_receipt: null`; this receipt makes no Cotal, Nebius, or other sponsor-usage claim.
 
 ## Verification and smoke commands
 
 ```sh
 npm run typecheck
-npm test                              # 83 tests
-npm --prefix ui test                  # 28 tests
+npm test                              # 85 tests
+npm --prefix ui test                  # 29 tests
 npm --prefix ui run build
-npm --prefix surface run check        # 60 tests + Surface typecheck
+npm --prefix surface run check        # 61 tests + Surface typecheck
 npm --prefix surface run build
 npm audit
 npm --prefix ui audit
@@ -64,7 +66,9 @@ ATLAS_RECEIPT_OUTPUT=artifacts/p0-editorial-market-final-smoke.json \
 node scripts/smoke-local.mjs
 ```
 
-The full root, UI, and Surface suites passed, as did strict typechecking and all three package audits. The isolated D1 contains one `succeeded` pipeline run, 111 clusters, 123 articles, and 143 article-linked event-location evidence rows. `/health` is truthfully `degraded` only because the replayed story watermark is stale at verification time; the pipeline run itself is successful.
+The full root, UI, and Surface suites passed, as did strict typechecking and all three package audits. The isolated D1 contains one `succeeded` pipeline run, 111 clusters, 123 cluster-scoped article rows representing 121 distinct canonical URLs, and 143 article-linked event-location evidence rows. `/health` is truthfully `degraded` only because the replayed story watermark is stale at verification time; the pipeline run itself is successful.
+
+The composed production refresh was also executed against an exact local copy of the production schema plus the superseded `gdelt:20260827091500` run. After the single transaction, only `gdelt:20260827170000` remained, with 111 clusters, 123 articles, 131 story locations, 143 location-evidence rows, 0 claims, and 122 regional-prominence rows; `PRAGMA foreign_key_check` returned no rows.
 
 ## HTTP results
 

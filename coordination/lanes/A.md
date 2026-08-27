@@ -12,7 +12,7 @@ Deliver the smallest real Atlas truth layer: canonical article/cluster/location/
 - Source comparison assessments use observed/unknown discriminated records carrying value, confidence, method, evidence, and reason.
 - A primary editorial market is observed only from documented outlet-market evidence, a validated combination of outlet language plus publisher location, or a manual confirmation. Unverified outlets remain explicitly unknown.
 - Event-region prominence declares `basis: event_location`, retains raw and source-normalized components and denominators, and explicitly disclaims audience reach.
-- Same-story coverage heat declares `basis: editorial_market` and is computed only from observed per-outlet editorial-market assessments; otherwise it is unavailable. Conflict requires opposed cited claims from distinct publishers; omission is not assessed without a regional baseline.
+- Same-story coverage heat declares `basis: editorial_market` and is computed only from observed per-outlet editorial-market assessments; otherwise it is unavailable. Conflict requires opposed cited claims from independent publisher networks, not merely different outlet domains under one parent; omission is not assessed without a regional baseline.
 - Surface collapses duplicate summary rows by cluster id and chooses one primary event-location candidate by confidence, evidence count, then stable location id while retaining other cited candidates.
 
 ## Receipts
@@ -35,9 +35,10 @@ Deliver the smallest real Atlas truth layer: canonical article/cluster/location/
     publisher identity, mention confidence, freshness, and source attribution.
 - `d19e0ec` + `a30f5a9` — primary editorial-market contract and current outlet registry
   - The singular `editorialMarket` assessment replaces legacy plural coverage and audience fields throughout the data contract.
-  - The live GDELT batch `20260827170000` yields 111 clusters and 123 articles. Its 11-article Beyoncé/Colombia relief cluster maps 11 station editions to 11 distinct, cited primary editorial markets.
+  - The live GDELT batch `20260827170000` yields 111 clusters and 123 cluster-scoped article records representing 121 distinct canonical URLs. Its 11-article Beyoncé/Colombia relief cluster maps 11 station editions to 11 distinct, cited primary editorial markets.
   - Unknown outlets remain unknown; event location and publisher origin are never substituted.
-  - Data verification passes 83/83 tests plus strict TypeScript.
+  - Data verification passes 85/85 tests plus strict TypeScript.
+  - The production refresh composes the verified new seed with one explicit retirement of the superseded run, preventing independently normalized batches from being mixed by current reads.
 
 ## Dependencies / blockers
 
