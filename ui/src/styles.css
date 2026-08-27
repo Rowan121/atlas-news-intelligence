@@ -65,10 +65,10 @@ button:focus-visible, input:focus-visible, a:focus-visible, h2:focus-visible { o
 .workspace { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 500px; gap: 1px; background: var(--line); }
 .map-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #e8ecef; }
 .globe-frame, .globe-map { position: absolute; inset: 0; }
-.globe-frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(255,255,255,.82), rgba(255,255,255,.18) 34%, transparent 62%), linear-gradient(0deg, rgba(255,255,255,.4), transparent 32%); }
-.mode-story .globe-frame::after { background: linear-gradient(90deg, rgba(255,255,255,.9), rgba(255,255,255,.3) 42%, transparent 68%), linear-gradient(0deg, rgba(255,255,255,.28), transparent 32%); }
+.globe-frame::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(255,255,255,.68), rgba(255,255,255,.08) 31%, transparent 52%), linear-gradient(0deg, rgba(255,255,255,.16), transparent 27%); }
+.mode-story .globe-frame::after { background: linear-gradient(90deg, rgba(255,255,255,.74), rgba(255,255,255,.1) 37%, transparent 58%), linear-gradient(0deg, rgba(255,255,255,.14), transparent 28%); }
 .globe-map { background: radial-gradient(circle at 54% 48%, #f7f9fa 0, #e9edf0 54%, #dde3e7 100%); }
-.maplibregl-canvas { filter: saturate(.72) contrast(.96) brightness(1.04); }
+.maplibregl-canvas { filter: saturate(.88) contrast(1.1) brightness(.99); }
 .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right { z-index: 3; }
 .maplibregl-ctrl-group { overflow: hidden; border: 1px solid var(--line-strong) !important; border-radius: 9px !important; background: rgba(255,255,255,.92) !important; box-shadow: 0 4px 16px rgba(22,32,45,.08) !important; }
 .maplibregl-ctrl-attrib { color: var(--ink-faint) !important; background: rgba(255,255,255,.82) !important; }

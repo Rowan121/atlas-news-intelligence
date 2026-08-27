@@ -37,6 +37,34 @@ const COVERAGE_SOURCE = "atlas-coverage-markets";
 const COVERAGE_HEAT = "atlas-coverage-heat";
 const COVERAGE_POINTS = "atlas-coverage-points";
 
+/**
+ * Keep the light basemap legible against Atlas's white interface. These
+ * overrides are deliberately limited to presentation: the underlying map
+ * sources and geography remain the style provider's real MapLibre data.
+ * Every override is guarded so a custom VITE_MAP_STYLE_URL can omit or rename
+ * these layers without breaking the globe.
+ */
+export function applyLightBasemapContrast(map: MapLibreMap) {
+  if (map.getLayer("background")?.type === "background") {
+    map.setPaintProperty("background", "background-color", "#edf0eb");
+  }
+  if (map.getLayer("water")?.type === "fill") {
+    map.setPaintProperty("water", "fill-color", "#b7ced8");
+  }
+  if (map.getLayer("boundary_2")?.type === "line") {
+    map.setPaintProperty("boundary_2", "line-color", "#667786");
+    map.setPaintProperty("boundary_2", "line-opacity", 0.84);
+  }
+  if (map.getLayer("boundary_3")?.type === "line") {
+    map.setPaintProperty("boundary_3", "line-color", "#8796a2");
+    map.setPaintProperty("boundary_3", "line-opacity", 0.74);
+  }
+  if (map.getLayer("boundary_disputed")?.type === "line") {
+    map.setPaintProperty("boundary_disputed", "line-color", "#765f6d");
+    map.setPaintProperty("boundary_disputed", "line-opacity", 0.82);
+  }
+}
+
 function heatCollection(points: CoverageHeatPoint[], mode: ProminenceMode) {
   return {
     type: "FeatureCollection" as const,
@@ -101,6 +129,7 @@ export function GlobeMap({
     map.addControl(new AttributionControl({ compact: true }), "bottom-left");
     map.on("style.load", () => {
       map.setProjection({ type: "globe" });
+      applyLightBasemapContrast(map);
       setMapReady(true);
     });
     map.on("click", (event: MapMouseEvent) => {
