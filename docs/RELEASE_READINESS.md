@@ -14,20 +14,20 @@ Before this candidate:
 - Runtype declared an A2A surface even though no A2A request path existed.
 - Runtype declared API-key authentication even though the underlying public reads did not require it.
 - Cloudflare used wildcard CORS and the deployment draft depended on an unknown hostname placeholder.
-- Cotal receipts were persisted in D1 but the latest-run health query did not return them.
+- The D1 schema could persist Cotal receipts, but the latest-run health query did not expose the optional value.
 - Sponsor before/after usage had no validated receipt shape.
 
 After this candidate:
 
 - `/robots.txt`, `/sitemap.xml`, `/llms.txt`, `/docs`, `/index.md`, `/integrations`, `/.well-known/api-catalog`, and `/openapi.json` are deterministic Worker routes.
-- Documentation supports `Accept: text/markdown`; HTML and Markdown assert the same auth, capability, and data-truth facts.
+- Documentation and the root resource support `Accept: text/markdown`; HTML and Markdown assert the same auth, capability, and data-truth facts, including correct q-value fallback and explicit 406 responses.
 - RFC 9727 GET/HEAD behavior is represented by an `application/linkset+json` API Catalog and `Link: rel="api-catalog"` discovery.
 - MCP retains the stable `2025-06-18` initialize flow and adds current stateless `server/discover`, plus a public server card.
 - A real read-only A2A HTTP+JSON interface now accepts structured `query_stories`, `explain_story`, and `pipeline_health` requests and returns source-of-truth results. Its Agent Card advertises only those operations and no auth, streaming, push, or writes.
 - `CORS_ORIGIN=self` allows same-origin browser/API use without guessing the Worker hostname and rejects foreign origins unless an explicit origin is later approved.
-- The latest D1 pipeline-run query now returns a sanitized Cotal receipt. Optional sponsor receipts validate provider, capability, timestamp, status, external request ID, evidence URLs, and mathematically consistent before/after/delta usage.
+- The latest D1 pipeline-run query now exposes an optional sanitized Cotal receipt when one exists. The final proof correctly returns `cotal_receipt: null`: its source JSON contained no Cotal receipt, so this candidate makes no Cotal/Nebius or other sponsor-usage claim. Optional future sponsor receipts validate provider, capability, timestamp, status, external request ID, evidence URLs, and mathematically consistent before/after/delta usage.
 - Selective Worker-first routing prevents the SPA fallback from turning missing conventional or machine paths into misleading HTML 200 responses.
-- The document response now contains a meaningful no-JavaScript product identity, explanation, and links to the current intelligence and health surfaces.
+- The document response now contains a meaningful no-JavaScript product identity, explanation, and ordinary links to documentation, current read-only intelligence, integration provenance, OpenAPI, and A2A discovery. The POST-only MCP endpoint is labeled as an endpoint rather than presented as a GET navigation link.
 - The browser contract separates the initial world-news view from a selected same-story comparison view. Source membership, event location, coverage-market heat, framing, and tone each retain their own truth status; unavailable evidence is shown as unavailable.
 - Malformed percent-encoding is a controlled non-retryable 400 and unknown Worker routes return a controlled 404 instead of leaking a stack or becoming a misleading SPA response.
 
@@ -59,14 +59,14 @@ After this candidate:
 2. The remote schema and current live seed have not been applied. Their exact file hashes and the returned D1 UUID must be shown before each write.
 3. There is no production HTTPS origin, deploy ID, or remote row-count/health receipt.
 4. Runtype has no observed product ID, surface IDs, deployed base URL, eval results, or before/after usage receipt yet. The local definition is only a draft.
-5. No live Tavily, Tenki, Runtype, Mitosis, or Cotal/Nebius usage should be claimed unless a sanitized receipt exists. Configuration or account balance alone is not evidence of use. The imported local GDELT proof's existing Cotal receipt is pipeline provenance, not proof of separate sponsor-service use.
+5. No live Tavily, Tenki, Runtype, Mitosis, or Cotal/Nebius usage should be claimed unless a sanitized receipt exists. Configuration or account balance alone is not evidence of use. The final GDELT source JSON contains no Cotal receipt, and the corrected SQL therefore stores `NULL`; this is explicitly not sponsor-service evidence.
 6. External Ora, IsItAgentReady, and Hacker Bob evidence cannot exist before deployment and was deliberately not consumed during iteration.
 
 None of these blockers justifies creating an account, hunting for a key, attaching a personal provider key, or enabling AIsa/HUD.
 
 ## Known evidence limitation
 
-The imported proof is real GDELT data: 20 clusters, 23 articles, and 12 event regions. Three clusters contain two source records about the same event. It does **not** contain evidence-backed coverage-market, framing, tone, or measured audience-exposure metadata, so every story correctly reports `coverageHeat.status = "unavailable"` and the UI must show an evidence-unavailable explanation. Publisher origin is not substituted for coverage market or audience. This is truthful behavior, but a richer comparison demo still depends on a later evidence-producing data run.
+The imported proof is real GDELT data: 20 clusters, 21 unique articles, and 14 event regions. At least one cluster contains multiple source records about the same event. It does **not** contain evidence-backed coverage-market, framing, tone, or measured audience-exposure metadata, so every story correctly reports `coverageHeat.status = "unavailable"` and the UI must show an evidence-unavailable explanation. Publisher origin is not substituted for coverage market or audience. This is truthful behavior, but a richer comparison demo still depends on a later evidence-producing data run.
 
 ## Sponsor receipt contract
 
@@ -95,27 +95,29 @@ If a provider does not expose usage, `usage` is `null`; never invent a numeric d
 
 ```text
 npm --prefix surface run check
-49 tests passed; Surface typecheck passed
+53 tests passed; Surface typecheck passed
 
 npm run typecheck
 passed
 
 npm test
-68 tests passed
+73 tests passed
 
 npm --prefix ui test
-9 tests passed; UI build passed
+13 tests passed; UI build passed
 
 ATLAS_BASE_URL=http://127.0.0.1:8788 \
 ATLAS_EXPECTED_RUN_ID=gdelt:20260827091500 \
-ATLAS_EXPECTED_CLUSTERS=20 ATLAS_EXPECTED_ARTICLES=23 \
-ATLAS_EXPECTED_REGIONS=12 ATLAS_EXPECTED_COVERAGE_STATUS=unavailable \
+ATLAS_EXPECTED_CLUSTERS=20 ATLAS_EXPECTED_ARTICLES=21 \
+ATLAS_EXPECTED_REGIONS=14 ATLAS_EXPECTED_COVERAGE_STATUS=unavailable \
 node scripts/smoke-local.mjs
 17/17 HTTP checks passed against the built UI + Worker + isolated local D1
 
 npm run verify:release
 all dependency audit, typecheck, test, build, and Wrangler dry-run gates passed
 ```
+
+The frozen local candidate was `257cc5240ba9a09129880fdbb8ece4ceab2e6aca`. Its corrected seed `/tmp/atlas-receipt-fix.sql` has SHA-256 `1b7d8e521e844587a5408b9bbddc2cf4319f8c884c13ff40e18fc9c8e0f8d71f`; its source `/tmp/atlas-news-integration/artifacts/gdelt-same-story-proof.json` has SHA-256 `fa11c15088e0486654354eca41aa977bce1bc68775305e0a4d64814bc6fcfc61`. The source contains no Cotal receipt, so the imported run's `cotal_receipt` is `null`.
 
 Full `npm run verify:release` remains the merge/deploy preflight because it also builds the changing UI and performs the Wrangler bundle dry-run.
 
