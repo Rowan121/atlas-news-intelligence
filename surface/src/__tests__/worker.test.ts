@@ -975,6 +975,28 @@ describe("A2A surface", () => {
     expect(store.queries).toEqual([{ region: "TEST-EU", metric: "raw", limit: 7 }]);
   });
 
+  it("accepts the official v0.3 message/send method name as a narrow alias", async () => {
+    const request = rpcMessage({
+      text: JSON.stringify({ operation: "pipeline_health" }),
+      mediaType: "application/json",
+    });
+    request.method = "message/send";
+
+    const response = await sendRpc(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      jsonrpc: "2.0",
+      id: "runtype-check",
+      result: {
+        message: {
+          role: "ROLE_AGENT",
+          parts: [{ data: { operation: "pipeline_health", health: { status: "ok" } } }],
+        },
+      },
+    });
+  });
+
   it("returns typed JSON-RPC errors for malformed requests, unknown methods, and non-JSON chat text", async () => {
     const malformed = await sendRpc("{");
     expect(await malformed.json()).toMatchObject({

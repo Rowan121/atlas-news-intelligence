@@ -125,6 +125,7 @@ The public read API requires no authentication. Atlas does not publish mutation,
 
 - [Agent Card](${origin}/.well-known/agent-card.json)
 - JSON-RPC 2.0 endpoint: \`${origin}/a2a\` using the A2A v1 \`SendMessage\` method.
+- Compatibility: the official v0.3 JSON-RPC method name \`message/send\` is accepted as an alias for the same read-only handler; v1 message and response shapes remain canonical.
 - HTTP+JSON compatibility: \`${origin}/a2a/message:send\`.
 - Send exactly one read operation as a structured \`data\` part or a \`text\` part containing strict JSON.
 - Supported operations: \`query_stories\`, \`explain_story\`, and \`pipeline_health\`.
@@ -173,7 +174,7 @@ function documentationHtml(origin: string): string {
     <h2>MCP</h2>
     <p>POST JSON-RPC requests to <code>/mcp</code>. Tools are read-only and share the same truth store as the browser and REST API.</p>
     <h2>A2A</h2>
-    <p>POST an A2A v1 JSON-RPC <code>SendMessage</code> request to <code>/a2a</code>, or use the HTTP+JSON compatibility route <code>/a2a/message:send</code>. The message must contain one structured data part or a text part containing strict JSON for a supported read operation.</p>
+    <p>POST an A2A v1 JSON-RPC <code>SendMessage</code> request to <code>/a2a</code>. The official v0.3 JSON-RPC method name <code>message/send</code> is accepted as an alias for the same read-only handler, while v1 message and response shapes remain canonical. The HTTP+JSON compatibility route is <code>/a2a/message:send</code>. The message must contain one structured data part or a text part containing strict JSON for a supported read operation.</p>
     <h2>Authentication and effects</h2>
     <p>No authentication is required for these public reads. Atlas exposes no public mutation, account, payment, or credential-management operation.</p>
   </main>

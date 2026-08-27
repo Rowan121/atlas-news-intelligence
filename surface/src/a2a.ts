@@ -257,7 +257,9 @@ export async function handleA2aJsonRpc(
     return jsonRpcError(body.id, -32600, "Request payload validation error");
   }
   if (body.id === undefined) return new Response(null, { status: 202, headers: { "A2A-Version": "1.0" } });
-  if (body.method !== "SendMessage") return jsonRpcError(body.id, -32601, "Method not found");
+  if (body.method !== "SendMessage" && body.method !== "message/send") {
+    return jsonRpcError(body.id, -32601, "Method not found");
+  }
   if (!isRecord(body.params)) return jsonRpcError(body.id, -32602, "Invalid parameters", "params must be an object");
 
   let message: A2AMessage;
