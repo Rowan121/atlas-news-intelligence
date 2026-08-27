@@ -1,6 +1,8 @@
 import type {
   Article,
   ClaimEvidence,
+  EditorialMarketAssessment,
+  EditorialMarketEvidence,
   EventLocation,
   PipelineHealth,
   PipelineRun,
@@ -31,7 +33,7 @@ interface ClusterRow {
 
 interface LocationRow {
   location_id: string;
-  location_type: EventLocation["location_type"];
+  location_type: EventLocation["location_type"] | "audience_region";
   location_granularity: EventLocation["location_granularity"];
   label: string;
   latitude: number;
@@ -83,14 +85,135 @@ const CLUSTER_COLUMNS = `
   normalized_prominence, cluster_confidence, membership_explanation`;
 
 function mapLocation(row: LocationRow): EventLocation {
-  return { ...row };
+  if (row.location_type === "audience_region") {
+    throw new Error("Legacy non-public region rows are not part of the public location contract");
+  }
+  return { ...row, location_type: row.location_type };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function sameStoryContext(value: string): SameStorySourceContext {
+function unknownEditorialMarket(reason: string): EditorialMarketAssessment {
+  return {
+    status: "unknown",
+    value: null,
+    confidence: null,
+    method: "unavailable",
+    evidence: [],
+    reason,
+  };
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function validCoordinates(value: unknown): value is { latitude: number; longitude: number } {
+  return isRecord(value)
+    && typeof value.latitude === "number"
+    && Number.isFinite(value.latitude)
+    && value.latitude >= -90
+    && value.latitude <= 90
+    && typeof value.longitude === "number"
+    && Number.isFinite(value.longitude)
+    && value.longitude >= -180
+    && value.longitude <= 180;
+}
+
+function editorialEvidence(value: unknown): value is EditorialMarketEvidence {
+  return isRecord(value)
+    && ["outlet_market_documentation", "outlet_language", "publisher_location"].includes(String(value.kind))
+    && nonEmptyString(value.url)
+    && /^https?:\/\//i.test(value.url)
+    && nonEmptyString(value.quote)
+    && (value.articleId === undefined || nonEmptyString(value.articleId));
+}
+
+function parseEditorialMarket(value: unknown): EditorialMarketAssessment {
+  if (value === undefined) {
+    return unknownEditorialMarket(
+      "Legacy row has no verified primary editorial-market assessment; superseded fields are not reinterpreted.",
+    );
+  }
+  if (!isRecord(value) || (value.status !== "observed" && value.status !== "unknown")) {
+    throw new Error("D1 article same_story_json had an invalid editorialMarket assessment");
+  }
+  if (value.status === "unknown") {
+    if (
+      value.value !== null
+      || value.confidence !== null
+      || value.method !== "unavailable"
+      || !Array.isArray(value.evidence)
+      || value.evidence.length !== 0
+      || !nonEmptyString(value.reason)
+    ) {
+      throw new Error("D1 article same_story_json had an invalid editorialMarket assessment");
+    }
+    return unknownEditorialMarket(value.reason);
+  }
+  const market = value.value;
+  const methods = ["documented_outlet_market", "language_and_publisher_location", "manual_confirmed"];
+  if (
+    !isRecord(market)
+    || !nonEmptyString(market.regionCode)
+    || !nonEmptyString(market.label)
+    || (market.coordinates !== undefined && !validCoordinates(market.coordinates))
+    || typeof value.confidence !== "number"
+    || !Number.isFinite(value.confidence)
+    || value.confidence < 0
+    || value.confidence > 1
+    || !methods.includes(String(value.method))
+    || !Array.isArray(value.evidence)
+    || value.evidence.length === 0
+    || !value.evidence.every(editorialEvidence)
+    || value.reason !== null
+  ) {
+    throw new Error("D1 article same_story_json had an invalid editorialMarket assessment");
+  }
+  const evidenceKinds = new Set(value.evidence.map((evidence) => evidence.kind));
+  if (
+    (value.method === "documented_outlet_market" && !evidenceKinds.has("outlet_market_documentation"))
+    || (
+      value.method === "language_and_publisher_location"
+      && (!evidenceKinds.has("outlet_language") || !evidenceKinds.has("publisher_location"))
+    )
+  ) {
+    throw new Error("D1 article same_story_json had editorialMarket evidence inconsistent with its method");
+  }
+  const coordinates = market.coordinates as { latitude: number; longitude: number } | undefined;
+  return {
+    status: "observed",
+    value: {
+      regionCode: market.regionCode,
+      label: market.label,
+      ...(coordinates === undefined ? {} : { coordinates: { ...coordinates } }),
+    },
+    confidence: value.confidence,
+    method: value.method as Extract<EditorialMarketAssessment, { status: "observed" }>["method"],
+    evidence: value.evidence.map((item) => ({
+      kind: item.kind,
+      url: item.url,
+      quote: item.quote,
+      ...(item.articleId === undefined ? {} : { articleId: item.articleId }),
+    })),
+    reason: null,
+  };
+}
+
+function assessment(value: unknown, field: "publisherOrigin" | "framing" | "tone"): unknown {
+  if (
+    !isRecord(value)
+    || (value.status !== "observed" && value.status !== "unknown")
+    || !Array.isArray(value.evidence)
+  ) {
+    throw new Error(`D1 article same_story_json had an invalid ${field} assessment`);
+  }
+  return value;
+}
+
+export function parseSameStoryContext(value: string): SameStorySourceContext {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
@@ -98,17 +221,12 @@ function sameStoryContext(value: string): SameStorySourceContext {
     throw new Error("D1 article same_story_json was not valid JSON");
   }
   if (!isRecord(parsed)) throw new Error("D1 article same_story_json was not an object");
-  for (const field of ["publisherOrigin", "coverageMarkets", "audienceExposure", "framing", "tone"] as const) {
-    const assessment = parsed[field];
-    if (
-      !isRecord(assessment)
-      || (assessment.status !== "observed" && assessment.status !== "unknown")
-      || !Array.isArray(assessment.evidence)
-    ) {
-      throw new Error(`D1 article same_story_json had an invalid ${field} assessment`);
-    }
-  }
-  return parsed as unknown as SameStorySourceContext;
+  return {
+    publisherOrigin: assessment(parsed.publisherOrigin, "publisherOrigin") as SameStorySourceContext["publisherOrigin"],
+    editorialMarket: parseEditorialMarket(parsed.editorialMarket),
+    framing: assessment(parsed.framing, "framing") as SameStorySourceContext["framing"],
+    tone: assessment(parsed.tone, "tone") as SameStorySourceContext["tone"],
+  };
 }
 
 function mapArticle(row: ArticleRow): Article {
@@ -118,7 +236,7 @@ function mapArticle(row: ArticleRow): Article {
     same_story_json,
     ...article
   } = row;
-  return { ...article, same_story: sameStoryContext(same_story_json) };
+  return { ...article, same_story: parseSameStoryContext(same_story_json) };
 }
 
 function mapSummary(row: ClusterRow, location: LocationRow | null): StorySummary {
@@ -250,7 +368,9 @@ export class D1TruthStore implements TruthStore {
     return {
       ...mapSummary(cluster, primary),
       articles: articles.map(mapArticle),
-      locations: locations.map(mapLocation),
+      locations: locations
+        .filter((location) => location.location_type !== "audience_region")
+        .map(mapLocation),
       claims,
       regional_prominence: regionalProminence,
     };

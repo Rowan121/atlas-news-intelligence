@@ -1,7 +1,7 @@
 {
   "name": "Atlas News Intelligence",
   "slug": "atlas-news-intelligence",
-  "description": "Evidence-backed global news intelligence over live records, with explicit event-location, publisher-origin, source, and uncertainty boundaries. Cross-regional coverage and framing remain activation-gated until their evidence fields are present.",
+  "description": "Evidence-backed global news intelligence over live records, with explicit event-location, publisher-origin, primary editorial-market, source, and uncertainty boundaries. Editorial-market comparison and framing remain activation-gated until their evidence fields are present.",
   "mode": "read_only",
   "source_of_truth": {
     "type": "external_api",
@@ -29,7 +29,7 @@
       "slug": "compare-regional-coverage",
       "method": "GET",
       "path": "/api/v1/intelligence?window={window}&prominence={prominence}",
-      "description": "Compare event-location prominence and evidence-backed coverage-market heat when available, while keeping publisher origin and measured audience exposure separate. Unknown dimensions remain explicit."
+      "description": "Compare event-location prominence and evidence-backed primary editorial-market heat while keeping publisher origin distinct. Each article contributes at most one observed assignment; unknown dimensions remain explicit."
     },
     {
       "name": "Inspect Pipeline Health",
@@ -79,7 +79,7 @@
       "criteria": [
         "Event locations have coordinates, type, confidence, and source evidence.",
         "Publisher origin is never presented as the event location.",
-        "Publisher origin is never used as a proxy for coverage market or audience exposure.",
+        "Neither event location nor publisher origin is used as a proxy for primary editorial market.",
         "Low-confidence or absent locations remain explicit and do not become map assertions."
       ]
     },

@@ -124,7 +124,7 @@ describe("Atlas Worker routes", () => {
     expect(await sitemap.text()).toContain("<loc>https://atlas.example/docs</loc>");
 
     const llms = await get("/llms.txt");
-    expect(await llms.text()).toContain("Event location, publisher origin, and audience-region evidence are distinct");
+    expect(await llms.text()).toContain("Event location, publisher origin, and primary editorial market are distinct");
   });
 
   it("negotiates equivalent Markdown documentation", async () => {
@@ -266,7 +266,10 @@ describe("Atlas Worker routes", () => {
   it("serves the Lane A/UI intelligence snapshot contract without an envelope", async () => {
     const response = await get("/api/v1/intelligence?window=24h&prominence=normalized");
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    const snapshot = await response.json() as {
+      clusters: Array<{ sources: Array<Record<string, unknown>> }>;
+    };
+    expect(snapshot).toMatchObject({
       generatedAt: "2026-08-26T12:00:00.000Z",
       window: "24h",
       health: { status: "healthy", activeSourceCount: 2, regionCount: 1 },
@@ -284,7 +287,7 @@ describe("Atlas Worker routes", () => {
             },
           }],
         },
-        coverageHeat: { status: "unavailable", basis: "coverage_market", markets: [] },
+        coverageHeat: { status: "unavailable", basis: "editorial_market", markets: [] },
         signals: {
           conflict: { status: "not_assessed" },
           omission: { status: "not_assessed" },
@@ -293,33 +296,58 @@ describe("Atlas Worker routes", () => {
           publisher: "Fixture Wire",
           claimPosition: "reports",
           publisherOrigin: { status: "observed", value: { regionCode: "ZZ" } },
-          coverageMarkets: { status: "unknown", value: null },
-          audienceExposure: { status: "unknown", value: null },
+          editorialMarket: { status: "unknown", value: null },
           framing: { status: "unknown", value: null },
           tone: { status: "unknown", value: null },
         }],
       }],
     });
+    expect(snapshot.clusters[0]?.sources[0]?.coverageMarkets).toBe(undefined);
+    expect(snapshot.clusters[0]?.sources[0]?.audienceExposure).toBe(undefined);
   });
 
-  it("builds SAME-STORY coverage heat and conflict only from cited cross-publisher evidence", async () => {
+  it("builds SAME-STORY editorial-market heat and conflict only from cited cross-publisher evidence", async () => {
     const compared = structuredClone(story);
     const first = compared.articles[0]!;
-    first.same_story.coverageMarkets = {
+    first.same_story.editorialMarket = {
       status: "observed",
-      value: [
-        { regionCode: "TEST-NA", label: "Test North" },
-        {
-          regionCode: "TEST-EU",
-          label: "Test Europe",
-          coordinates: { latitude: 48.8, longitude: 2.3 },
-        },
-      ],
+      value: { regionCode: "TEST-NA", label: "Test North" },
       confidence: 0.9,
-      method: "provider_coverage_metadata",
-      evidence: [{ articleId: first.article_id, url: first.canonical_url, quote: "Fixture coverage metadata." }],
+      method: "documented_outlet_market",
+      evidence: [{
+        kind: "outlet_market_documentation",
+        articleId: first.article_id,
+        url: first.canonical_url,
+        quote: "Fixture outlet-market documentation.",
+      }],
       reason: null,
     };
+    compared.articles.push({
+      ...structuredClone(first),
+      article_id: "test-article-1b",
+      canonical_url: "https://fixture.example.invalid/test-only/article-1b",
+      source_url: "https://fixture.example.invalid/test-only/article-1b",
+      same_story: {
+        ...structuredClone(first.same_story),
+        editorialMarket: {
+          status: "observed",
+          value: {
+            regionCode: "TEST-EU",
+            label: "Test Europe",
+            coordinates: { latitude: 48.8, longitude: 2.3 },
+          },
+          confidence: 0.9,
+          method: "documented_outlet_market",
+          evidence: [{
+            kind: "outlet_market_documentation",
+            articleId: "test-article-1b",
+            url: "https://fixture.example.invalid/test-only/article-1b",
+            quote: "Fixture outlet-market documentation.",
+          }],
+          reason: null,
+        },
+      },
+    });
     compared.articles.push({
       ...structuredClone(first),
       article_id: "test-article-2",
@@ -337,15 +365,16 @@ describe("Atlas Worker routes", () => {
           evidence: [],
           reason: null,
         },
-        coverageMarkets: {
+        editorialMarket: {
           status: "observed",
-          value: [{ regionCode: "TEST-EU", label: "Test Europe" }],
+          value: { regionCode: "TEST-EU", label: "Test Europe" },
           confidence: 0.9,
-          method: "provider_coverage_metadata",
+          method: "documented_outlet_market",
           evidence: [{
+            kind: "outlet_market_documentation",
             articleId: "test-article-2",
             url: "https://second.example.invalid/test-only/article-2",
-            quote: "Fixture coverage metadata.",
+            quote: "Fixture outlet-market documentation.",
           }],
           reason: null,
         },
@@ -384,7 +413,7 @@ describe("Atlas Worker routes", () => {
     expect(body.clusters[0]).toMatchObject({
       coverageHeat: {
         status: "observed",
-        basis: "coverage_market",
+        basis: "editorial_market",
         markets: [
           {
             regionCode: "TEST-EU",
@@ -395,7 +424,7 @@ describe("Atlas Worker routes", () => {
               latitude: 48.8,
               longitude: 2.3,
               confidence: 0.9,
-              method: "provider_coverage_metadata",
+              method: "documented_outlet_market",
             },
           },
           {
@@ -412,8 +441,9 @@ describe("Atlas Worker routes", () => {
         omission: { status: "not_assessed", method: "unavailable" },
       },
       sources: [
-        { framing: { status: "observed", value: "supports" }, audienceExposure: { status: "unknown" } },
-        { framing: { status: "observed", value: "disputes" }, audienceExposure: { status: "unknown" } },
+        { editorialMarket: { status: "observed", value: { regionCode: "TEST-NA" } }, framing: { status: "observed", value: "supports" } },
+        { editorialMarket: { status: "observed", value: { regionCode: "TEST-EU" } }, framing: { status: "unknown" } },
+        { editorialMarket: { status: "observed", value: { regionCode: "TEST-EU" } }, framing: { status: "observed", value: "disputes" } },
       ],
     });
   });

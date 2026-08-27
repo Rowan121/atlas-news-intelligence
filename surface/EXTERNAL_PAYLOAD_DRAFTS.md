@@ -162,7 +162,7 @@ Runtype access is treated as working. The platform definition is ready, but this
   "action": "product.ensure",
   "existing_account_only": true,
   "definition_file": "surface/runtype/atlas-product.json",
-  "definition_sha256": "e3d1c97246ecac8cddb03c3dce32c642bb93d178872e0de0ffc35bfe415e1dbc",
+  "definition_sha256": "84c5f36777654ba376d5b1770e1ef00f84b6adeeca1def007345acf7c212513c",
   "product": "Atlas News Intelligence",
   "environment": "production",
   "ATLAS_API_BASE_URL": "DEPLOYED_HTTPS_ORIGIN_REQUIRED",

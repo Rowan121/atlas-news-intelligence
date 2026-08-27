@@ -1,5 +1,5 @@
 export type IsoTimestamp = string;
-export type LocationType = "event" | "mentioned" | "publisher_origin" | "audience_region";
+export type LocationType = "event" | "mentioned" | "publisher_origin";
 export type LocationGranularity = "city" | "admin1" | "country" | "region" | "point" | "unknown";
 export type PipelineState = "ok" | "degraded" | "unavailable";
 export type ProminenceMetric = "raw" | "normalized";
@@ -33,10 +33,6 @@ export interface MarketRegion {
   coordinates?: { latitude: number; longitude: number };
 }
 
-export interface AudienceRegionExposure extends MarketRegion {
-  share?: number;
-}
-
 export interface UnknownAssessment {
   status: "unknown";
   value: null;
@@ -58,12 +54,22 @@ export interface ObservedAssessment<T, Method extends string> {
 export type PublisherOriginAssessment =
   | UnknownAssessment
   | ObservedAssessment<MarketRegion, "provider_metadata" | "publisher_registry">;
-export type CoverageMarketsAssessment =
+export interface EditorialMarketEvidence {
+  kind: "outlet_market_documentation" | "outlet_language" | "publisher_location";
+  url: string;
+  quote: string;
+  articleId?: string;
+}
+export type EditorialMarketAssessment =
   | UnknownAssessment
-  | ObservedAssessment<MarketRegion[], "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed">;
-export type AudienceExposureAssessment =
-  | UnknownAssessment
-  | ObservedAssessment<AudienceRegionExposure[], "first_party_audience_telemetry" | "provider_audience_measurement" | "manual_confirmed">;
+  | {
+      status: "observed";
+      value: MarketRegion;
+      confidence: number;
+      method: "documented_outlet_market" | "language_and_publisher_location" | "manual_confirmed";
+      evidence: EditorialMarketEvidence[];
+      reason: null;
+    };
 export type FramingAssessment =
   | UnknownAssessment
   | ObservedAssessment<"supports" | "disputes" | "straight_report" | "mixed" | "unclear", "claim_stance_comparison" | "model_analysis" | "manual_confirmed">;
@@ -73,8 +79,7 @@ export type ToneAssessment =
 
 export interface SameStorySourceContext {
   publisherOrigin: PublisherOriginAssessment;
-  coverageMarkets: CoverageMarketsAssessment;
-  audienceExposure: AudienceExposureAssessment;
+  editorialMarket: EditorialMarketAssessment;
   framing: FramingAssessment;
   tone: ToneAssessment;
 }

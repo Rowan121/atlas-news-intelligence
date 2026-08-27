@@ -1,6 +1,7 @@
 import type {
   Article,
   ClaimEvidence,
+  EditorialMarketEvidence,
   EventLocation,
   PipelineHealth,
   ProminenceMetric,
@@ -28,8 +29,7 @@ interface UiSource {
   publisher: string;
   publisherDomain: string;
   publisherOrigin: Article["same_story"]["publisherOrigin"];
-  coverageMarkets: Article["same_story"]["coverageMarkets"];
-  audienceExposure: Article["same_story"]["audienceExposure"];
+  editorialMarket: Article["same_story"]["editorialMarket"];
   framing: Article["same_story"]["framing"];
   tone: Article["same_story"]["tone"];
   articleTitle: string;
@@ -66,7 +66,7 @@ interface UiRegionalProminence {
 
 interface UiCoverageHeat {
   status: "observed" | "unavailable";
-  basis: "coverage_market";
+  basis: "editorial_market";
   markets: Array<{
     regionCode: string;
     label: string;
@@ -77,8 +77,8 @@ interface UiCoverageHeat {
       latitude: number;
       longitude: number;
       confidence: number;
-      method: "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed";
-      evidence: Array<{ articleId: string; url: string; quote: string }>;
+      method: "documented_outlet_market" | "language_and_publisher_location" | "manual_confirmed";
+      evidence: EditorialMarketEvidence[];
     };
   }>;
   reason: string | null;
@@ -185,8 +185,7 @@ function uiSource(article: Article, claims: ClaimEvidence[]): UiSource {
     publisher: article.publisher_name,
     publisherDomain: article.publisher_domain,
     publisherOrigin: article.same_story.publisherOrigin,
-    coverageMarkets: article.same_story.coverageMarkets,
-    audienceExposure: article.same_story.audienceExposure,
+    editorialMarket: article.same_story.editorialMarket,
     framing: framingAssessment(article, claims),
     tone: article.same_story.tone,
     articleTitle: article.title,
@@ -300,21 +299,36 @@ function omissionSignal(): UiSignalAssessment {
     method: "unavailable",
     summary: null,
     evidence: [],
-    reason: "No evidence-backed regional coverage baseline is available; omission is not inferred from publisher origin.",
+    reason: "No evidence-backed editorial-market baseline is available; omission is not inferred from publisher origin.",
   };
 }
 
 function coverageHeat(sources: UiSource[]): UiCoverageHeat {
-  const observed = sources.filter(
-    (source): source is UiSource & { coverageMarkets: Extract<UiSource["coverageMarkets"], { status: "observed" }> } =>
-      source.coverageMarkets.status === "observed",
-  );
+  type ObservedSource = UiSource & {
+    editorialMarket: Extract<UiSource["editorialMarket"], { status: "observed" }>;
+  };
+  const observedByArticle = new Map<string, ObservedSource>();
+  for (const source of sources) {
+    if (source.editorialMarket.status !== "observed") continue;
+    const current = observedByArticle.get(source.id);
+    if (
+      current === undefined
+      || source.editorialMarket.confidence > current.editorialMarket.confidence
+      || (
+        source.editorialMarket.confidence === current.editorialMarket.confidence
+        && source.editorialMarket.value.regionCode.localeCompare(current.editorialMarket.value.regionCode) < 0
+      )
+    ) {
+      observedByArticle.set(source.id, source as ObservedSource);
+    }
+  }
+  const observed = [...observedByArticle.values()].sort((left, right) => left.id.localeCompare(right.id));
   if (observed.length === 0) {
     return {
       status: "unavailable",
-      basis: "coverage_market",
+      basis: "editorial_market",
       markets: [],
-      reason: "No evidence-backed coverage-market metadata is available for this story; publisher origin and audience are not substitutes.",
+      reason: "No evidence-backed primary editorial-market assignment is available for this story; event location and publisher origin are not substitutes.",
     };
   }
   const assignments = new Map<string, {
@@ -326,47 +340,45 @@ function coverageHeat(sources: UiSource[]): UiCoverageHeat {
       latitude: number;
       longitude: number;
       confidence: number;
-      method: "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed";
-      evidence: Array<{ articleId: string; url: string; quote: string }>;
+      method: "documented_outlet_market" | "language_and_publisher_location" | "manual_confirmed";
+      evidence: EditorialMarketEvidence[];
       sourceId: string;
     };
   }>();
   const publisherTotals = new Map<string, number>();
   for (const source of observed) {
-    const uniqueMarkets = new Map(source.coverageMarkets.value.map((market) => [market.regionCode, market]));
-    publisherTotals.set(source.publisherDomain, (publisherTotals.get(source.publisherDomain) ?? 0) + uniqueMarkets.size);
-    for (const market of uniqueMarkets.values()) {
-      const entry = assignments.get(market.regionCode) ?? {
-        label: market.label,
-        articleIds: new Set<string>(),
-        publishers: new Set<string>(),
-        byPublisher: new Map<string, number>(),
-        coordinates: null,
-      };
-      entry.articleIds.add(source.id);
-      entry.publishers.add(source.publisherDomain);
-      entry.byPublisher.set(source.publisherDomain, (entry.byPublisher.get(source.publisherDomain) ?? 0) + 1);
-      if (
-        market.coordinates !== undefined
-        && (
-          entry.coordinates === null
-          || source.coverageMarkets.confidence > entry.coordinates.confidence
-          || (
-            source.coverageMarkets.confidence === entry.coordinates.confidence
-            && source.id.localeCompare(entry.coordinates.sourceId) < 0
-          )
+    const market = source.editorialMarket.value;
+    publisherTotals.set(source.publisherDomain, (publisherTotals.get(source.publisherDomain) ?? 0) + 1);
+    const entry = assignments.get(market.regionCode) ?? {
+      label: market.label,
+      articleIds: new Set<string>(),
+      publishers: new Set<string>(),
+      byPublisher: new Map<string, number>(),
+      coordinates: null,
+    };
+    entry.articleIds.add(source.id);
+    entry.publishers.add(source.publisherDomain);
+    entry.byPublisher.set(source.publisherDomain, (entry.byPublisher.get(source.publisherDomain) ?? 0) + 1);
+    if (
+      market.coordinates !== undefined
+      && (
+        entry.coordinates === null
+        || source.editorialMarket.confidence > entry.coordinates.confidence
+        || (
+          source.editorialMarket.confidence === entry.coordinates.confidence
+          && source.id.localeCompare(entry.coordinates.sourceId) < 0
         )
-      ) {
-        entry.coordinates = {
-          ...market.coordinates,
-          confidence: source.coverageMarkets.confidence,
-          method: source.coverageMarkets.method,
-          evidence: source.coverageMarkets.evidence,
-          sourceId: source.id,
-        };
-      }
-      assignments.set(market.regionCode, entry);
+      )
+    ) {
+      entry.coordinates = {
+        ...market.coordinates,
+        confidence: source.editorialMarket.confidence,
+        method: source.editorialMarket.method,
+        evidence: source.editorialMarket.evidence,
+        sourceId: source.id,
+      };
     }
+    assignments.set(market.regionCode, entry);
   }
   const markets = [...assignments.entries()].map(([regionCode, entry]) => {
     let normalized = 0;
@@ -391,7 +403,7 @@ function coverageHeat(sources: UiSource[]): UiCoverageHeat {
       coordinates,
     };
   }).sort((left, right) => right.sourceNormalizedShare - left.sourceNormalizedShare || left.regionCode.localeCompare(right.regionCode));
-  return { status: "observed", basis: "coverage_market", markets, reason: null };
+  return { status: "observed", basis: "editorial_market", markets, reason: null };
 }
 
 function meanConfidence(story: StoryDetail): number {
@@ -423,7 +435,7 @@ function mapCluster(story: StoryDetail): UiCluster | null {
     normalizedProminence: Math.max(0, Math.min(1, story.normalized_prominence)),
     prominence: {
       basis: "event_location",
-      caveat: "Event-location prominence measures observed corpus coverage of events in a region; it is not audience reach.",
+      caveat: "Event-location prominence measures observed corpus coverage of events in a region; it is distinct from outlet editorial-market coverage.",
       byRegion: story.regional_prominence
         .filter((entry) => !entry.formula_version.endsWith("legacy-components-unavailable"))
         .map((entry) => ({

@@ -96,7 +96,7 @@ export function sitemap(origin: string): Response {
 export function documentationMarkdown(origin: string): string {
   return `# Atlas News Intelligence
 
-Atlas is a read-only global news intelligence service over current, evidence-backed records. It maps event locations, keeps publisher origin and audience-region evidence separate, clusters reports about the same event, and exposes raw plus source-normalized prominence.
+Atlas is a read-only global news intelligence service over current, evidence-backed records. It maps event locations, keeps publisher origin and each outlet's evidence-backed primary editorial market separate, clusters reports about the same event, and exposes raw plus source-normalized prominence.
 
 ## Public browser
 
@@ -131,7 +131,8 @@ The public read API requires no authentication. Atlas does not publish mutation,
 ## Truth and security boundaries
 
 - Event location is never inferred from publisher headquarters.
-- Audience-region coverage is shown only when explicit evidence exists.
+- Each observed editorial market is one evidence-backed primary outlet market; unknown assignments remain explicit.
+- Event location and publisher origin never substitute for editorial market.
 - Every story member retains a source URL and cluster-membership evidence.
 - Unknown or stale data remains visible; it is never replaced with fabricated news.
 - Machine-readable surfaces describe only deployed public read capabilities.
@@ -151,7 +152,7 @@ function documentationHtml(origin: string): string {
 <body>
   <main>
     <h1>Atlas News Intelligence</h1>
-    <p>Atlas is a read-only global news intelligence service over current, evidence-backed records. It clusters reports about the same event and compares regional coverage only when that coverage is evidenced. Event location, publisher origin, and audience-region evidence remain separate.</p>
+    <p>Atlas is a read-only global news intelligence service over current, evidence-backed records. It clusters reports about the same event and compares primary editorial markets only when that assignment is evidenced. Event location, publisher origin, and primary editorial market remain separate.</p>
     <nav aria-label="Documentation">
       <ul>
         <li><a href="/">Interactive explorer</a></li>
@@ -190,7 +191,7 @@ export function docs(request: Request): Response {
 }
 
 export function llms(origin: string): Response {
-  const body = `# Atlas News Intelligence\n\n> Evidence-backed global news intelligence over real current records.\n\n## Start here\n\n- [Product and machine documentation](${origin}/docs)\n- [OpenAPI 3.1](${origin}/openapi.json)\n- [API catalog](${origin}/.well-known/api-catalog)\n- [MCP server card](${origin}/.well-known/mcp/server-card.json)\n- [A2A Agent Card](${origin}/.well-known/agent-card.json)\n- [Pipeline health](${origin}/health)\n\n## Canonical facts\n\n- Public reads require no authentication.\n- The service exposes no public writes or payments.\n- Event location, publisher origin, and audience-region evidence are distinct.\n- Empty, stale, or failed upstream data is reported explicitly; no demo records substitute for it.\n`;
+  const body = `# Atlas News Intelligence\n\n> Evidence-backed global news intelligence over real current records.\n\n## Start here\n\n- [Product and machine documentation](${origin}/docs)\n- [OpenAPI 3.1](${origin}/openapi.json)\n- [API catalog](${origin}/.well-known/api-catalog)\n- [MCP server card](${origin}/.well-known/mcp/server-card.json)\n- [A2A Agent Card](${origin}/.well-known/agent-card.json)\n- [Pipeline health](${origin}/health)\n\n## Canonical facts\n\n- Public reads require no authentication.\n- The service exposes no public writes or payments.\n- Event location, publisher origin, and primary editorial market are distinct.\n- Editorial-market heat uses at most one evidence-backed primary assignment per article; unknown assignments stay unknown.\n- Empty, stale, or failed upstream data is reported explicitly; no demo records substitute for it.\n`;
   return attachDiscoveryHeaders(text(body, "text/plain; charset=utf-8", { headers: CACHE_HEADERS }));
 }
 

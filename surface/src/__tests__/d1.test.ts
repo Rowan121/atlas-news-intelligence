@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { D1TruthStore } from "../storage/d1";
+import { D1TruthStore, parseSameStoryContext } from "../storage/d1";
 import { expect } from "./expect";
 
 function sqliteD1(database: DatabaseSync): D1Database {
@@ -89,5 +89,82 @@ describe("D1 truth-store region filtering", () => {
       .toEqual(["nepal-flood"]);
     expect(await store.listStories({ ...query, region: "US" }, new Date(), 1800)).toEqual([]);
     database.close();
+  });
+});
+
+describe("D1 SAME-STORY context normalization", () => {
+  const unknown = (reason: string) => ({
+    status: "unknown",
+    value: null,
+    confidence: null,
+    method: "unavailable",
+    evidence: [],
+    reason,
+  });
+
+  it("normalizes a legacy row to an explicit unknown editorial market without reinterpreting plural fields", () => {
+    const context = parseSameStoryContext(JSON.stringify({
+      publisherOrigin: unknown("No origin."),
+      coverageMarkets: {
+        status: "observed",
+        value: [{ regionCode: "WRONG", label: "Must not be reused" }],
+        confidence: 1,
+        method: "manual_confirmed",
+        evidence: [{ url: "https://example.invalid/legacy", quote: "Legacy field." }],
+        reason: null,
+      },
+      audienceExposure: {
+        status: "observed",
+        value: [{ regionCode: "ALSO-WRONG", label: "Must not be reused" }],
+        confidence: 1,
+        method: "manual_confirmed",
+        evidence: [{ url: "https://example.invalid/legacy", quote: "Legacy field." }],
+        reason: null,
+      },
+      framing: unknown("No framing."),
+      tone: unknown("No tone."),
+    }));
+
+    expect(context).toEqual({
+      publisherOrigin: unknown("No origin."),
+      editorialMarket: unknown(
+        "Legacy row has no verified primary editorial-market assessment; superseded fields are not reinterpreted.",
+      ),
+      framing: unknown("No framing."),
+      tone: unknown("No tone."),
+    });
+  });
+
+  it("preserves a valid singular evidence-backed editorial market", () => {
+    const context = parseSameStoryContext(JSON.stringify({
+      publisherOrigin: unknown("No origin."),
+      editorialMarket: {
+        status: "observed",
+        value: {
+          regionCode: "US-NM-ABQ",
+          label: "Albuquerque metropolitan area, New Mexico",
+          coordinates: { latitude: 35.0844, longitude: -106.6504 },
+        },
+        confidence: 0.99,
+        method: "documented_outlet_market",
+        evidence: [{
+          kind: "outlet_market_documentation",
+          url: "https://example.invalid/about",
+          quote: "The outlet documents its Albuquerque editorial market.",
+          articleId: "article-1",
+        }],
+        reason: null,
+      },
+      framing: unknown("No framing."),
+      tone: unknown("No tone."),
+    }));
+
+    expect(context.editorialMarket).toMatchObject({
+      status: "observed",
+      value: { regionCode: "US-NM-ABQ", coordinates: { latitude: 35.0844, longitude: -106.6504 } },
+      confidence: 0.99,
+      method: "documented_outlet_market",
+      evidence: [{ kind: "outlet_market_documentation", articleId: "article-1" }],
+    });
   });
 });
