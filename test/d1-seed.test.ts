@@ -19,12 +19,15 @@ describe("GDELT snapshot to D1 seed", () => {
     expect(dataset.clusters[0]!.prominence[0]).toMatchObject({
       basis: "event_location",
       raw_article_count: 2,
-      unique_publisher_count: 2,
+      unique_outlet_count: 2,
       regional_source_volume: 2,
       regional_outlet_count: 2,
       normalized_score: 1,
       source_normalized_share: 1,
     });
+    expect(dataset.clusters[0]!.prominence[0]).not.toHaveProperty("unique_publisher_count");
+    expect(dataset.clusters[0]!.story).toMatchObject({ unique_outlet_count: 2 });
+    expect(dataset.clusters[0]!.story).not.toHaveProperty("unique_publisher_count");
     expect(dataset.clusters[0]!.articles[0]!.same_story).toMatchObject({
       editorialMarket: { status: "unknown", value: null },
       framing: { status: "unknown", value: null },

@@ -389,7 +389,7 @@ function surfaceProminence(
       window_start: cluster.firstObservedAt,
       window_end: cluster.lastObservedAt,
       raw_article_count: entry.raw.articleCount,
-      unique_publisher_count: entry.raw.outletCount,
+      unique_outlet_count: entry.raw.outletCount,
       regional_source_volume: entry.normalized.denominators.regionalArticleMemberships,
       regional_outlet_count: entry.normalized.denominators.regionalOutlets,
       normalized_score: entry.normalized.score,
@@ -443,7 +443,7 @@ export function convertSnapshotToD1(snapshot: IntelligenceSnapshot): D1SeedDatas
       first_observed_at: cluster.firstObservedAt,
       last_observed_at: cluster.lastObservedAt,
       raw_article_count: articles.length,
-      unique_publisher_count: new Set(articles.map((article) => article.publisher_domain)).size,
+      unique_outlet_count: new Set(articles.map((article) => article.publisher_domain)).size,
       normalized_prominence: primaryProminence?.normalized_score ?? 0,
       cluster_confidence: storyConfidence(cluster),
       membership_explanation: JSON.stringify(
@@ -622,7 +622,7 @@ export function renderD1Seed(dataset: D1SeedDataset): string {
       [[
         story.cluster_id, cluster.ingestion_run_id, story.canonical_title, story.summary,
         story.primary_region_code, story.first_observed_at, story.last_observed_at,
-        story.raw_article_count, story.unique_publisher_count, story.normalized_prominence,
+        story.raw_article_count, story.unique_outlet_count, story.normalized_prominence,
         story.cluster_confidence, story.membership_explanation, cluster.updated_at,
       ]],
     ));
@@ -692,7 +692,7 @@ export function renderD1Seed(dataset: D1SeedDataset): string {
       ],
       cluster.prominence.map((entry) => [
         entry.ingestion_run_id, entry.cluster_id, entry.region_code, entry.window_start,
-        entry.window_end, entry.raw_article_count, entry.unique_publisher_count,
+        entry.window_end, entry.raw_article_count, entry.unique_outlet_count,
         entry.regional_source_volume, entry.regional_outlet_count, entry.normalized_score,
         entry.article_share, entry.outlet_share, entry.source_normalized_share, entry.basis, entry.formula_version,
         entry.computed_at,
