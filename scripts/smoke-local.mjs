@@ -15,6 +15,7 @@ const expected = {
   coverageStatus: process.env.ATLAS_EXPECTED_COVERAGE_STATUS,
   observedHeatClusters: optionalInteger("ATLAS_EXPECTED_OBSERVED_HEAT_CLUSTERS"),
 };
+const deploymentVersionId = process.env.ATLAS_DEPLOYMENT_VERSION_ID;
 const checks = [];
 let firstClusterId = null;
 
@@ -42,6 +43,12 @@ function optionalInteger(name) {
   if (value === undefined) return undefined;
   assert.match(value, /^\d+$/, `${name} must be a non-negative integer`);
   return Number(value);
+}
+
+function requiredEnvironment(name) {
+  const value = process.env[name];
+  assert.ok(value !== undefined && value.trim() !== "", `${name} is required when writing deployment metadata`);
+  return value;
 }
 
 function digest(bytes) {
@@ -436,7 +443,40 @@ if (new URL(base).protocol === "https:") {
   }
 }
 
-const receipt = { base, completedAt: new Date().toISOString(), checks };
+const cloudflare = deploymentVersionId === undefined ? undefined : {
+  accountId: requiredEnvironment("ATLAS_CLOUDFLARE_ACCOUNT_ID"),
+  worker: requiredEnvironment("ATLAS_WORKER_NAME"),
+  database: requiredEnvironment("ATLAS_DATABASE_NAME"),
+  databaseId: requiredEnvironment("ATLAS_DATABASE_ID"),
+  deploymentVersionId,
+  buildVersion: requiredEnvironment("ATLAS_BUILD_VERSION"),
+};
+const receipt = {
+  schemaVersion: 1,
+  origin: base,
+  ...(cloudflare === undefined ? {} : { cloudflare }),
+  completedAt: new Date().toISOString(),
+  expectedData: {
+    runId: expected.runId,
+    runStatus: expected.runStatus,
+    databaseClusters: expected.dbClusters,
+    databaseArticles: expected.articles,
+    responseClusters: expected.responseClusters,
+    responseRegions: expected.regions,
+    observedHeatClusters: expected.observedHeatClusters,
+  },
+  securityPolicy: {
+    contentSecurityPolicy: "frame-ancestors 'none'",
+    xFrameOptions: "DENY",
+    strictTransportSecurity: new URL(base).protocol === "https:" ? "max-age=31536000; includeSubDomains" : null,
+    appliesToEveryRecordedHttpsResponse: new URL(base).protocol === "https:",
+  },
+  checks,
+  summary: {
+    passed: checks.filter((result) => result.outcome === "pass").length,
+    failed: checks.filter((result) => result.outcome !== "pass").length,
+  },
+};
 const serializedReceipt = `${JSON.stringify(receipt, null, 2)}\n`;
 const receiptOutput = process.env.ATLAS_RECEIPT_OUTPUT;
 if (receiptOutput !== undefined) {
