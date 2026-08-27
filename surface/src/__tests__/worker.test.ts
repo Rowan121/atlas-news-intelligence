@@ -59,6 +59,17 @@ describe("Atlas Worker routes", () => {
     expect(await response.text()).toContain("## Public REST API");
   });
 
+  it("keeps the HTML documentation aligned with the same-event product contract", async () => {
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/docs", { headers: { Accept: "text/html" } }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    expect(await response.text()).toContain("clusters reports about the same event");
+  });
+
   it("honors explicit Accept quality and never mislabels an HTML fallback", async () => {
     const response = await worker.fetch!(
       new Request("https://atlas.example/docs", {

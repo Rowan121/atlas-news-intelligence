@@ -151,7 +151,7 @@ function documentationHtml(origin: string): string {
 <body>
   <main>
     <h1>Atlas News Intelligence</h1>
-    <p>Atlas is a read-only global news intelligence service over current, evidence-backed records. Event location, publisher origin, and audience-region evidence remain separate.</p>
+    <p>Atlas is a read-only global news intelligence service over current, evidence-backed records. It clusters reports about the same event and compares regional coverage only when that coverage is evidenced. Event location, publisher origin, and audience-region evidence remain separate.</p>
     <nav aria-label="Documentation">
       <ul>
         <li><a href="/">Interactive explorer</a></li>

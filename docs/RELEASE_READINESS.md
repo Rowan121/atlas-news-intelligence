@@ -1,6 +1,6 @@
 # Release and agent-readiness audit
 
-Checked locally on 2026-08-27. No external write, deployment, account mutation, paid call, Runtype convergence, or quota-consuming scanner run was performed.
+Checked locally on 2026-08-27 through the full built UI + Worker + isolated local D1 stack. No external write, deployment, account mutation, paid call, Runtype convergence, or quota-consuming scanner run was performed. The reproducible route-level evidence is in [the local smoke receipt](./LOCAL_RELEASE_SMOKE_2026-08-27.md).
 
 ## Truthful profile
 
@@ -27,21 +27,24 @@ After this candidate:
 - `CORS_ORIGIN=self` allows same-origin browser/API use without guessing the Worker hostname and rejects foreign origins unless an explicit origin is later approved.
 - The latest D1 pipeline-run query now returns a sanitized Cotal receipt. Optional sponsor receipts validate provider, capability, timestamp, status, external request ID, evidence URLs, and mathematically consistent before/after/delta usage.
 - Selective Worker-first routing prevents the SPA fallback from turning missing conventional or machine paths into misleading HTML 200 responses.
+- The document response now contains a meaningful no-JavaScript product identity, explanation, and links to the current intelligence and health surfaces.
+- The browser contract separates the initial world-news view from a selected same-story comparison view. Source membership, event location, coverage-market heat, framing, and tone each retain their own truth status; unavailable evidence is shown as unavailable.
+- Malformed percent-encoding is a controlled non-retryable 400 and unknown Worker routes return a controlled 404 instead of leaking a stack or becoming a misleading SPA response.
 
 ## Applicable readiness matrix
 
 | Area | Local candidate | Production evidence still required |
 |---|---|---|
-| Homepage identity/no-JS | **Blocked in UI lane:** current committed `ui/index.html` has an empty root | Meaningful server-returned HTML and keyboard/browser verification |
-| Conventional `/docs`, `/api`, `/integrations` | Implemented and unit tested | HTTPS probes |
+| Homepage identity/no-JS | Implemented, built, and served through the Worker; local HTTP check passed | Deployed HTTPS and keyboard/browser verification |
+| Conventional `/docs`, `/api`, `/integrations` | Implemented and unit tested; `/docs` local HTTP check passed | Deployed HTTPS probes |
 | `/pricing` | Intentionally absent; Worker-first path returns a real 404 | HTTPS probe |
-| robots and sitemap | Implemented and unit tested | Parser + canonical URL probes |
-| Markdown negotiation and explicit fallback | Implemented and unit tested | HTTPS content equivalence probe |
+| robots and sitemap | Implemented, unit tested, and locally HTTP-smoked | Deployed parser + canonical URL probes |
+| Markdown negotiation and explicit fallback | HTML, Markdown, and explicit 406 are unit tested and locally HTTP-smoked | Deployed HTTPS content-equivalence probe |
 | `llms.txt` | Implemented from canonical release facts | Link/fact consistency probe |
-| API Catalog + OpenAPI | Implemented for deployed public reads only | RFC validator and sampled operation probes |
+| API Catalog + OpenAPI | Implemented for public reads only; OpenAPI paths and GET-only operations locally verified | Deployed RFC validator and sampled operation probes |
 | Authentication/OAuth metadata | N/A: public reads, no public OAuth server | Confirm no deployment layer adds auth |
-| MCP discovery and invocation | Implemented; 3 read-only tools | Deployed initialize/discover/list/call receipt |
-| A2A discovery and invocation | Implemented; 3 structured read operations | Deployed card + SendMessage receipt |
+| MCP discovery and invocation | Implemented; initialize and 3 read-only tools locally invoked | Deployed initialize/discover/list/call receipt |
+| A2A discovery and invocation | Implemented; card and read-only query SendMessage locally invoked | Deployed card + SendMessage receipt |
 | Agent Skills, WebMCP, ARD, DNS-AID | N/A unless a later real capability requires them | Re-evaluate against live scanner catalog |
 | Commerce protocols | N/A: Atlas sells nothing | Keep N/A |
 | Bot training/inference policy | No owner policy supplied; robots permits public reads only as a crawl instruction | Owner decision if Content Signals or crawler-specific policy is desired |
@@ -50,18 +53,20 @@ After this candidate:
 | External Ora/IsItAgentReady | Deferred to frozen deployed candidate | One milestone scan each, with check-set/version snapshot |
 | Hacker Bob | Reserved | One final scan after freeze |
 
-## Hard deployment blockers
+## Remaining deployment blockers
 
 1. `surface/wrangler.jsonc` intentionally contains D1 ID `00000000-0000-0000-0000-000000000000`; deployment is prohibited until existing-account Cloudflare OAuth creates or identifies the approved production database.
 2. The remote schema and current live seed have not been applied. Their exact file hashes and the returned D1 UUID must be shown before each write.
 3. There is no production HTTPS origin, deploy ID, or remote row-count/health receipt.
 4. Runtype has no observed product ID, surface IDs, deployed base URL, eval results, or before/after usage receipt yet. The local definition is only a draft.
-5. The current committed homepage still fails the document-response/no-JS information gate; the UI lane must add meaningful initial HTML without undoing the interactive app.
-6. No live Tavily, Tenki, Runtype, Mitosis, Cotal/Nebius usage should be claimed unless a sanitized receipt exists. Configuration or account balance alone is not evidence of use.
-7. External Ora, IsItAgentReady, and Hacker Bob evidence cannot exist before deployment and was deliberately not consumed during iteration.
-8. The current intelligence response still aggregates prominence around event regions and does not yet provide the user-required same-story coverage-market heatmap or framing/tone evidence. The Runtype comparison capability remains explicitly draft/activation-gated until the data and UI lanes land those fields.
+5. No live Tavily, Tenki, Runtype, Mitosis, or Cotal/Nebius usage should be claimed unless a sanitized receipt exists. Configuration or account balance alone is not evidence of use. The imported local GDELT proof's existing Cotal receipt is pipeline provenance, not proof of separate sponsor-service use.
+6. External Ora, IsItAgentReady, and Hacker Bob evidence cannot exist before deployment and was deliberately not consumed during iteration.
 
 None of these blockers justifies creating an account, hunting for a key, attaching a personal provider key, or enabling AIsa/HUD.
+
+## Known evidence limitation
+
+The imported proof is real GDELT data: 20 clusters, 23 articles, and 12 event regions. Three clusters contain two source records about the same event. It does **not** contain evidence-backed coverage-market, framing, tone, or measured audience-exposure metadata, so every story correctly reports `coverageHeat.status = "unavailable"` and the UI must show an evidence-unavailable explanation. Publisher origin is not substituted for coverage market or audience. This is truthful behavior, but a richer comparison demo still depends on a later evidence-producing data run.
 
 ## Sponsor receipt contract
 
@@ -90,13 +95,26 @@ If a provider does not expose usage, `usage` is `null`; never invent a numeric d
 
 ```text
 npm --prefix surface run check
-40 tests passed; Surface typecheck passed
+49 tests passed; Surface typecheck passed
 
 npm run typecheck
 passed
 
 npm test
-64 tests passed
+68 tests passed
+
+npm --prefix ui test
+9 tests passed; UI build passed
+
+ATLAS_BASE_URL=http://127.0.0.1:8788 \
+ATLAS_EXPECTED_RUN_ID=gdelt:20260827091500 \
+ATLAS_EXPECTED_CLUSTERS=20 ATLAS_EXPECTED_ARTICLES=23 \
+ATLAS_EXPECTED_REGIONS=12 ATLAS_EXPECTED_COVERAGE_STATUS=unavailable \
+node scripts/smoke-local.mjs
+17/17 HTTP checks passed against the built UI + Worker + isolated local D1
+
+npm run verify:release
+all dependency audit, typecheck, test, build, and Wrangler dry-run gates passed
 ```
 
 Full `npm run verify:release` remains the merge/deploy preflight because it also builds the changing UI and performs the Wrangler bundle dry-run.
