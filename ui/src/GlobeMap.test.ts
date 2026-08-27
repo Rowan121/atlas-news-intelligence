@@ -3,6 +3,7 @@ import type { Map as MapLibreMap } from "maplibre-gl";
 import {
   applyLightBasemapContrast,
   createReferenceGraticule,
+  createReferenceMapStyle,
   installReferenceGeography,
 } from "./GlobeMap";
 
@@ -59,6 +60,30 @@ describe("light basemap contrast", () => {
 });
 
 describe("bundled reference geography", () => {
+  it("is present in the initial style without waiting for remote tiles or news data", () => {
+    const style = createReferenceMapStyle();
+
+    expect(style.version).toBe(8);
+    expect(Object.keys(style.sources)).toEqual([
+      "atlas-reference-countries",
+      "atlas-reference-graticule",
+    ]);
+    expect(style.layers.map((layer) => layer.id)).toEqual([
+      "atlas-reference-ocean",
+      "atlas-reference-countries-fill",
+      "atlas-reference-graticule-line",
+      "atlas-reference-countries-line",
+    ]);
+    expect(style.layers[0]).toMatchObject({
+      type: "background",
+      paint: { "background-color": "#b7ced8" },
+    });
+    expect(style.layers.at(-1)).toMatchObject({
+      type: "line",
+      paint: { "line-color": "#425763", "line-opacity": 0.96 },
+    });
+  });
+
   it("provides a deterministic latitude/longitude frame", () => {
     const graticule = createReferenceGraticule();
 

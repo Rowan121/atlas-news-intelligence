@@ -34,11 +34,15 @@ interface GlobeMapProps {
   onSelectRegion: (id: string) => void;
 }
 
-const MAP_STYLE =
-  import.meta.env.VITE_MAP_STYLE_URL ?? "https://tiles.openfreemap.org/styles/positron";
+type InlineMapStyle = Exclude<
+  NonNullable<ConstructorParameters<typeof MapLibreMap>[0]["style"]>,
+  string
+>;
+
 const COVERAGE_SOURCE = "atlas-coverage-markets";
 const COVERAGE_HEAT = "atlas-coverage-heat";
 const COVERAGE_POINTS = "atlas-coverage-points";
+const REFERENCE_OCEAN_LAYER = "atlas-reference-ocean";
 const REFERENCE_COUNTRIES_SOURCE = "atlas-reference-countries";
 const REFERENCE_COUNTRIES_FILL = "atlas-reference-countries-fill";
 const REFERENCE_COUNTRIES_LINE = "atlas-reference-countries-line";
@@ -80,6 +84,64 @@ export function createReferenceGraticule() {
 }
 
 const REFERENCE_GRATICULE = createReferenceGraticule();
+
+/**
+ * The default map is intentionally local and deterministic. It gives the
+ * globe real Natural Earth land geometry, country/coast outlines, and a
+ * coordinate frame before any news request or third-party tile request can
+ * succeed. Deployments may still opt into a richer provider style through
+ * VITE_MAP_STYLE_URL; installReferenceGeography keeps the same reference
+ * layers present in that style too.
+ */
+export function createReferenceMapStyle(): InlineMapStyle {
+  return {
+    version: 8,
+    name: "Atlas reference globe",
+    sources: {
+      [REFERENCE_COUNTRIES_SOURCE]: {
+        type: "geojson",
+        data: REFERENCE_COUNTRIES,
+        attribution: "Natural Earth",
+      },
+      [REFERENCE_GRATICULE_SOURCE]: {
+        type: "geojson",
+        data: REFERENCE_GRATICULE,
+      },
+    },
+    layers: [
+      {
+        id: REFERENCE_OCEAN_LAYER,
+        type: "background",
+        paint: { "background-color": "#b7ced8" },
+      },
+      {
+        id: REFERENCE_COUNTRIES_FILL,
+        type: "fill",
+        source: REFERENCE_COUNTRIES_SOURCE,
+        paint: { "fill-color": "#d7dfd3", "fill-opacity": 0.98 },
+      },
+      {
+        id: REFERENCE_GRATICULE_LINE,
+        type: "line",
+        source: REFERENCE_GRATICULE_SOURCE,
+        paint: { "line-color": "#617581", "line-opacity": 0.44, "line-width": 0.8 },
+      },
+      {
+        id: REFERENCE_COUNTRIES_LINE,
+        type: "line",
+        source: REFERENCE_COUNTRIES_SOURCE,
+        paint: {
+          "line-color": "#425763",
+          "line-opacity": 0.96,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.9, 5, 1.5],
+        },
+      },
+    ],
+  };
+}
+
+const USE_BUNDLED_REFERENCE_STYLE = !import.meta.env.VITE_MAP_STYLE_URL;
+const MAP_STYLE = import.meta.env.VITE_MAP_STYLE_URL ?? createReferenceMapStyle();
 
 export function installReferenceGeography(map: MapLibreMap) {
   const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
@@ -235,6 +297,17 @@ export function GlobeMap({
     map.addControl(new AttributionControl({ compact: true }), "bottom-left");
     map.on("style.load", () => {
       map.setProjection({ type: "globe" });
+      if (USE_BUNDLED_REFERENCE_STYLE) {
+        map.setSky({
+          "sky-color": "#dfe7eb",
+          "horizon-color": "#f8fafb",
+          "fog-color": "#ffffff",
+          "fog-ground-blend": 0.12,
+          "horizon-fog-blend": 0.18,
+          "sky-horizon-blend": 0.36,
+          "atmosphere-blend": 0.22,
+        });
+      }
       applyLightBasemapContrast(map);
       installReferenceGeography(map);
       setMapReady(true);
