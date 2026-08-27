@@ -8,11 +8,11 @@ Deliver the smallest real Atlas truth layer: canonical article/cluster/location/
 
 ## SAME-STORY integration decision
 
-- Event location, publisher origin, outlet coverage market, and measured audience exposure are separate fields and never proxy for one another.
+- Event location, publisher origin, and an outlet's single primary editorial market are separate fields and never proxy for one another. Audience/readership telemetry is out of scope.
 - Source comparison assessments use observed/unknown discriminated records carrying value, confidence, method, evidence, and reason.
-- GDELT coverage-market, audience, framing, and tone values remain unknown because the current raw stream does not supply defensible evidence for them.
+- A primary editorial market is observed only from documented outlet-market evidence, a validated combination of outlet language plus publisher location, or a manual confirmation. Unverified outlets remain explicitly unknown.
 - Event-region prominence declares `basis: event_location`, retains raw and source-normalized components and denominators, and explicitly disclaims audience reach.
-- Coverage heat is computed only from observed coverage-market assessments; otherwise it is unavailable. Conflict requires opposed cited claims from distinct publishers; omission is not assessed without a regional baseline.
+- Same-story coverage heat declares `basis: editorial_market` and is computed only from observed per-outlet editorial-market assessments; otherwise it is unavailable. Conflict requires opposed cited claims from distinct publishers; omission is not assessed without a regional baseline.
 - Surface collapses duplicate summary rows by cluster id and chooses one primary event-location candidate by confidence, evidence count, then stable location id while retaining other cited candidates.
 
 ## Receipts
@@ -33,12 +33,17 @@ Deliver the smallest real Atlas truth layer: canonical article/cluster/location/
     100-cluster cap omitted lower-ranked clusters.
   - Exact `GlobalEventID` and `MentionIdentifier` joins preserve evidence,
     publisher identity, mention confidence, freshness, and source attribution.
+- `d19e0ec` + `a30f5a9` — primary editorial-market contract and current outlet registry
+  - The singular `editorialMarket` assessment replaces legacy plural coverage and audience fields throughout the data contract.
+  - The live GDELT batch `20260827170000` yields 111 clusters and 123 articles. Its 11-article Beyoncé/Colombia relief cluster maps 11 station editions to 11 distinct, cited primary editorial markets.
+  - Unknown outlets remain unknown; event location and publisher origin are never substituted.
+  - Data verification passes 83/83 tests plus strict TypeScript.
 
 ## Dependencies / blockers
 
 - No credential blocker. The GDELT raw stream is reachable and verified.
-- Coordinator integration is merging obvious duplicate GDELT event IDs and
-  exporting the validated snapshot to the D1 schema without any remote write.
+- The validated P0 snapshot and deterministic D1 seed are ready for the approved
+  production refresh; exact hashes are recorded in the release-readiness ledger.
 
 ## HITL_REQUIRED
 

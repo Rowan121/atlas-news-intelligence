@@ -1,74 +1,72 @@
 # Local release smoke receipt — 2026-08-27
 
-This is the current local receipt for the frozen Atlas candidate. It covers the built UI, Worker, and an isolated local D1 only: no deployment, push, resource creation, account mutation, external scan, paid call, or sponsor API invocation occurred.
-
-An earlier local run produced different asset hashes and seed counts. That receipt is historical and is not evidence for the current candidate; its superseded values are intentionally omitted here.
+This is the current local receipt for the Atlas P0 editorial-market candidate. It covers the built UI, Worker, and an isolated local D1 only. No deployment, production write, account mutation, paid call, sponsor API invocation, or external scanner run occurred while producing it.
 
 ## Candidate and runtime
 
-- Frozen product/code candidate: `f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650`
-- Documentation-ledger commit: the later commit containing this file; it changes only the two release documents, is not a new product/code candidate, and its distinct SHA is reported in the release handoff
+- Product/code candidate: `6433723734a07cd5cdcbcf4e044719e8ad610f01`
 - Candidate worktree: `/tmp/atlas-news-ui-correction`
-- Clean Agent D archive of the frozen f7 candidate: `/tmp/atlas-agent-d-f7.zCBDgz`
-- Fresh independent f7 proof SQL/D1 load: `/tmp/atlas-agent-d-f7-d1.4pUWlr`
-- Exact f7 smoke-server persistence: `/tmp/atlas-news-final2-8788.13cNcf`
-- Local origin: `http://127.0.0.1:8788`
+- Isolated local D1 persistence: `/tmp/atlas-p0-final-smoke.2CIdVh`
+- Local origin: `http://127.0.0.1:8791`
 - Result: 17/17 HTTP checks passed
+- Retained machine-readable smoke receipt: `artifacts/p0-editorial-market-final-smoke.json`
 
-The final runtime's wall-clock and process/session identifier were ephemeral and are deliberately not treated as immutable release evidence. The frozen code SHA, inputs, reproducible build hashes, assertions, and counts below are the durable receipt.
+The later ledger and release-freeze commits do not change product logic. Their distinct SHAs are reported in the release handoff because a Git commit cannot embed its own final SHA.
 
-## Input and built-asset hashes
+## Reproducible inputs and built assets
 
 | Input/artifact | SHA-256 |
 |---|---|
 | `surface/schema/schema.sql` | `f3d30b54bd56066b149c19dc425f71778f2512073ebb86bb489bf1bda339f6ee` |
-| Source `/tmp/atlas-news-integration/artifacts/gdelt-same-story-proof.json` | `fa11c15088e0486654354eca41aa977bce1bc68775305e0a4d64814bc6fcfc61` |
-| Corrected seed `/tmp/atlas-receipt-fix.sql` | `1b7d8e521e844587a5408b9bbddc2cf4319f8c884c13ff40e18fc9c8e0f8d71f` |
-| Served `ui/dist/index.html` | `d2b5abe4178206f738e71dccc07d3134a84d14dfbb29dabac97231e403f4dfa5` |
-| Served `ui/dist/assets/index-DTMesOzy.js` | `46afa349c8ee6b813d5073ee8cf1e77350f034ada05c065b669c60851a84ee53` |
-| Served `ui/dist/assets/index-DCaFNjwV.css` | `1e1bc0d7bf73faee75ab8568d8c7a42c323560f08c9510d5a0e1011390307618` |
+| `artifacts/gdelt-20260827170000.manifest.txt` | `09a7ed399857bf1f4703b7c82564a3499fb8d23064bade21a35dccddb136574b` |
+| `artifacts/p0-editorial-market-final.json` | `fff27207417aba310ada64a0653d944e391224b15973be7102fafda40a19c94c` |
+| `artifacts/p0-editorial-market-final.sql` | `4cde8920229744e4de0ffeb584069836b92a22234700af116a3681755c8c102b` |
+| `artifacts/p0-editorial-market-final-smoke.json` | `5a3eb51627a170aa6bdf8765fed51fe629f5682a20a88667e75633151e9e02e1` |
+| `ui/dist/index.html` | `7855101eb21ffde8e95ea5c47ee91e1f80d8d02d99fadf2711f48fcc691c5b72` |
+| `ui/dist/assets/index-CyuNfEuD.js` | `35a6f887e297f3b47bdc61bec2303a6f191681b0e15804a8a3e5e7d12b796134` |
+| `ui/dist/assets/index-DXU3S9Il.css` | `6266713fc302878c9a41cb8407d5af9074cbae7cc8a9d279994c2a46c9c5e5d0` |
 
-The source JSON contains no Cotal receipt. The corrected SQL therefore imports `cotal_receipt_json` as `NULL`, and the API truthfully exposes `cotal_receipt: null`. This receipt makes no Cotal/Nebius or other sponsor-usage claim.
+The tracked manifest pins the exact real GDELT batch inputs and checksums used to regenerate the source JSON. The final SQL is derived from that validated JSON. The source contains no Cotal receipt, so the imported run exposes `cotal_receipt: null`; this receipt makes no Cotal, Nebius, or other sponsor-usage claim.
 
 ## Verification and smoke commands
 
 ```sh
 npm run typecheck
-npm test                              # 73 tests
-npm --prefix ui test                  # 14 tests
+npm test                              # 83 tests
+npm --prefix ui test                  # 28 tests
 npm --prefix ui run build
-npm --prefix surface run check        # 55 tests + Surface typecheck
+npm --prefix surface run check        # 60 tests + Surface typecheck
 npm --prefix surface run build
-npm audit                             # 0 vulnerabilities
-npm --prefix ui audit                 # 0 vulnerabilities
-npm --prefix surface audit            # 0 vulnerabilities
+npm audit
+npm --prefix ui audit
+npm --prefix surface audit            # 0 vulnerabilities in each audit
 
 cd surface
-# Fresh independent proof-load check; this is distinct from the smoke server.
 npx wrangler d1 execute atlas-news-intelligence-local --local \
-  --persist-to /tmp/atlas-agent-d-f7-d1.4pUWlr \
+  --persist-to /tmp/atlas-p0-final-smoke.2CIdVh \
   --file schema/schema.sql
 npx wrangler d1 execute atlas-news-intelligence-local --local \
-  --persist-to /tmp/atlas-agent-d-f7-d1.4pUWlr \
-  --file /tmp/atlas-receipt-fix.sql
-
-# The exact 17-check f7 HTTP receipt used this separate local persistence.
-npx wrangler dev --local --ip 127.0.0.1 --port 8788 \
-  --persist-to /tmp/atlas-news-final2-8788.13cNcf
+  --persist-to /tmp/atlas-p0-final-smoke.2CIdVh \
+  --file ../artifacts/p0-editorial-market-final.sql
+npx wrangler dev --local --ip 127.0.0.1 --port 8791 \
+  --persist-to /tmp/atlas-p0-final-smoke.2CIdVh
 
 cd ..
-ATLAS_BASE_URL=http://127.0.0.1:8788 \
-ATLAS_EXPECTED_RUN_ID=gdelt:20260827091500 \
-ATLAS_EXPECTED_CLUSTERS=20 \
-ATLAS_EXPECTED_ARTICLES=21 \
-ATLAS_EXPECTED_REGIONS=14 \
-ATLAS_EXPECTED_COVERAGE_STATUS=unavailable \
+ATLAS_BASE_URL=http://127.0.0.1:8791 \
+ATLAS_EXPECTED_RUN_ID=gdelt:20260827170000 \
+ATLAS_EXPECTED_RUN_STATUS=succeeded \
+ATLAS_EXPECTED_DB_CLUSTERS=111 \
+ATLAS_EXPECTED_RESPONSE_CLUSTERS=100 \
+ATLAS_EXPECTED_ARTICLES=123 \
+ATLAS_EXPECTED_REGIONS=42 \
+ATLAS_EXPECTED_OBSERVED_HEAT_CLUSTERS=1 \
+ATLAS_RECEIPT_OUTPUT=artifacts/p0-editorial-market-final-smoke.json \
 node scripts/smoke-local.mjs
 ```
 
-The fresh independent proof load verified one pipeline run, 20 clusters, and 21 unique article records. The separate f7 smoke-server persistence produced the 17/17 HTTP receipt and an intelligence response with 14 event regions. The run was truthfully `degraded`; it remained readable and did not fabricate unavailable coverage-market evidence.
+The full root, UI, and Surface suites passed, as did strict typechecking and all three package audits. The isolated D1 contains one `succeeded` pipeline run, 111 clusters, 123 articles, and 143 article-linked event-location evidence rows. `/health` is truthfully `degraded` only because the replayed story watermark is stale at verification time; the pipeline run itself is successful.
 
-## Final HTTP results
+## HTTP results
 
 All 17 checks passed with the expected status and representation:
 
@@ -90,21 +88,14 @@ All 17 checks passed with the expected status and representation:
 16. Malformed-percent story route — controlled 400 JSON error.
 17. Missing Worker route — controlled 404 JSON error.
 
-The exact retained response hashes for the final run are:
-
-| Response | SHA-256 | Reproducibility note |
-|---|---|---|
-| Root HTML | `d2b5abe4178206f738e71dccc07d3134a84d14dfbb29dabac97231e403f4dfa5` | Reproducible built asset |
-| JavaScript asset | `46afa349c8ee6b813d5073ee8cf1e77350f034ada05c065b669c60851a84ee53` | Reproducible built asset |
-| CSS asset | `1e1bc0d7bf73faee75ab8568d8c7a42c323560f08c9510d5a0e1011390307618` | Reproducible built asset |
-
-The 24-hour intelligence response passed its semantic assertions, but its body contains time-variant request/generation metadata. Its digest is intentionally omitted rather than frozen as an immutable build identifier. The other dynamic route bodies are treated the same way.
-
 ## Semantic findings and limits
 
-- At least one cluster contains multiple source records about the same event.
-- Every cluster has an event location, and regional prominence remains explicitly based on event location.
-- Coverage-market heat remains separate and reports `unavailable` because this proof contains no evidence-backed coverage-market metadata.
-- Publisher origin is not substituted for coverage market or measured audience exposure.
-- There are no unresolved local route failures in this 17-check receipt.
-- This receipt does not prove production HTTPS, redirects, a real Cloudflare D1 binding, deployed MCP/A2A invocation, Runtype activation, sponsor usage, or external Ora/IsItAgentReady/Hacker Bob results.
+- The intelligence response exposes its deterministic 100-cluster cap across 42 event regions.
+- One 11-article same-story cluster has 11 observed heat points backed one-for-one by distinct, cited source editorial markets; the other 99 returned clusters truthfully report unavailable heat.
+- Each observed editorial market has a confidence label, method, and cited evidence. Accepted evidence is a documented outlet market, or the validated combination of outlet language and publisher location. Manual confirmation requires direct outlet-market documentation.
+- Every heat coordinate matches the corresponding source's observed editorial-market coordinate.
+- Event location is used only for event prominence. It never fills editorial-market heat.
+- Publisher origin remains separate. The 11 station publisher-origin assessments omit coordinates because the cited publisher addresses do not establish those editorial-market anchor points.
+- Audience/readership telemetry and legacy plural coverage fields are absent from the public contract.
+- Framing, tone, conflict, and omission remain unavailable where the evidence cannot support them.
+- This receipt does not prove production HTTPS, redirects, a remote D1 binding, deployed REST/MCP/A2A behavior, Runtype activation, sponsor usage, or external Ora/IsItAgentReady/Hacker Bob results. Those require the independently approved frozen deployment.

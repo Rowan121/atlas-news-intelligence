@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 
 const base = (process.env.ATLAS_BASE_URL ?? "http://127.0.0.1:8788").replace(/\/$/, "");
+const legacyExpectedClusters = optionalInteger("ATLAS_EXPECTED_CLUSTERS");
 const expected = {
   runId: process.env.ATLAS_EXPECTED_RUN_ID,
-  clusters: optionalInteger("ATLAS_EXPECTED_CLUSTERS"),
+  runStatus: process.env.ATLAS_EXPECTED_RUN_STATUS,
+  dbClusters: optionalInteger("ATLAS_EXPECTED_DB_CLUSTERS") ?? legacyExpectedClusters,
+  responseClusters: optionalInteger("ATLAS_EXPECTED_RESPONSE_CLUSTERS") ?? legacyExpectedClusters,
   articles: optionalInteger("ATLAS_EXPECTED_ARTICLES"),
   regions: optionalInteger("ATLAS_EXPECTED_REGIONS"),
   coverageStatus: process.env.ATLAS_EXPECTED_COVERAGE_STATUS,
+  observedHeatClusters: optionalInteger("ATLAS_EXPECTED_OBSERVED_HEAT_CLUSTERS"),
 };
 const checks = [];
 
@@ -81,10 +87,12 @@ await check("D1 health", "/health", undefined, ({ response, text, contentType })
   assert.match(contentType, /^application\/json\b/);
   const body = JSON.parse(text);
   assert.equal(body.ok, true);
-  assert.equal(body.data.latest_run.status, "degraded");
-  assert.ok(body.data.reasons.includes("latest_pipeline_run_degraded"));
+  if (expected.runStatus !== undefined) assert.equal(body.data.latest_run.status, expected.runStatus);
+  if (body.data.latest_run.status === "degraded") {
+    assert.ok(body.data.reasons.includes("latest_pipeline_run_degraded"));
+  }
   if (expected.runId !== undefined) assert.equal(body.data.latest_run.run_id, expected.runId);
-  if (expected.clusters !== undefined) assert.equal(body.data.cluster_count_24h, expected.clusters);
+  if (expected.dbClusters !== undefined) assert.equal(body.data.cluster_count_24h, expected.dbClusters);
   if (expected.articles !== undefined) assert.equal(body.data.article_count_24h, expected.articles);
 });
 
@@ -96,10 +104,30 @@ await check("24h normalized intelligence", "/api/v1/intelligence?window=24h&prom
   assert.ok(body.clusters.every((cluster) => cluster.eventLocations.length > 0));
   assert.ok(body.clusters.every((cluster) => cluster.prominence.basis === "event_location"));
   assert.ok(body.clusters.every((cluster) => cluster.coverageHeat.basis === "editorial_market"));
-  if (expected.clusters !== undefined) assert.equal(body.clusters.length, expected.clusters);
+  assert.ok(body.clusters.every((cluster) => cluster.sources.every((source) => (
+    !Object.hasOwn(source, "coverageMarkets") && !Object.hasOwn(source, "audienceExposure")
+  ))));
+  for (const cluster of body.clusters) {
+    if (cluster.coverageHeat.status !== "observed") continue;
+    for (const market of cluster.coverageHeat.markets) {
+      assert.ok(cluster.sources.some((source) => (
+        source.editorialMarket.status === "observed"
+        && source.editorialMarket.value.regionCode === market.regionCode
+        && source.editorialMarket.value.coordinates?.latitude === market.coordinates?.latitude
+        && source.editorialMarket.value.coordinates?.longitude === market.coordinates?.longitude
+      )), `heat market ${market.regionCode} must be backed by a matching observed source editorial market`);
+    }
+  }
+  if (expected.responseClusters !== undefined) assert.equal(body.clusters.length, expected.responseClusters);
   if (expected.regions !== undefined) assert.equal(body.regions.length, expected.regions);
   if (expected.coverageStatus !== undefined) {
     assert.ok(body.clusters.every((cluster) => cluster.coverageHeat.status === expected.coverageStatus));
+  }
+  if (expected.observedHeatClusters !== undefined) {
+    assert.equal(
+      body.clusters.filter((cluster) => cluster.coverageHeat.status === "observed").length,
+      expected.observedHeatClusters,
+    );
   }
 });
 
@@ -227,5 +255,12 @@ await check("missing route", "/definitely-missing", undefined, ({ response, text
 });
 
 const receipt = { base, completedAt: new Date().toISOString(), checks };
-console.log(JSON.stringify(receipt, null, 2));
+const serializedReceipt = `${JSON.stringify(receipt, null, 2)}\n`;
+const receiptOutput = process.env.ATLAS_RECEIPT_OUTPUT;
+if (receiptOutput !== undefined) {
+  const outputPath = resolve(receiptOutput);
+  await mkdir(dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, serializedReceipt, { encoding: "utf8", mode: 0o600 });
+}
+console.log(serializedReceipt);
 if (checks.some((result) => result.outcome !== "pass")) process.exitCode = 1;
