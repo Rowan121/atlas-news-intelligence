@@ -21,12 +21,16 @@ The implementation follows the official GDELT 2.0/2.1 raw schemas:
 
 Every emitted cluster is validated against Atlas's `StoryCluster` contract. Membership reasons retain the exact event/document joins, the mention confidence, and the `InRawText` gate. Event-location evidence is explicitly marked `provider_event_geotag`.
 
-GDELT can assign more than one `GlobalEventID` to syndicated copies of the same
-story. Atlas conservatively merges only clusters whose Unicode/punctuation-
-normalized headline **and** primary event location match. Every distinct
-article is retained; membership reasons and location-evidence rows are unioned;
-raw and source-normalized prominence are then recomputed over the merged corpus.
-Headline similarity by itself is never a merge gate.
+GDELT can assign more than one `GlobalEventID` to facets or syndicated copies
+of the same published story. Atlas conservatively merges clusters only when an
+exact Unicode/punctuation-normalized headline has a second identity gate:
+either the primary event location matches or at least one exact canonical
+article URL overlaps. Cross-location matches therefore require a shared source
+document; Atlas does not treat its URL-derived metadata fingerprint as an
+independent content hash. Connected matches are consolidated deterministically,
+every distinct article and cited event location is retained, membership and
+location evidence are unioned, and prominence is recomputed over the merged
+corpus. Headline similarity by itself is never a merge gate.
 
 The raw stream does not provide verified outlet coverage markets, actual
 audience geography, framing, or tone. Atlas emits typed unknown assessments for

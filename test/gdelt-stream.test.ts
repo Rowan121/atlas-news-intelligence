@@ -5,25 +5,48 @@ import { fetchCappedBytes, GdeltStreamError, unzipSingleCsv, verifyManifestBytes
 import { loadLatestGdeltSnapshot } from "../src/ingestion/gdelt-stream/loader.js";
 import { parseLastUpdate, parseMasterFileTail } from "../src/ingestion/gdelt-stream/manifest.js";
 import { parseEventsTsv, parseGkgTsv, parseMentionsTsv } from "../src/ingestion/gdelt-stream/parsers.js";
-import { buildIntelligenceSnapshot, validateIntelligenceSnapshot } from "../src/ingestion/gdelt-stream/snapshot.js";
+import {
+  buildIntelligenceSnapshot,
+  mergeDuplicateGdeltClusters,
+  validateIntelligenceSnapshot,
+} from "../src/ingestion/gdelt-stream/snapshot.js";
 import type { GdeltFileKind, GdeltManifest, GdeltStreamLimits } from "../src/ingestion/gdelt-stream/types.js";
 
 const BATCH = "20260827060000";
 const NOW = "2026-08-27T06:05:00.000Z";
 const ARTICLE_URL = "https://wire.example/world/tokyo-event";
 
-function eventRow(overrides: { id?: string; withGeo?: boolean } = {}): string {
+function eventRow(overrides: {
+  id?: string;
+  withGeo?: boolean;
+  geo?: {
+    name: string;
+    countryCode: string;
+    admin1: string;
+    latitude: number;
+    longitude: number;
+    featureId: string;
+  };
+} = {}): string {
   const fields = Array<string>(61).fill("");
   fields[0] = overrides.id ?? "123456789";
   if (overrides.withGeo !== false) {
+    const geo = overrides.geo ?? {
+      name: "Tokyo, Tokyo, Japan",
+      countryCode: "JA",
+      admin1: "JA40",
+      latitude: 35.6762,
+      longitude: 139.6503,
+      featureId: "-246227",
+    };
     fields[51] = "4";
-    fields[52] = "Tokyo, Tokyo, Japan";
-    fields[53] = "JA";
-    fields[54] = "JA40";
+    fields[52] = geo.name;
+    fields[53] = geo.countryCode;
+    fields[54] = geo.admin1;
     fields[55] = "";
-    fields[56] = "35.6762";
-    fields[57] = "139.6503";
-    fields[58] = "-246227";
+    fields[56] = String(geo.latitude);
+    fields[57] = String(geo.longitude);
+    fields[58] = geo.featureId;
   }
   fields[59] = BATCH;
   fields[60] = ARTICLE_URL;
@@ -281,6 +304,139 @@ describe("GDELT 2.x stream loader", () => {
     });
     expect(snapshot.health.warnings.join(" ")).toContain("duplicate GlobalEventID");
     expect(validateIntelligenceSnapshot(snapshot)).toEqual([]);
+  });
+
+  it("consolidates one published Nepal flood story across event geos using shared canonical documents", () => {
+    const title = "Nepal flash floods kill at least 98; over 400 missing";
+    const firstUrl = "http://www.albuquerqueexpress.com/news/279266961/nepal-tibet-floods";
+    const secondUrl = "http://www.australiannews.net/news/279266961/nepal-tibet-floods";
+    const eventIds = ["1320164521", "1320164631", "1320165077"];
+    const geos = [
+      { name: "Tibet, Xizang, China", countryCode: "CH", admin1: "CH14", latitude: 32, longitude: 90, featureId: "-1930652" },
+      { name: "Gandak River, India (general), India", countryCode: "IN", admin1: "IN00", latitude: 25.65, longitude: 85.2167, featureId: "-2095811" },
+      { name: "Rasuwa, Nepal (general), Nepal", countryCode: "NP", admin1: "NP00", latitude: 28.2812, longitude: 85.3898, featureId: "-1022026" },
+    ];
+    const snapshot = buildIntelligenceSnapshot({
+      manifest: fixtureManifest(),
+      events: parseEventsTsv(
+        eventIds.map((id, index) => eventRow({ id, geo: geos[index]! })).join("\n"),
+        10,
+      ),
+      mentions: parseMentionsTsv(
+        eventIds.flatMap((eventId, index) => [
+          mentionRow({ eventId, url: firstUrl, confidence: index === 0 ? 80 : 100 }),
+          mentionRow({ eventId, url: secondUrl, confidence: index === 0 ? 80 : 100 }),
+        ]).join("\n"),
+        10,
+      ),
+      gkg: parseGkgTsv(
+        [gkgRow({ url: firstUrl, title }), gkgRow({ url: secondUrl, title })].join("\n"),
+        10,
+      ),
+      generatedAt: NOW,
+      limits: tinyLimits(),
+      gates: {
+        mentionType: 1,
+        inRawText: true,
+        minimumConfidence: 80,
+        requireActionGeoCoordinates: true,
+        requireGkgPageTitle: true,
+      },
+    });
+
+    expect(snapshot.clusters).toHaveLength(1);
+    expect(snapshot.clusters[0]).toMatchObject({
+      id: "gdelt_event_1320164521",
+      canonicalTitle: title,
+    });
+    expect(snapshot.clusters[0]!.articles).toHaveLength(2);
+    expect(snapshot.clusters[0]!.memberships).toHaveLength(2);
+    expect(snapshot.clusters[0]!.eventLocations.map((location) => location.name)).toEqual([
+      "Gandak River, India (general), India",
+      "Rasuwa, Nepal (general), Nepal",
+      "Tibet, Xizang, China",
+    ]);
+    expect(snapshot.clusters[0]!.memberships[0]!.evidence.reasons.join(" ")).toContain("1320164521");
+    expect(snapshot.clusters[0]!.memberships[0]!.evidence.reasons.join(" ")).toContain("1320164631");
+    expect(snapshot.clusters[0]!.memberships[0]!.evidence.reasons.join(" ")).toContain("1320165077");
+    expect(snapshot.clusters[0]!.prominence).toHaveLength(3);
+    expect(snapshot.health.warnings.join(" ")).toContain("overlapping canonical article URL");
+    expect(validateIntelligenceSnapshot(snapshot)).toEqual([]);
+  });
+
+  it("does not merge identical headlines across different geos without shared canonical documents", () => {
+    const secondUrl = "https://second-wire.example/world/tokyo-event";
+    const snapshot = buildIntelligenceSnapshot({
+      manifest: fixtureManifest(),
+      events: parseEventsTsv(
+        [
+          eventRow({ id: "123456789" }),
+          eventRow({
+            id: "123456790",
+            geo: {
+              name: "Paris, Ile-de-France, France",
+              countryCode: "FR",
+              admin1: "FR11",
+              latitude: 48.8566,
+              longitude: 2.3522,
+              featureId: "-1456928",
+            },
+          }),
+        ].join("\n"),
+        10,
+      ),
+      mentions: parseMentionsTsv(
+        [
+          mentionRow({ eventId: "123456789", url: ARTICLE_URL }),
+          mentionRow({ eventId: "123456790", url: secondUrl }),
+        ].join("\n"),
+        10,
+      ),
+      gkg: parseGkgTsv(
+        [
+          gkgRow({ url: ARTICLE_URL, title: "Leaders meet – live" }),
+          gkgRow({ url: secondUrl, title: "LEADERS meet: live" }),
+        ].join("\n"),
+        10,
+      ),
+      generatedAt: NOW,
+      limits: tinyLimits(),
+      gates: {
+        mentionType: 1,
+        inRawText: true,
+        minimumConfidence: 80,
+        requireActionGeoCoordinates: true,
+        requireGkgPageTitle: true,
+      },
+    });
+
+    expect(snapshot.clusters).toHaveLength(2);
+  });
+
+  it("does not merge a shared canonical document when normalized headlines differ", () => {
+    const snapshot = buildIntelligenceSnapshot({
+      manifest: fixtureManifest(),
+      events: parseEventsTsv(eventRow(), 10),
+      mentions: parseMentionsTsv(mentionRow(), 10),
+      gkg: parseGkgTsv(gkgRow(), 10),
+      generatedAt: NOW,
+      limits: tinyLimits(),
+      gates: {
+        mentionType: 1,
+        inRawText: true,
+        minimumConfidence: 80,
+        requireActionGeoCoordinates: true,
+        requireGkgPageTitle: true,
+      },
+    });
+    const first = snapshot.clusters[0]!;
+    const second = structuredClone(first);
+    second.id = "gdelt_event_different_headline";
+    second.canonicalTitle = "A materially different story";
+    second.eventLocations[0]!.name = "Paris, Ile-de-France, France";
+    second.eventLocations[0]!.coordinates = { latitude: 48.8566, longitude: 2.3522 };
+
+    expect(mergeDuplicateGdeltClusters([first, second])).toHaveLength(2);
   });
 
   it("enforces web, InRawText, confidence, coordinates, exact GKG, and page-title gates", () => {

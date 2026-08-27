@@ -43,9 +43,9 @@ interface JoinedDocument {
 
 /**
  * Conservative headline normalization used only to collapse GDELT event ids
- * that describe the same titled story at the same primary event location.
- * Location remains a mandatory second gate; title similarity alone never
- * merges clusters.
+ * with an exact normalized headline and a second piece of identity evidence:
+ * either the same primary event location or an overlapping canonical article
+ * URL. Title similarity alone never merges clusters.
  */
 export function normalizeGdeltHeadline(value: string): string {
   return value
@@ -72,6 +72,18 @@ export function gdeltDuplicateClusterKey(cluster: StoryCluster): string | undefi
   const title = normalizeGdeltHeadline(cluster.canonicalTitle);
   if (primary === undefined || title.length === 0) return undefined;
   return `${title}|${normalizedPrimaryLocation(primary)}`;
+}
+
+function gdeltDuplicateEvidenceKeys(cluster: StoryCluster): string[] {
+  const title = normalizeGdeltHeadline(cluster.canonicalTitle);
+  if (title.length === 0) return [];
+  const keys = new Set<string>();
+  const locationKey = gdeltDuplicateClusterKey(cluster);
+  if (locationKey !== undefined) keys.add(`location|${locationKey}`);
+  for (const canonicalUrl of cluster.articles.map((article) => article.canonicalUrl).sort()) {
+    if (canonicalUrl.length > 0) keys.add(`document|${title}|${canonicalUrl}`);
+  }
+  return [...keys];
 }
 
 function mergeMemberships(memberships: ClusterMembership[]): ClusterMembership[] {
@@ -161,23 +173,56 @@ function mergeClaims(claims: Claim[]): Claim[] {
 }
 
 /**
- * Merge only exact normalized-title + primary-location duplicates. The output
- * is stable across input ordering, retains each distinct article and all
- * membership/location evidence, and leaves prominence empty for corpus-wide
- * recomputation by the caller.
+ * Merge only clusters connected by an exact normalized title plus either a
+ * matching primary location or an overlapping canonical article URL. A shared
+ * canonical document is direct evidence that different GlobalEventIDs are
+ * facets of the same published story; all distinct event locations remain.
+ * The output is stable across input ordering, retains each distinct article
+ * and all membership/location evidence, and leaves prominence empty for
+ * corpus-wide recomputation by the caller.
  */
 export function mergeDuplicateGdeltClusters(clusters: StoryCluster[]): StoryCluster[] {
-  const groups = new Map<string, StoryCluster[]>();
-  for (const cluster of clusters) {
-    const key = gdeltDuplicateClusterKey(cluster) ?? `unmergeable:${cluster.id}`;
-    const group = groups.get(key) ?? [];
+  const parent = clusters.map((_, index) => index);
+  const find = (index: number): number => {
+    let root = index;
+    while (parent[root] !== root) root = parent[root]!;
+    while (parent[index] !== index) {
+      const next = parent[index]!;
+      parent[index] = root;
+      index = next;
+    }
+    return root;
+  };
+  const union = (left: number, right: number): void => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot === rightRoot) return;
+    if (leftRoot < rightRoot) parent[rightRoot] = leftRoot;
+    else parent[leftRoot] = rightRoot;
+  };
+  const firstClusterByEvidence = new Map<string, number>();
+  clusters.forEach((cluster, index) => {
+    for (const key of gdeltDuplicateEvidenceKeys(cluster)) {
+      const existing = firstClusterByEvidence.get(key);
+      if (existing === undefined) firstClusterByEvidence.set(key, index);
+      else union(existing, index);
+    }
+  });
+
+  const groups = new Map<number, StoryCluster[]>();
+  clusters.forEach((cluster, index) => {
+    const root = find(index);
+    const group = groups.get(root) ?? [];
     group.push(cluster);
-    groups.set(key, group);
+    groups.set(root, group);
+  });
+
+  for (const group of groups.values()) {
+    group.sort((left, right) => left.id.localeCompare(right.id));
   }
 
   const merged: StoryCluster[] = [];
   for (const group of groups.values()) {
-    group.sort((left, right) => left.id.localeCompare(right.id));
     const canonical = group[0]!;
     const articlesById = new Map<string, Article>();
     for (const article of group.flatMap((cluster) => cluster.articles)) {
@@ -439,7 +484,7 @@ export function buildIntelligenceSnapshot(input: BuildSnapshotInput): Intelligen
   const duplicateClustersMerged = provisional.length - merged.length;
   if (duplicateClustersMerged > 0) {
     warnings.push(
-      `merged ${duplicateClustersMerged} duplicate GlobalEventID cluster(s) by normalized title and primary event location.`,
+      `merged ${duplicateClustersMerged} duplicate GlobalEventID cluster(s) by exact normalized title plus matching primary event location or overlapping canonical article URL.`,
     );
   }
   if (clustersBeforeCap > clusters.length) warnings.push("cluster cap reached; snapshot is partial.");
