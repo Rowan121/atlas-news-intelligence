@@ -1,7 +1,7 @@
 {
-  "completed_at": "2026-08-27T21:51:56.136Z",
+  "completed_at": "2026-08-27T22:01:29.028Z",
   "scope": "isolated local Worker and D1; no push, deployment, remote database write, or external score claim",
-  "candidate_parent": "cb18b7e4a07c9a814b482877b11e195be25b733d",
+  "candidate_parent": "bef302b7e50e218b72a0dadaf5915ba5af761a83",
   "origin": "http://127.0.0.1:8790",
   "seed": {
     "run_id": "gdelt:20260827170000",
@@ -13,7 +13,7 @@
     "observed_editorial_market_heat_clusters": 1
   },
   "verification": {
-    "http_checks_passed": 24,
+    "http_checks_passed": 25,
     "http_checks_failed": 0,
     "full_release_gate": {
       "data_tests": "85/85 passed",
@@ -26,6 +26,7 @@
     },
     "covered": [
       "substantive raw HTML and built UI assets",
+      "social preview SVG routed through the Worker with clickjacking, MIME-sniffing, and production transport security headers",
       "D1 health and 24-hour intelligence",
       "REST list/detail and v1 OpenAPI paths",
       "HTML and Markdown documentation",
@@ -38,7 +39,7 @@
   },
   "full_machine_receipt": {
     "path": "artifacts/readiness-recovery-local-smoke.json",
-    "sha256": "2728e2bcce41d9b52ac1d64416e0307b712f0f2fb785101b4cc647663b1889c1",
+    "sha256": "21e31d61d7c8f29b86beb2a6cd7930f88c74089a3dbfa3003237bca901515290",
     "tracked": false,
     "reason": "generated runtime artifacts are intentionally gitignored; this tracked receipt preserves their identity"
   },

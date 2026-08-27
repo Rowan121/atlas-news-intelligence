@@ -356,6 +356,16 @@ describe("Atlas Worker routes", () => {
               },
             });
           }
+          if (pathname === "/atlas-social.svg") {
+            return new Response("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>", {
+              status: 200,
+              headers: {
+                "Content-Type": "image/svg+xml",
+                "Cache-Control": "public, max-age=300",
+                ETag: "\"social-etag\"",
+              },
+            });
+          }
           return new Response("console.log('atlas');", {
             status: 200,
             headers: {
@@ -406,6 +416,17 @@ describe("Atlas Worker routes", () => {
     expect(missingAsset.headers.get("etag")).toBe("\"missing-etag\"");
     expectClickjackingHeaders(missingAsset);
 
+    const socialAsset = await worker.fetch!(
+      new Request("https://atlas.example/atlas-social.svg"),
+      assetEnv,
+      {} as ExecutionContext,
+    );
+    expect(socialAsset.status).toBe(200);
+    expect(socialAsset.headers.get("content-type")).toBe("image/svg+xml");
+    expect(socialAsset.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(socialAsset.headers.get("strict-transport-security")).toBe("max-age=31536000; includeSubDomains");
+    expectClickjackingHeaders(socialAsset);
+
     const nonAssetMiss = await worker.fetch!(
       new Request("https://atlas.example/not-an-asset"),
       assetEnv,
@@ -418,6 +439,7 @@ describe("Atlas Worker routes", () => {
       { method: "GET", pathname: "/assets/index.js" },
       { method: "HEAD", pathname: "/assets/index.js" },
       { method: "GET", pathname: "/assets/missing.js" },
+      { method: "GET", pathname: "/atlas-social.svg" },
     ]);
   });
 

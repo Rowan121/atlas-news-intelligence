@@ -155,6 +155,7 @@ function securityValues(request: Request, environment: string | undefined): Reco
   return {
     "Content-Security-Policy": "frame-ancestors 'none'",
     "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
     ...(environment === "production" && url.protocol === "https:"
       ? { "Strict-Transport-Security": "max-age=31536000; includeSubDomains" }
       : {}),
@@ -377,7 +378,7 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           return response;
         }
 
-        if (url.pathname.startsWith("/assets/")) {
+        if (url.pathname.startsWith("/assets/") || url.pathname === "/atlas-social.svg") {
           readMethod(request);
           if (env.ASSETS === undefined) throw new HttpProblem(404, "not_found", "Asset not found");
           const asset = await env.ASSETS.fetch(request);

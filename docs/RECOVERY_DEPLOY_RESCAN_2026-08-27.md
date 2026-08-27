@@ -25,8 +25,9 @@ three-market evidence-backed cluster and would replace a stronger production
 comparison slice.
 
 ```bash
+ATLAS_RELEASE_SHA="$(git rev-parse HEAD)"
 cd surface
-npx wrangler@4.127.0 deploy
+npx wrangler deploy --var "BUILD_VERSION:${ATLAS_RELEASE_SHA}"
 ```
 
 Do not create a new Worker, D1 database, route, account, or credential. The
@@ -58,14 +59,26 @@ curl -sS -X POST \
 
 ## Exact Ora MCP rescans
 
-Force a new production domain/MCP scan only after deployment:
+Force a new production **domain** scan only after deployment:
 
 ```bash
 curl -sS \
   -H 'content-type: application/json' \
   -H 'accept: application/json, text/event-stream' \
   -H 'mcp-protocol-version: 2025-06-18' \
-  --data '{"jsonrpc":"2.0","id":"atlas-force-rescan","method":"tools/call","params":{"name":"scan_domain","arguments":{"url":"https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/","mcpUrl":"https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp","force":true}}}' \
+  --data '{"jsonrpc":"2.0","id":"atlas-domain-rescan","method":"tools/call","params":{"name":"scan_domain","arguments":{"url":"https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/","force":true}}}' \
+  https://ora.ai/api/mcp
+```
+
+Then force a separate **MCP endpoint** scan. Ora treats this as a distinct URL;
+combining `mcpUrl` with the root request can return only the MCP audit:
+
+```bash
+curl -sS \
+  -H 'content-type: application/json' \
+  -H 'accept: application/json, text/event-stream' \
+  -H 'mcp-protocol-version: 2025-06-18' \
+  --data '{"jsonrpc":"2.0","id":"atlas-mcp-rescan","method":"tools/call","params":{"name":"scan_domain","arguments":{"url":"https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp","force":true}}}' \
   https://ora.ai/api/mcp
 ```
 

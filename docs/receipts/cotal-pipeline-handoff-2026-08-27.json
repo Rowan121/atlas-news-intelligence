@@ -5,7 +5,7 @@
   "tests": [
     "GDELT batch 20260827213000 passed checksum, join, schema, and cluster validation gates",
     "Tavily search was bounded to three advanced news queries and extraction to six URLs",
-    "Tavily candidates required successful extraction, a distinct publisher network, current publication time, and deterministic title/entity/query similarity"
+    "Tavily candidates required successful extraction, a distinct configured domain-network label used only as a dedupe guard, current publication time, and deterministic title/entity/query similarity; the label is not persisted parent-ownership proof"
   ],
   "artifact_paths": [
     "artifacts/recovery-gdelt-latest.json",
@@ -22,7 +22,7 @@
     "Cotal mesh transport accepted the team.rowan handoff, but the live user-mode snapshot remains blocked because this machine has no user-auth material.",
     "The Cotal manager did not answer the read-only process query within its ten-second budget."
   ],
-  "next": "Deploy the validated GDELT/Tavily dataset to the existing D1 database, then run independent live product and external-scanner verification.",
+  "next": "Do not deploy this under-target dataset. Preserve it as a local evidence experiment, keep the stronger production comparison slice, and expand parent-ownership plus editorial-market evidence before proposing a future D1 refresh.",
   "integrations": [
     {
       "provider": "gdelt",

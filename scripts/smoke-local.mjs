@@ -111,6 +111,12 @@ if (root !== null) {
   }
 }
 
+await check("social preview asset", "/atlas-social.svg", undefined, ({ response, bytes, contentType }) => {
+  assert.equal(response.status, 200);
+  assert.match(contentType, /^image\/svg\+xml\b/);
+  assert.ok(bytes.length > 500);
+});
+
 await check("D1 health", "/health", undefined, ({ response, text, contentType }) => {
   assert.equal(response.status, 200);
   assert.match(contentType, /^application\/json\b/);

@@ -17,6 +17,7 @@
       "/a2a",
       "/a2a/*",
       "/assets/*",
+      "/atlas-social.svg",
       "/robots.txt",
       "/sitemap.xml",
       "/llms.txt",
@@ -45,7 +46,7 @@
     "enabled": true
   },
   "vars": {
-    "BUILD_VERSION": "074da0c4683686d17d5b7b4ea31541384a31d2d6",
+    "BUILD_VERSION": "unreleased-local-candidate",
     "ENVIRONMENT": "production",
     "CORS_ORIGIN": "self",
     "STALE_AFTER_SECONDS": "1800"
