@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
+    "verify:release": "node scripts/verify-release.mjs",
     "probe:gdelt": "tsx scripts/probe-gdelt.ts",
     "snapshot:gdelt": "tsx scripts/load-gdelt-snapshot.ts"
   },

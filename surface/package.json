@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
     "check": "npm run typecheck && npm test",
     "dev": "wrangler dev --local",
     "test": "node --import tsx --test src/__tests__/*.test.ts",

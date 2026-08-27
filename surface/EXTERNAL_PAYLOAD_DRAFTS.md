@@ -42,6 +42,14 @@ npx wrangler d1 execute atlas-news-intelligence-prod --remote --file surface/sch
 
 ## Worker deployment
 
+The release build is a single Worker deployment containing the API/agent runtime and the Vite output from `ui/dist`. Cloudflare serves static files and the SPA fallback directly. Only `/api/*`, `/health`, and `/mcp` are Worker-first routes.
+
+Required local preflight (read-only with respect to external systems):
+
+```sh
+npm run verify:release
+```
+
 ```json
 {
   "provider": "cloudflare",
@@ -52,19 +60,27 @@ npx wrangler d1 execute atlas-news-intelligence-prod --remote --file surface/sch
   "bindings": {
     "DB": "atlas-news-intelligence-prod"
   },
+  "assets": {
+    "directory": "ui/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*", "/health", "/mcp"]
+  },
   "vars": {
     "ENVIRONMENT": "production",
-    "CORS_ORIGIN": "https://REPLACE_WITH_APPROVED_UI_HOST",
+    "CORS_ORIGIN": "https://REPLACE_WITH_APPROVED_WORKER_HOST",
     "STALE_AFTER_SECONDS": "1800"
   }
 }
 ```
 
-Proposed command only after the final hostname and binding are approved:
+Proposed command only after the final hostname, D1 binding, and this combined UI/API payload are approved:
 
 ```sh
-npx wrangler deploy --config surface/wrangler.jsonc
+(cd surface && npx wrangler deploy --config wrangler.jsonc)
 ```
+
+Wrangler resolves `assets.directory` relative to `surface/wrangler.jsonc`, where it is `../ui/dist`. The payload above expresses the same path from the repository root for review. The preflight must finish first so the asset directory exists and the dry-run bundle has passed.
 
 ## Runtype convergence and publish intent
 
