@@ -32,7 +32,7 @@
     "enabled": true
   },
   "vars": {
-    "BUILD_VERSION": "23e8149c07b7cd15ce2e97f2b0b43e1416e427f2",
+    "BUILD_VERSION": "21f8c9e21d09efa8aa08dc3653bdc933993767e3",
     "ENVIRONMENT": "production",
     "CORS_ORIGIN": "self",
     "STALE_AFTER_SECONDS": "1800"
