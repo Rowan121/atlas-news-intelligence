@@ -72,6 +72,17 @@ describe("Atlas Worker routes", () => {
     expect(await response.text()).toContain("<!doctype html>");
   });
 
+  it("returns 406 when neither documentation representation is acceptable", async () => {
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/docs", { headers: { Accept: "application/pdf" } }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(response.status).toBe(406);
+    expect(response.headers.get("content-type")).toContain("application/problem+json");
+    expect(await response.json()).toMatchObject({ title: "Not Acceptable", status: 406 });
+  });
+
   it("publishes an RFC 9727 linkset and a matching HEAD relation", async () => {
     const response = await get("/.well-known/api-catalog");
     expect(response.headers.get("content-type")).toContain("application/linkset+json");
@@ -252,6 +263,24 @@ describe("Atlas Worker routes", () => {
     });
   });
 
+  it("rejects malformed percent-encoding as a non-retryable client error", async () => {
+    const response = await get("/api/stories/%");
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { kind: "bad_request", retryable: false },
+    });
+  });
+
+  it("returns a controlled 404 for an unknown Worker route", async () => {
+    const response = await get("/definitely-not-a-real-route");
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      error: { kind: "not_found", retryable: false },
+    });
+  });
+
   it("returns healthy pipeline state", async () => {
     const response = await get("/health");
     expect(response.status).toBe(200);
@@ -355,6 +384,46 @@ describe("MCP surface", () => {
     expect(response).toMatchObject({
       result: { isError: false, structuredContent: { cluster_id: story.cluster_id } },
     });
+  });
+
+  it("enforces declared MCP schemas and normalizes query timestamps", async () => {
+    const invalid = await rpc({
+      jsonrpc: "2.0",
+      id: "invalid-args",
+      method: "tools/call",
+      params: { name: "atlas.query_dominant_stories", arguments: { region: "us", surprise: true } },
+    });
+    expect(invalid).toMatchObject({ result: { isError: true } });
+
+    await rpc({
+      jsonrpc: "2.0",
+      id: "normalized-args",
+      method: "tools/call",
+      params: {
+        name: "atlas.query_dominant_stories",
+        arguments: { region: "test-eu", since: "2026-08-26T01:00:00Z", limit: 7 },
+      },
+    });
+    expect(store.queries.at(-1)).toEqual({
+      region: "TEST-EU",
+      since: "2026-08-26T01:00:00.000Z",
+      metric: "normalized",
+      limit: 7,
+    });
+  });
+
+  it("returns no body for JSON-RPC notifications", async () => {
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "tools/list" }),
+      }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(response.status).toBe(202);
+    expect(await response.text()).toBe("");
   });
 
   it("returns a tool-level error for an unknown cluster", async () => {

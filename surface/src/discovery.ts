@@ -22,25 +22,46 @@ function apiLinks(): string {
   ].join(", ");
 }
 
-function explicitMediaQuality(accept: string, mediaType: string): number | null {
+function mediaQuality(accept: string, mediaType: string): number {
+  if (accept.trim() === "") return 1;
+  const [targetType] = mediaType.split("/");
+  let bestSpecificity = -1;
+  let bestQuality = 0;
   for (const entry of accept.split(",")) {
     const [rawType, ...parameters] = entry.trim().split(";");
-    if (rawType?.toLowerCase() !== mediaType) continue;
+    const candidate = rawType?.toLowerCase();
+    const specificity = candidate === mediaType ? 2 : candidate === `${targetType}/*` ? 1 : candidate === "*/*" ? 0 : -1;
+    if (specificity < 0 || specificity < bestSpecificity) continue;
     const qualityParameter = parameters.find((parameter) => parameter.trim().toLowerCase().startsWith("q="));
-    if (qualityParameter === undefined) return 1;
-    const quality = Number(qualityParameter.trim().slice(2));
-    return Number.isFinite(quality) ? Math.max(0, Math.min(1, quality)) : 0;
+    const parsed = qualityParameter === undefined ? 1 : Number(qualityParameter.trim().slice(2));
+    const quality = Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : 0;
+    if (specificity > bestSpecificity || quality > bestQuality) {
+      bestSpecificity = specificity;
+      bestQuality = quality;
+    }
   }
-  return null;
+  return bestQuality;
 }
 
-function prefersMarkdown(request: Request): boolean {
-  if (new URL(request.url).pathname.endsWith(".md")) return true;
+function documentationRepresentation(request: Request): "markdown" | "html" | null {
+  if (new URL(request.url).pathname.endsWith(".md")) return "markdown";
   const accept = request.headers.get("Accept") ?? "";
-  const markdown = explicitMediaQuality(accept, "text/markdown");
-  if (markdown === null || markdown === 0) return false;
-  const html = explicitMediaQuality(accept, "text/html");
-  return html === null || markdown >= html;
+  const markdown = mediaQuality(accept, "text/markdown");
+  const html = mediaQuality(accept, "text/html");
+  if (markdown === 0 && html === 0) return null;
+  return markdown > html ? "markdown" : "html";
+}
+
+function notAcceptable(): Response {
+  return text(JSON.stringify({
+    type: "about:blank",
+    title: "Not Acceptable",
+    status: 406,
+    detail: "This documentation is available as text/html or text/markdown.",
+  }), "application/problem+json; charset=utf-8", {
+    status: 406,
+    headers: { "Cache-Control": "no-store", Vary: "Accept" },
+  });
 }
 
 export function attachDiscoveryHeaders(response: Response): Response {
@@ -160,7 +181,9 @@ function documentationHtml(origin: string): string {
 
 export function docs(request: Request): Response {
   const origin = new URL(request.url).origin;
-  if (prefersMarkdown(request)) {
+  const representation = documentationRepresentation(request);
+  if (representation === null) return attachDiscoveryHeaders(notAcceptable());
+  if (representation === "markdown") {
     return attachDiscoveryHeaders(text(documentationMarkdown(origin), "text/markdown; charset=utf-8", { headers: CACHE_HEADERS }));
   }
   return attachDiscoveryHeaders(text(documentationHtml(origin), "text/html; charset=utf-8", { headers: CACHE_HEADERS }));
@@ -182,7 +205,9 @@ Sponsor presence is never inferred from configuration alone. A provider counts a
 - [Pipeline health and latest receipt](${origin}/health)
 - [API documentation](${origin}/docs)
 `;
-  if (prefersMarkdown(request)) {
+  const representation = documentationRepresentation(request);
+  if (representation === null) return attachDiscoveryHeaders(notAcceptable());
+  if (representation === "markdown") {
     return attachDiscoveryHeaders(text(markdown, "text/markdown; charset=utf-8", { headers: CACHE_HEADERS }));
   }
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas integration provenance</title><link rel="canonical" href="${origin}/integrations"></head><body><main><h1>Atlas integration provenance</h1><p>Atlas uses GDELT as its current-news backbone and MapLibre for mapping. Optional sponsor services count as used only when a sanitized live receipt exists; configuration alone is not usage.</p><p>Cotal receipts preserve coordination provenance. Nebius is used only through Cotal. Tavily, Tenki, Runtype, and Mitosis are reported only from real invocations. AIsa and HUD are excluded.</p><ul><li><a href="/health">Pipeline health and latest receipt</a></li><li><a href="/docs">API documentation</a></li></ul></main></body></html>`;

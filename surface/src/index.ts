@@ -285,7 +285,12 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           readMethod(request);
           const rawId = match[1];
           if (rawId === undefined) throw new HttpProblem(400, "bad_request", "cluster_id is required");
-          const clusterId = decodeURIComponent(rawId);
+          let clusterId: string;
+          try {
+            clusterId = decodeURIComponent(rawId);
+          } catch {
+            throw new HttpProblem(400, "bad_request", "cluster_id contains malformed percent-encoding");
+          }
           if (clusterId === "" || clusterId.length > 200) {
             throw new HttpProblem(400, "bad_request", "cluster_id is invalid");
           }

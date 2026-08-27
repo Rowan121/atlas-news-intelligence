@@ -72,8 +72,24 @@ function objectParams(params: unknown): Record<string, unknown> {
   return params as Record<string, unknown>;
 }
 
+function assertOnlyKeys(value: Record<string, unknown>, allowed: readonly string[], context: string): void {
+  const unknown = Object.keys(value).find((key) => !allowed.includes(key));
+  if (unknown !== undefined) {
+    throw new HttpProblem(400, "bad_request", `${context} does not allow property ${unknown}`);
+  }
+}
+
+function timestamp(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+    throw new HttpProblem(400, "bad_request", `${field} must be an ISO-8601 timestamp`);
+  }
+  return new Date(value).toISOString();
+}
+
 function parseQuery(argumentsValue: unknown): StoryQuery {
   const args = objectParams(argumentsValue);
+  assertOnlyKeys(args, ["region", "since", "until", "metric", "limit"], "query arguments");
   const metric = args.metric ?? "normalized";
   const limit = args.limit ?? 20;
   if (metric !== "raw" && metric !== "normalized") {
@@ -82,17 +98,21 @@ function parseQuery(argumentsValue: unknown): StoryQuery {
   if (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100) {
     throw new HttpProblem(400, "bad_request", "limit must be an integer between 1 and 100");
   }
-  for (const field of ["region", "since", "until"] as const) {
-    if (args[field] !== undefined && typeof args[field] !== "string") {
-      throw new HttpProblem(400, "bad_request", `${field} must be a string`);
-    }
+  const region = args.region === undefined ? undefined : typeof args.region === "string" ? args.region.trim().toUpperCase() : null;
+  if (region === null || (region !== undefined && !/^[A-Z0-9_-]{2,16}$/.test(region))) {
+    throw new HttpProblem(400, "bad_request", "region must be a 2-16 character geographic code");
+  }
+  const since = timestamp(args.since, "since");
+  const until = timestamp(args.until, "until");
+  if (since !== undefined && until !== undefined && since > until) {
+    throw new HttpProblem(400, "bad_request", "since must not be after until");
   }
   return {
     metric,
     limit: limit as number,
-    ...(typeof args.region === "string" ? { region: args.region } : {}),
-    ...(typeof args.since === "string" ? { since: args.since } : {}),
-    ...(typeof args.until === "string" ? { until: args.until } : {}),
+    ...(region === undefined ? {} : { region }),
+    ...(since === undefined ? {} : { since }),
+    ...(until === undefined ? {} : { until }),
   };
 }
 
@@ -111,6 +131,10 @@ export async function handleMcp(
   if (body.jsonrpc !== "2.0" || typeof body.method !== "string") {
     return rpcError(body.id, -32600, "Invalid Request");
   }
+
+  // JSON-RPC notifications never receive a response. Atlas also avoids doing
+  // unnecessary read work for a notification that cannot consume a result.
+  if (body.id === undefined) return null;
 
   try {
     if (body.method === "server/discover") {
@@ -152,7 +176,8 @@ export async function handleMcp(
     }
     if (params.name === "atlas.explain_story_cluster") {
       const parsed = objectParams(args);
-      if (typeof parsed.cluster_id !== "string" || parsed.cluster_id === "") {
+      assertOnlyKeys(parsed, ["cluster_id"], "explain arguments");
+      if (typeof parsed.cluster_id !== "string" || parsed.cluster_id === "" || parsed.cluster_id.length > 200) {
         return rpcResult(body.id, toolResult({ error: "cluster_id is required" }, true));
       }
       const story = await store.getStory(parsed.cluster_id);
@@ -162,6 +187,8 @@ export async function handleMcp(
       );
     }
     if (params.name === "atlas.pipeline_health") {
+      const parsed = objectParams(args);
+      assertOnlyKeys(parsed, [], "health arguments");
       return rpcResult(body.id, toolResult(await store.getHealth(now, staleAfterSeconds)));
     }
     return rpcResult(body.id, toolResult({ error: "unknown tool" }, true));

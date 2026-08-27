@@ -105,7 +105,7 @@ This payload is not exact until the real D1 UUID, frozen commit SHA, and success
   "assets": {
     "directory": "ui/dist",
     "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
+    "not_found_handling": "none",
     "run_worker_first": [
       "/",
       "/api",
