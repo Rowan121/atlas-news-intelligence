@@ -138,10 +138,10 @@ Agent D performs the only final verification after candidate artifacts are froze
 
 | Lane | State | Current task | Dependency/blocker |
 |---|---|---|---|
-| A — Atlas/Data | BOOTSTRAP | Await agent launch | GitHub-backed worktree |
-| B — Globe/UI | BOOTSTRAP | Await agent launch | Data contract from A |
-| C — Surface/Runtime | BOOTSTRAP | Await agent launch | Existing-account Cloudflare/Runtype OAuth |
-| D — Proof Gate | BOOTSTRAP | Await agent launch | Frozen candidate build |
+| A — Atlas/Data | ACTIVE | Live source and truth-slice contract | GitHub artifact-transfer path |
+| B — Globe/UI | ACTIVE | Globe shell and analyst journey | Data contract from A |
+| C — Surface/Runtime | ACTIVE | Local Worker/Runtype definitions | Existing-account Cloudflare/Runtype OAuth at publish |
+| D — Proof Gate | ACTIVE/BLIND | Verification plan only | Frozen candidate build |
 
 ## HITL queue
 
@@ -156,6 +156,8 @@ No open product-choice questions. Pause only if a genuinely required credential 
 | 2026-08-26 | Analyst-grade public explorer, rolling 24h default, raw + normalized prominence | Rowan | Explicit approval |
 | 2026-08-26 | GitHub repository is public `rowan121/atlas-news-intelligence` | Rowan | Explicit approval |
 | 2026-08-26 | Telegram removed; do not spend more time obtaining API keys | Rowan | Explicit instruction |
+| 2026-08-26 | Four hosted agents launched: `atlas_data`, `globe_ui`, `surface_runtime`, `proof_gate` | Main | Cotal Graph reports all four working on approved Nebius variants |
+| 2026-08-26 | Fixed access matrix frozen at `docs/API_ACCESS.md` | Main | Bounded audit; no critical live-news key missing |
 
 ## External references used for the initial hypothesis
 
