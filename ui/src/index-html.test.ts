@@ -21,4 +21,15 @@ describe("no-JavaScript root navigation", () => {
     expect(indexHtml).not.toContain('href="/mcp"');
     expect(indexHtml).toContain("<code>POST /mcp</code>");
   });
+
+  it("ships substantive crawler-readable product truth and structured identity", () => {
+    expect(indexHtml).toContain("Atlas helps people inspect how the same current news story is covered");
+    expect(indexHtml).toContain('rel="canonical" href="https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/"');
+    expect(indexHtml).toContain('rel="alternate" type="text/markdown"');
+    expect(indexHtml).toContain('property="og:image"');
+    expect(indexHtml).toContain('type="application/ld+json"');
+    expect(indexHtml).toContain('"@type": ["SoftwareApplication", "Service"]');
+    expect(indexHtml).toContain("Audience and readership telemetry are outside the product");
+    expect(indexHtml.length > 5_000).toBe(true);
+  });
 });

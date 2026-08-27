@@ -119,6 +119,7 @@ describe("Atlas Worker routes", () => {
     );
     expect(html.status).toBe(200);
     expect(html.headers.get("content-type")).toContain("text/html");
+    expect(html.headers.get("link")).toContain('</index.md>; rel="alternate"; type="text/markdown"');
 
     const unacceptable = await worker.fetch!(
       new Request("https://atlas.example/", { headers: { Accept: "application/pdf" } }),
@@ -136,13 +137,35 @@ describe("Atlas Worker routes", () => {
     expect(robots.headers.get("strict-transport-security")).toBe(null);
     expect(robots.headers.get("content-type")).toContain("text/plain");
     expect(await robots.text()).toContain("Sitemap: https://atlas.example/sitemap.xml");
+    expect(await (await get("/robots.txt")).text()).toContain("Content-Signal: search=yes, ai-train=no, ai-input=yes");
 
     const sitemap = await get("/sitemap.xml");
     expect(sitemap.headers.get("content-type")).toContain("application/xml");
     expect(await sitemap.text()).toContain("<loc>https://atlas.example/docs</loc>");
+    expect(await (await get("/sitemap.xml")).text()).toContain("<lastmod>2026-08-27</lastmod>");
 
     const llms = await get("/llms.txt");
     expect(await llms.text()).toContain("Event location, publisher origin, and primary editorial market are distinct");
+
+    const ard = await get("/.well-known/ard.json");
+    expect(ard.headers.get("content-type")).toContain("application/ai-catalog+json");
+    expect(await ard.json()).toMatchObject({ specVersion: "1.0", entries: [{ displayName: "Atlas News Intelligence MCP" }] });
+
+    const skills = await get("/.well-known/agent-skills/index.json");
+    const skillsBody = await skills.json() as { $schema: string; skills: Array<{ name: string; type: string; url: string; digest: string }> };
+    expect(skillsBody).toMatchObject({
+      $schema: "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+      skills: [{ name: "query-current-stories", type: "skill-md" }],
+    });
+    const skill = await get(new URL(skillsBody.skills[0]!.url).pathname);
+    const skillBody = await skill.text();
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(skillBody));
+    const digestHex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    expect(skillsBody.skills[0]!.digest).toBe(`sha256:${digestHex}`);
+
+    const auth = await get("/auth.md");
+    expect(auth.headers.get("content-type")).toContain("text/markdown");
+    expect(await auth.text()).toContain("There is no public registration endpoint");
   });
 
   it("negotiates equivalent Markdown documentation", async () => {
@@ -155,6 +178,13 @@ describe("Atlas Worker routes", () => {
     expect(response.headers.get("content-type")).toContain("text/markdown");
     expect(response.headers.get("vary")).toContain("Accept");
     expect(await response.text()).toContain("## Public REST API");
+
+    for (const path of ["/index.md", "/docs.md", "/.well-known/api-catalog.md", "/openapi.json.md"]) {
+      const twin = await get(path);
+      expect(twin.status).toBe(200);
+      expect(twin.headers.get("content-type")).toContain("text/markdown");
+      expect((await twin.text()).startsWith("---\n")).toBe(true);
+    }
   });
 
   it("keeps the HTML documentation aligned with the same-event product contract", async () => {
@@ -205,29 +235,50 @@ describe("Atlas Worker routes", () => {
     );
     expect(head.status).toBe(200);
     expect(head.headers.get("link")).toContain('rel="api-catalog"');
+    expect(head.headers.get("link")).toContain('/.well-known/api-catalog.md>');
     expect(await head.text()).toBe("");
   });
 
   it("publishes only real public API paths in OpenAPI", async () => {
     const response = await get("/openapi.json");
     expect(response.headers.get("content-type")).toContain("application/vnd.oai.openapi+json");
-    expect(await response.json()).toMatchObject({
+    const specification = await response.json() as {
+      paths: Record<string, Record<string, { responses: Record<string, { content?: Record<string, { schema?: unknown }> }> }>>;
+    };
+    expect(specification).toMatchObject({
       openapi: "3.1.0",
       servers: [{ url: "https://atlas.example" }],
       paths: {
         "/health": {},
         "/api/v1/intelligence": {},
+        "/api/v1/stories": {},
+        "/api/v1/stories/{cluster_id}": {},
         "/api/stories": {},
         "/api/stories/{cluster_id}": {},
       },
+      components: { schemas: { FailureEnvelope: {}, StoryListEnvelope: {}, StoryDetailEnvelope: {}, IntelligenceSnapshot: {} } },
     });
+    for (const pathItem of Object.values(specification.paths)) {
+      for (const operation of Object.values(pathItem)) {
+        for (const describedResponse of Object.values(operation.responses)) {
+          expect(describedResponse.content?.["application/json"]?.schema === undefined).toBe(false);
+        }
+      }
+    }
   });
 
   it("publishes truthful MCP and A2A discovery cards", async () => {
     const mcp = await get("/.well-known/mcp/server-card.json");
     expect(await mcp.json()).toMatchObject({
+      name: "Atlas News Intelligence",
+      serverUrl: "https://atlas.example/mcp",
       protocolVersion: "2026-07-28",
       transport: { type: "streamable-http", endpoint: "https://atlas.example/mcp" },
+      tools: [
+        { name: "atlas.query_dominant_stories" },
+        { name: "atlas.explain_story_cluster" },
+        { name: "atlas.pipeline_health" },
+      ],
     });
     const a2a = await get("/.well-known/agent-card.json");
     expect(await a2a.json()).toMatchObject({
@@ -361,7 +412,8 @@ describe("Atlas Worker routes", () => {
       {} as ExecutionContext,
     );
     expect(nonAssetMiss.status).toBe(404);
-    expect(await nonAssetMiss.json()).toMatchObject({ ok: false, error: { kind: "not_found" } });
+    expect(nonAssetMiss.headers.get("content-type")).toContain("text/markdown");
+    expect(await nonAssetMiss.text()).toContain("[Documentation](https://atlas.example/docs)");
     expect(assetRequests).toEqual([
       { method: "GET", pathname: "/assets/index.js" },
       { method: "HEAD", pathname: "/assets/index.js" },
@@ -784,13 +836,73 @@ describe("Atlas Worker routes", () => {
     });
   });
 
-  it("returns a controlled 404 for an unknown Worker route", async () => {
+  it("returns recoverable Markdown for an ordinary missing page and typed JSON for an API miss", async () => {
     const response = await get("/definitely-not-a-real-route");
     expect(response.status).toBe(404);
-    expect(await response.json()).toMatchObject({
+    expect(response.headers.get("content-type")).toContain("text/markdown");
+    expect(await response.text()).toContain("[Agent index](https://atlas.example/llms.txt)");
+
+    const apiResponse = await get("/api/v1/definitely-not-a-real-route");
+    expect(apiResponse.status).toBe(404);
+    expect(await apiResponse.json()).toMatchObject({
       ok: false,
       error: { kind: "not_found", retryable: false },
     });
+    expect(await (await get("/api/v1/definitely-not-a-real-route")).json()).toMatchObject({
+      error: { details: { docs: "https://atlas.example/docs", llms: "https://atlas.example/llms.txt" } },
+    });
+  });
+
+  it("gives agent crawlers a recoverable Markdown 404", async () => {
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/no-such-document", { headers: { "User-Agent": "ora-agent/1.0" } }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toContain("text/markdown");
+    expect(await response.text()).toContain("[Sitemap](https://atlas.example/sitemap.xml)");
+
+    const root = await worker.fetch!(
+      new Request("https://atlas.example/", { headers: { Accept: "text/html", "User-Agent": "ChatGPT-User/1.0" } }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(root.status).toBe(200);
+    expect(root.headers.get("content-type")).toContain("text/markdown");
+    expect(await root.text()).toContain("# Atlas News Intelligence");
+  });
+
+  it("serves substantive trust anchors and a distinct machine entry view", async () => {
+    for (const path of ["/about", "/contact", "/privacy", "/security"]) {
+      const response = await worker.fetch!(
+        new Request(`https://atlas.example${path}`, { headers: { Accept: "text/html" } }),
+        env,
+        {} as ExecutionContext,
+      );
+      expect(response.status).toBe(200);
+      expect((await response.text()).length > 500).toBe(true);
+    }
+    const agent = await get("/?mode=agent");
+    expect(agent.headers.get("content-type")).toContain("text/markdown");
+    expect(await agent.text()).toContain("## Call sequence");
+  });
+
+  it("enforces and describes a best-effort production Worker-instance read limit", async () => {
+    const productionEnv = { ...env, ENVIRONMENT: "production" };
+    const makeRequest = () => worker.fetch!(
+      new Request("https://atlas.example/health", { headers: { "CF-Connecting-IP": "203.0.113.91" } }),
+      productionEnv,
+      {} as ExecutionContext,
+    );
+    const first = await makeRequest();
+    expect(first.headers.get("ratelimit-policy")).toContain("q=120;w=60");
+    expect(first.headers.get("ratelimit-remaining")).toBe("119");
+    for (let index = 1; index < 120; index += 1) await makeRequest();
+    const limited = await makeRequest();
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("retry-after")).toBe("60");
+    expect(await limited.json()).toMatchObject({ error: { kind: "rate_limited", retryable: true } });
   });
 
   it("returns healthy pipeline state", async () => {
@@ -922,7 +1034,7 @@ describe("MCP surface", () => {
       method: "tools/call",
       params: { name: "atlas.query_dominant_stories", arguments: { region: "us", surprise: true } },
     });
-    expect(invalid).toMatchObject({ result: { isError: true } });
+    expect(invalid).toMatchObject({ error: { code: -32602, message: "query arguments does not allow property surprise" } });
 
     await rpc({
       jsonrpc: "2.0",
@@ -948,12 +1060,7 @@ describe("MCP surface", () => {
       method: "tools/call",
       params: { name: "atlas.query_dominant_stories", arguments: { since: "1" } },
     });
-    expect(response).toMatchObject({
-      result: {
-        isError: true,
-        structuredContent: { error: "since must be an RFC 3339 date-time" },
-      },
-    });
+    expect(response).toMatchObject({ error: { code: -32602, message: "since must be an RFC 3339 date-time" } });
   });
 
   it("returns no body for JSON-RPC notifications", async () => {

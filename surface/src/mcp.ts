@@ -10,7 +10,7 @@ interface JsonRpcRequest {
   params?: unknown;
 }
 
-const tools = [
+export const mcpTools = [
   {
     name: "atlas.query_dominant_stories",
     title: "Query dominant stories",
@@ -25,6 +25,7 @@ const tools = [
         metric: { type: "string", enum: ["raw", "normalized"], default: "normalized" },
         limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
       },
+      required: [],
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
@@ -44,7 +45,7 @@ const tools = [
     name: "atlas.pipeline_health",
     title: "Inspect pipeline health",
     description: "Return source freshness, latest ingestion status, and explicit failure reasons.",
-    inputSchema: { type: "object", additionalProperties: false },
+    inputSchema: { type: "object", additionalProperties: false, properties: {}, required: [] },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
 ] as const;
@@ -167,7 +168,7 @@ export async function handleMcp(
     }
     if (body.method === "notifications/initialized") return null;
     if (body.method === "ping") return rpcResult(body.id, {});
-    if (body.method === "tools/list") return rpcResult(body.id, { tools });
+    if (body.method === "tools/list") return rpcResult(body.id, { tools: mcpTools });
     if (body.method !== "tools/call") return rpcError(body.id, -32601, "Method not found");
 
     const params = objectParams(body.params);
@@ -182,12 +183,14 @@ export async function handleMcp(
       const parsed = objectParams(args);
       assertOnlyKeys(parsed, ["cluster_id"], "explain arguments");
       if (typeof parsed.cluster_id !== "string" || parsed.cluster_id === "" || parsed.cluster_id.length > 200) {
-        return rpcResult(body.id, toolResult({ error: "cluster_id is required" }, true));
+        return rpcError(body.id, -32602, "cluster_id is required");
       }
       const story = await store.getStory(parsed.cluster_id);
       return rpcResult(
         body.id,
-        story === null ? toolResult({ error: "cluster not found" }, true) : toolResult(story),
+        story === null
+          ? toolResult({ error: { code: "cluster_not_found", message: "Story cluster not found" } }, true)
+          : toolResult(story),
       );
     }
     if (params.name === "atlas.pipeline_health") {
@@ -195,9 +198,12 @@ export async function handleMcp(
       assertOnlyKeys(parsed, [], "health arguments");
       return rpcResult(body.id, toolResult(await store.getHealth(now, staleAfterSeconds)));
     }
-    return rpcResult(body.id, toolResult({ error: "unknown tool" }, true));
+    return rpcError(body.id, -32602, `Unknown tool: ${params.name}`);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Tool execution failed";
-    return rpcResult(body.id, toolResult({ error: message }, true));
+    if (error instanceof HttpProblem && error.status >= 400 && error.status < 500) {
+      return rpcError(body.id, -32602, message);
+    }
+    return rpcResult(body.id, toolResult({ error: { code: "tool_execution_failed", message } }, true));
   }
 }

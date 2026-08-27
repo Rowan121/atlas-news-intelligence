@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Atlas News Intelligence</title>
+  <desc id="description">A white Atlas wordmark with a blue globe grid and red-to-green comparison line.</desc>
+  <rect width="1200" height="630" fill="#f8fafc"/>
+  <circle cx="250" cy="315" r="152" fill="#ffffff" stroke="#1769aa" stroke-width="12"/>
+  <path d="M98 315h304M250 163c-58 52-84 101-84 152s26 100 84 152M250 163c58 52 84 101 84 152s-26 100-84 152M126 228h248M126 402h248" fill="none" stroke="#5f8fb5" stroke-width="8" stroke-linecap="round"/>
+  <path d="M105 500h290" stroke="url(#tone)" stroke-width="18" stroke-linecap="round"/>
+  <defs><linearGradient id="tone"><stop stop-color="#b42318"/><stop offset=".5" stop-color="#98a2b3"/><stop offset="1" stop-color="#17803d"/></linearGradient></defs>
+  <text x="470" y="292" fill="#17202a" font-family="system-ui, sans-serif" font-size="112" font-weight="750">ATLAS</text>
+  <text x="474" y="375" fill="#475467" font-family="system-ui, sans-serif" font-size="38">Same story. Different editorial markets.</text>
+</svg>

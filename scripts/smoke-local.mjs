@@ -407,9 +407,9 @@ await check("malformed percent cluster route", "/api/stories/%E0%A4%A", undefine
 
 await check("missing route", "/definitely-missing", undefined, ({ response, text }) => {
   assert.equal(response.status, 404);
-  const body = JSON.parse(text);
-  assert.equal(body.ok, false);
-  assert.equal(body.error.kind, "not_found");
+  assert.match(response.headers.get("content-type") ?? "", /text\/markdown/i);
+  assert.match(text, /\[Documentation\]\(/);
+  assert.match(text, /\[Sitemap\]\(/);
 });
 
 if (new URL(base).protocol === "https:") {

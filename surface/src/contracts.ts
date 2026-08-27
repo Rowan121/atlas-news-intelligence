@@ -244,6 +244,7 @@ export type ErrorKind =
   | "not_found"
   | "method_not_allowed"
   | "conflict"
+  | "rate_limited"
   | "database_unavailable"
   | "internal_error";
 

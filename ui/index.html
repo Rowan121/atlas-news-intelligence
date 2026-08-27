@@ -5,26 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="Atlas compares how the same current story is covered across primary editorial markets without conflating event location or publisher origin." />
+    <link rel="canonical" href="https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/" />
+    <link rel="alternate" type="text/markdown" href="https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/index.md" />
+    <link rel="ai-catalog" type="application/ai-catalog+json" href="https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/.well-known/ard.json" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Atlas — Global news intelligence" />
+    <meta property="og:description" content="Compare how the same current story is covered across evidence-backed primary editorial markets." />
+    <meta property="og:url" content="https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/" />
+    <meta property="og:image" content="https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/atlas-social.svg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/#publisher",
+            "name": "Atlas News Intelligence",
+            "url": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/",
+            "sameAs": ["https://github.com/rowan121/atlas-news-intelligence"]
+          },
+          {
+            "@type": ["SoftwareApplication", "Service"],
+            "@id": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/#product",
+            "name": "Atlas News Intelligence",
+            "description": "A free, read-only global news intelligence service that compares how the same current story is covered across evidence-backed primary editorial markets.",
+            "url": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/",
+            "applicationCategory": "NewsApplication",
+            "operatingSystem": "Web",
+            "isAccessibleForFree": true,
+            "provider": { "@id": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/#publisher" },
+            "featureList": [
+              "Same-story clustering across independent outlets",
+              "Evidence-backed editorial-market coverage heat",
+              "Event-location, publisher-origin, and editorial-market separation",
+              "Read-only REST, MCP, and A2A access"
+            ]
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "What does regional coverage mean in Atlas?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Regional coverage means an outlet's evidence-backed primary editorial market. It is not audience exposure, event location, or publisher headquarters."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Does Atlas require authentication?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "No. Atlas exposes public, read-only browser, REST, MCP, and A2A interfaces and no public mutation or account operations."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
     <title>Atlas — Global news intelligence</title>
   </head>
   <body>
     <a class="skip-link" href="#top">Skip to main content</a>
-    <div id="root"></div>
-    <noscript>
-      <main id="top" style="max-width:760px;margin:48px auto;padding:0 24px;font:16px/1.6 system-ui;color:#17202a">
+    <div id="root">
+      <main id="top" style="max-width:840px;margin:48px auto;padding:0 24px;font:16px/1.65 system-ui;color:#17202a">
         <h1>Atlas — global news intelligence</h1>
-        <p>Atlas maps current events and compares how the same story is covered across outlets and evidenced primary editorial markets. Event location and publisher origin remain separate facts and never substitute for editorial-market evidence.</p>
+        <p>Atlas helps people inspect how the same current news story is covered across the world. It starts with real source articles, clusters reports only when the evidence supports a same-event relationship, and shows where participating outlets have their primary editorial markets. Regional coverage never means reader exposure. Audience and readership telemetry are outside the product. Event location, publisher origin, outlet language, and primary editorial market remain separate facts with visible confidence and evidence.</p>
+        <p>Select a place to inspect current stories connected to events there, then select one story to compare coverage by other outlets. The focused view shows the story's evidenced editorial-market coverage heat, source-normalized and raw prominence, article citations, and any supported differences in claims or framing. Atlas leaves tone, contradiction, omission, and geography unknown when the available evidence cannot support a conclusion; it never fills gaps with demo news or invented comparisons.</p>
+        <p>The public service is free and read-only. Its browser explorer and machine interfaces share the same current truth store. No sign-in, OAuth flow, API key, payment, account, mutation, or credential-management operation is exposed. Automated clients should preserve source URLs, uncertainty, timestamps, and the distinction between editorial market and event location when presenting Atlas results.</p>
         <nav aria-label="Atlas resources">
           <a href="/docs">Documentation</a>
           · <a href="/api/v1/intelligence?window=24h&amp;prominence=normalized">Current 24-hour intelligence (JSON)</a>
           · <a href="/integrations">Integration provenance</a>
           · <a href="/openapi.json">OpenAPI description</a>
           · <a href="/.well-known/agent-card.json">A2A discovery</a>
+          · <a href="/.well-known/ard.json">Agent resource catalog</a>
+          · <a href="/about">About</a>
+          · <a href="/privacy">Privacy</a>
+          · <a href="/security">Security</a>
         </nav>
-        <p>Agent endpoint: <code>POST /mcp</code>. See the documentation for request examples.</p>
-        <p>The interactive globe requires JavaScript; the linked public interfaces remain available without it.</p>
+        <p>Agent endpoint: <code>POST /mcp</code>. See the documentation and public <a href="/auth.md">access statement</a> before integration. The interactive globe loads when JavaScript is available; every linked public interface remains readable without it.</p>
       </main>
-    </noscript>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

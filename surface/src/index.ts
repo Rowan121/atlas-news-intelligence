@@ -2,16 +2,26 @@ import type { ProminenceMetric, StoryQuery } from "./contracts";
 import { handleA2aJsonRpc, handleA2aSend } from "./a2a";
 import {
   a2aAgentCard,
+  agentMode,
+  agentSkill,
+  agentSkillsIndex,
+  apiCatalogMarkdown,
   apiCatalog,
+  ardCatalog,
   attachDiscoveryHeaders,
+  authMarkdown,
   documentationRepresentation,
   docs,
   integrations,
   llms,
   mcpServerCard,
+  notFoundMarkdown,
+  openApiMarkdown,
   openApi,
   robots,
+  scopedLlms,
   sitemap,
+  trustDocument,
 } from "./discovery";
 import { failure, HttpProblem, json, parsePositiveInt, parseTimestamp, success } from "./http";
 import { buildIntelligenceSnapshot, type IntelligenceWindow } from "./intelligence";
@@ -32,6 +42,65 @@ export interface RuntimeDependencies {
   clock?: () => Date;
   requestId?: () => string;
   store?: TruthStore;
+}
+
+const PUBLIC_READ_LIMIT = 120;
+const PUBLIC_READ_WINDOW_MS = 60_000;
+const rateWindows = new Map<string, { count: number; resetAt: number }>();
+let nextRateWindowCleanupAt = 0;
+
+interface RateLimitResult {
+  headers: Record<string, string>;
+  limited: boolean;
+  retryAfterSeconds: number;
+}
+
+function rateLimitFor(request: Request, env: Env, now: Date, pathname: string): RateLimitResult {
+  const isMachineRead = pathname === "/health"
+    || pathname.startsWith("/api/")
+    || pathname === "/mcp"
+    || pathname === "/a2a"
+    || pathname.startsWith("/a2a/");
+  const source = request.headers.get("CF-Connecting-IP")?.trim();
+  if (env.ENVIRONMENT !== "production" || source === undefined || source === "" || !isMachineRead || request.method === "OPTIONS") {
+    return { headers: {}, limited: false, retryAfterSeconds: 0 };
+  }
+
+  const nowMs = now.getTime();
+  if (nowMs >= nextRateWindowCleanupAt || rateWindows.size > 5_000) {
+    for (const [key, value] of rateWindows) {
+      if (value.resetAt <= nowMs) rateWindows.delete(key);
+    }
+    nextRateWindowCleanupAt = nowMs + PUBLIC_READ_WINDOW_MS;
+  }
+  const existing = rateWindows.get(source);
+  const window = existing === undefined || existing.resetAt <= nowMs
+    ? { count: 0, resetAt: nowMs + PUBLIC_READ_WINDOW_MS }
+    : existing;
+  window.count += 1;
+  rateWindows.set(source, window);
+  const remaining = Math.max(0, PUBLIC_READ_LIMIT - window.count);
+  const retryAfterSeconds = Math.max(1, Math.ceil((window.resetAt - nowMs) / 1_000));
+  const headers = {
+    RateLimit: `"atlas-public-read";r=${remaining};t=${retryAfterSeconds}`,
+    "RateLimit-Policy": `"atlas-public-read";q=${PUBLIC_READ_LIMIT};w=${PUBLIC_READ_WINDOW_MS / 1_000}`,
+    "RateLimit-Limit": String(PUBLIC_READ_LIMIT),
+    "RateLimit-Remaining": String(remaining),
+    "RateLimit-Reset": String(retryAfterSeconds),
+  };
+  return { headers, limited: window.count > PUBLIC_READ_LIMIT, retryAfterSeconds };
+}
+
+function isAgentCrawler(request: Request): boolean {
+  return /(?:GPTBot|ChatGPT-User|ClaudeBot|PerplexityBot|Google-Extended|Applebot-Extended|ora-agent|DeepSeekBot)/i.test(
+    request.headers.get("User-Agent") ?? "",
+  );
+}
+
+function withAccept(request: Request, accept: string): Request {
+  const headers = new Headers(request.headers);
+  headers.set("Accept", accept);
+  return new Request(request, { headers });
 }
 
 function parseStaleAfter(value: string | undefined): number {
@@ -133,14 +202,22 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
       const requestId = dependencies.requestId?.() ?? crypto.randomUUID();
       const staleAfterSeconds = parseStaleAfter(env.STALE_AFTER_SECONDS);
       const store = dependencies.store ?? new D1TruthStore(env.DB);
+      const rateLimit = rateLimitFor(request, env, now, url.pathname);
 
       const corsHeaders = {
         ...corsValues(request, env.CORS_ORIGIN),
         ...securityValues(request, env.ENVIRONMENT),
+        ...rateLimit.headers,
       };
 
       try {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
+        if (rateLimit.limited) {
+          throw new HttpProblem(429, "rate_limited", "Public read limit exceeded", true, {
+            scope: "best_effort_worker_instance",
+            retry_after_seconds: rateLimit.retryAfterSeconds,
+          });
+        }
 
         if (url.pathname === "/robots.txt") {
           readMethod(request);
@@ -163,16 +240,44 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           return response;
         }
 
-        if (url.pathname === "/docs" || url.pathname === "/docs/index.md" || url.pathname === "/index.md" || url.pathname === "/api") {
+        if (url.pathname === "/docs/llms.txt" || url.pathname === "/api/llms.txt") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, scopedLlms(url.origin, url.pathname.startsWith("/api/") ? "api" : "docs"));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/auth.md") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, authMarkdown(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/docs" || url.pathname === "/docs.md" || url.pathname === "/docs/index.md" || url.pathname === "/index.md" || url.pathname === "/api") {
           readMethod(request);
           const response = withoutBodyForHead(request, docs(request));
           corsHeadersFor(response.headers, corsHeaders);
           return response;
         }
 
-        if (url.pathname === "/integrations") {
+        if (url.pathname === "/integrations" || url.pathname === "/integrations.md") {
           readMethod(request);
           const response = withoutBodyForHead(request, integrations(request));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        const trustPath = url.pathname.endsWith(".md") ? url.pathname.slice(0, -3) : url.pathname;
+        const trustKind = trustPath === "/about" ? "about"
+          : trustPath === "/contact" ? "contact"
+            : trustPath === "/privacy" ? "privacy"
+              : trustPath === "/security" ? "security"
+                : trustPath === "/api/versioning" ? "versioning"
+                  : null;
+        if (trustKind !== null) {
+          readMethod(request);
+          const response = withoutBodyForHead(request, trustDocument(request, trustKind));
           corsHeadersFor(response.headers, corsHeaders);
           return response;
         }
@@ -184,9 +289,47 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           return response;
         }
 
+        if (url.pathname === "/.well-known/api-catalog.md") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, apiCatalogMarkdown(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/.well-known/ard.json" || url.pathname === "/.well-known/ai-catalog.json") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, ardCatalog(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/.well-known/agent-skills/index.json" || url.pathname === "/.well-known/skills/index.json") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, await agentSkillsIndex(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        const skillMatch = url.pathname.match(/^\/\.well-known\/(?:agent-skills|skills)\/([a-z0-9-]+)\/SKILL\.md$/i);
+        if (skillMatch !== null) {
+          readMethod(request);
+          const response = agentSkill(skillMatch[1] ?? "");
+          if (response === null) throw new HttpProblem(404, "not_found", "Agent skill not found");
+          const output = withoutBodyForHead(request, response);
+          corsHeadersFor(output.headers, corsHeaders);
+          return output;
+        }
+
         if (url.pathname === "/openapi.json") {
           readMethod(request);
           const response = withoutBodyForHead(request, openApi(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/openapi.json.md") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, openApiMarkdown(url.origin));
           corsHeadersFor(response.headers, corsHeaders);
           return response;
         }
@@ -249,6 +392,16 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
 
         if (url.pathname === "/") {
           readMethod(request);
+          if (url.searchParams.get("mode") === "agent") {
+            const response = withoutBodyForHead(request, agentMode(url.origin));
+            corsHeadersFor(response.headers, corsHeaders);
+            return response;
+          }
+          if (isAgentCrawler(request)) {
+            const response = withoutBodyForHead(request, docs(withAccept(request, "text/markdown")));
+            corsHeadersFor(response.headers, corsHeaders);
+            return response;
+          }
           if (documentationRepresentation(request) !== "html") {
             const response = withoutBodyForHead(request, docs(request));
             corsHeadersFor(response.headers, corsHeaders);
@@ -260,7 +413,7 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
               status: asset.status,
               statusText: asset.statusText,
               headers: asset.headers,
-            }));
+            }), "/index.md");
             corsHeadersFor(response.headers, corsHeaders);
             return response;
           }
@@ -271,8 +424,8 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
               data_policy: "real records only; uncertainty and source evidence are preserved",
               links: {
                 health: "/health",
-                stories: "/api/stories",
-                story: "/api/stories/{cluster_id}",
+                stories: "/api/v1/stories",
+                story: "/api/v1/stories/{cluster_id}",
                 intelligence: "/api/v1/intelligence?window=24h&prominence=normalized",
                 mcp: "/mcp",
                 a2a: "/.well-known/agent-card.json",
@@ -302,7 +455,7 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           return output;
         }
 
-        if (url.pathname === "/api/stories") {
+        if (url.pathname === "/api/stories" || url.pathname === "/api/v1/stories") {
           readMethod(request);
           const query = parseStoryQuery(url);
           const stories = await store.listStories(query, now, staleAfterSeconds);
@@ -345,7 +498,7 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           return output;
         }
 
-        const match = url.pathname.match(/^\/api\/stories\/([^/]+)$/);
+        const match = url.pathname.match(/^\/api\/(?:v1\/)?stories\/([^/]+)$/);
         if (match !== null) {
           readMethod(request);
           const rawId = match[1];
@@ -378,12 +531,22 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           return response;
         }
 
-        throw new HttpProblem(404, "not_found", "Route not found");
+        if ((request.method === "GET" || request.method === "HEAD") && !url.pathname.startsWith("/api/")) {
+          const response = withoutBodyForHead(request, notFoundMarkdown(url.origin, url.pathname));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+        throw new HttpProblem(404, "not_found", "Route not found", false, {
+          docs: `${url.origin}/docs`,
+          llms: `${url.origin}/llms.txt`,
+          sitemap: `${url.origin}/sitemap.xml`,
+        });
       } catch (error) {
         const problem = error instanceof HttpProblem
           ? error
           : new HttpProblem(503, "database_unavailable", "News intelligence storage is temporarily unavailable", true);
         const response = failure(problem, requestId, now);
+        if (problem.status === 429) response.headers.set("Retry-After", String(rateLimit.retryAfterSeconds));
         corsHeadersFor(response.headers, corsHeaders);
         return response;
       }
