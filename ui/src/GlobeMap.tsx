@@ -136,26 +136,26 @@ export function GlobeMap({
     markersRef.current = [];
 
     clusters.forEach((cluster) => {
-      const location = cluster.eventLocations.find((candidate) => candidate.isPrimary) ?? cluster.eventLocations[0];
-      if (!location) return;
       const value = prominenceMode === "raw" ? cluster.rawProminence : cluster.normalizedProminence;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `map-story-marker${cluster.id === selectedClusterId ? " is-selected" : ""}${viewMode === "story" ? " is-event-anchor" : ""}`;
-      button.style.setProperty("--marker-scale", String(Math.max(0.72, Math.min(1.8, 0.72 + value))));
-      button.setAttribute(
-        "aria-label",
-        `${cluster.canonicalTitle}, event location ${location.label}, ${cluster.publisherCount} publishers`,
-      );
-      button.title = `${cluster.canonicalTitle} — event location: ${location.label}`;
-      button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        onSelectClusterRef.current(cluster.id);
+      cluster.eventLocations.forEach((location) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `map-story-marker${cluster.id === selectedClusterId ? " is-selected" : ""}${viewMode === "story" ? " is-event-anchor" : ""}`;
+        button.style.setProperty("--marker-scale", String(Math.max(0.72, Math.min(1.8, 0.72 + value))));
+        button.setAttribute(
+          "aria-label",
+          `${cluster.canonicalTitle}, event location ${location.label}, ${cluster.publisherCount} publishers`,
+        );
+        button.title = `${cluster.canonicalTitle} — event location: ${location.label}`;
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          onSelectClusterRef.current(cluster.id);
+        });
+        const marker = new Marker({ element: button, anchor: "center" })
+          .setLngLat([location.longitude, location.latitude])
+          .addTo(map);
+        markersRef.current.push(marker);
       });
-      const marker = new Marker({ element: button, anchor: "center" })
-        .setLngLat([location.longitude, location.latitude])
-        .addTo(map);
-      markersRef.current.push(marker);
     });
   }, [clusters, mapReady, prominenceMode, selectedClusterId, viewMode]);
 
@@ -229,13 +229,13 @@ export function GlobeMap({
         className="globe-map"
         aria-label={
           viewMode === "story"
-            ? "Interactive globe for one story. Heat shows only evidence-backed coverage markets; the outlined marker shows the event location."
+            ? "Interactive globe for one story. Heat shows only evidence-backed coverage markets; outlined markers show cited event locations."
             : "Interactive globe showing verified event locations. Use the story feed for a fully keyboard-accessible alternative."
         }
       />
       <div className={`map-key is-${viewMode}`} aria-hidden="true">
         {viewMode === "story" ? (
-          <><span className="map-key-heat" /> Coverage-market intensity <span className="map-key-line" /><span className="map-key-anchor" /> Event location</>
+          <><span className="map-key-heat" /> Coverage-market intensity <span className="map-key-line" /><span className="map-key-anchor" /> Event locations</>
         ) : (
           <><span className="map-key-dot" /> Event location <span className="map-key-line" /> Relative prominence</>
         )}

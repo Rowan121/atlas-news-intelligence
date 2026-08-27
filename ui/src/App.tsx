@@ -134,13 +134,17 @@ function RegionRail({
 function StoryCard({
   cluster,
   mode,
+  activeRegionId,
   onSelect,
 }: {
   cluster: StoryCluster;
   mode: ProminenceMode;
+  activeRegionId: string | null;
   onSelect: () => void;
 }) {
-  const location = cluster.eventLocations.find((candidate) => candidate.isPrimary) ?? cluster.eventLocations[0];
+  const location = cluster.eventLocations.find((candidate) => candidate.regionId === activeRegionId)
+    ?? cluster.eventLocations.find((candidate) => candidate.isPrimary)
+    ?? cluster.eventLocations[0];
   return (
     <button type="button" className="story-card" onClick={onSelect}>
       <span className="story-rank" aria-label={`Prominence ${formatProminence(cluster, mode)}`}>
@@ -236,18 +240,26 @@ function SourceVariantCard({ source }: { source: SourceCoverage }) {
 
 function FocusedStory({ cluster }: { cluster: StoryCluster }) {
   const location = cluster.eventLocations.find((candidate) => candidate.isPrimary) ?? cluster.eventLocations[0];
+  const additionalLocationCount = Math.max(0, cluster.eventLocations.length - 1);
   return (
     <article className="focused-story-card" aria-label="Selected story">
       <span className="mode-chip">Selected same-story cluster</span>
       <h1>{cluster.canonicalTitle}</h1>
       {cluster.summary && <p>{cluster.summary}</p>}
       <div className="focused-story-facts">
-        <span><LocateFixed size={15} /><small>Event happened in</small><strong>{location?.label ?? "Unresolved"}</strong></span>
+        <span>
+          <LocateFixed size={15} />
+          <small>Event geography</small>
+          <strong>
+            {location?.label ?? "Unresolved"}
+            {additionalLocationCount > 0 ? ` + ${additionalLocationCount} cited ${additionalLocationCount === 1 ? "location" : "locations"}` : ""}
+          </strong>
+        </span>
         <span><Signal size={15} /><small>Compared coverage</small><strong>{cluster.publisherCount} outlets · {cluster.articleCount} articles</strong></span>
         <span><CheckCircle2 size={15} /><small>Same-story confidence</small><strong>{Math.round(cluster.membershipConfidence * 100)}%</strong></span>
       </div>
       <p className="truth-caption">
-        The event location anchors the story. Heat appears only from separately evidenced coverage markets; it never represents reader location by assumption.
+        Verified event locations: {cluster.eventLocations.map((candidate) => candidate.label).join("; ")}. Heat appears only from separately evidenced coverage markets; it never represents reader location by assumption.
       </p>
       {(cluster.signals.conflict.status === "detected" || cluster.signals.omission.status === "detected") && (
         <div className="focused-signal-summary">
@@ -275,7 +287,10 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
   const clusters = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return (snapshot?.clusters ?? []).filter((cluster) => {
-      if (selectedRegionId && cluster.primaryRegionId !== selectedRegionId) return false;
+      if (
+        selectedRegionId &&
+        !cluster.eventLocations.some((location) => location.regionId === selectedRegionId)
+      ) return false;
       if (!normalizedQuery) return true;
       return [
         cluster.canonicalTitle,
@@ -504,7 +519,13 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             {focusedCluster
               ? focusedCluster.sources.map((source) => <SourceVariantCard key={source.id} source={source} />)
               : clusters.map((cluster) => (
-                  <StoryCard key={cluster.id} cluster={cluster} mode={prominence} onSelect={() => enterStoryMode(cluster.id)} />
+                  <StoryCard
+                    key={cluster.id}
+                    cluster={cluster}
+                    mode={prominence}
+                    activeRegionId={selectedRegionId}
+                    onSelect={() => enterStoryMode(cluster.id)}
+                  />
                 ))}
             {snapshot && !focusedCluster && clusters.length === 0 && (
               <div className="feed-empty">

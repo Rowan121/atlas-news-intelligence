@@ -61,6 +61,17 @@ const comparisonSnapshot: IntelligenceSnapshot = {
       sourceCount: 2,
       topClusterIds: ["story-1"],
     },
+    {
+      id: "IN",
+      label: "India",
+      latitude: 20.6,
+      longitude: 78.9,
+      rawProminence: 1,
+      normalizedProminence: 0.4,
+      storyCount: 1,
+      sourceCount: 1,
+      topClusterIds: ["story-1"],
+    },
   ],
   clusters: [
     {
@@ -79,6 +90,18 @@ const comparisonSnapshot: IntelligenceSnapshot = {
           confidence: 0.97,
           evidenceCount: 2,
           isPrimary: true,
+        },
+        {
+          id: "location-2",
+          label: "Assam, India",
+          countryCode: "IN",
+          regionId: "IN",
+          locationType: "admin1",
+          latitude: 26.2,
+          longitude: 92.9,
+          confidence: 0.91,
+          evidenceCount: 1,
+          isPrimary: false,
         },
       ],
       primaryRegionId: "AU",
@@ -263,6 +286,19 @@ describe("App live-data states", () => {
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(await screen.findByRole("heading", { name: "What happened where" })).toBeInTheDocument();
     expect(screen.queryByText("Tone not assessed")).not.toBeInTheDocument();
+  });
+
+  it("keeps one story discoverable from every cited event location", async () => {
+    const client: NewsIntelligenceClient = {
+      getSnapshot: vi.fn().mockResolvedValue(comparisonSnapshot),
+    };
+    render(<App client={client} />);
+
+    await screen.findByRole("button", { name: /Major flood response begins in Queensland/i });
+    fireEvent.click(screen.getByRole("button", { name: /India\s*40%/ }));
+
+    expect(screen.getAllByRole("button", { name: /Major flood response begins in Queensland/i })).toHaveLength(1);
+    expect(screen.getByText(/Event: Assam, India/)).toBeInTheDocument();
   });
 
   it("renders evidenced tone and coverage heat only inside comparison mode", async () => {
