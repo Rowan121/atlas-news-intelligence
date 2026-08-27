@@ -25,7 +25,7 @@ interface ClusterRow {
   first_observed_at: string;
   last_observed_at: string;
   raw_article_count: number;
-  unique_publisher_count: number;
+  unique_outlet_count: number;
   normalized_prominence: number;
   cluster_confidence: number;
   membership_explanation: string;
@@ -81,7 +81,7 @@ interface HealthRow {
 
 const CLUSTER_COLUMNS = `
   cluster_id, canonical_title, summary, primary_region_code, first_observed_at,
-  last_observed_at, raw_article_count, unique_publisher_count,
+  last_observed_at, raw_article_count, unique_publisher_count AS unique_outlet_count,
   normalized_prominence, cluster_confidence, membership_explanation`;
 
 function mapLocation(row: LocationRow): EventLocation {
@@ -342,7 +342,8 @@ export class D1TruthStore implements TruthStore {
          FROM story_claims WHERE cluster_id = ? ORDER BY confidence DESC`,
       ).bind(clusterId),
       this.db.prepare(
-        `SELECT region_code, window_start, window_end, raw_article_count, unique_publisher_count,
+        `SELECT region_code, window_start, window_end, raw_article_count,
+                unique_publisher_count AS unique_outlet_count,
                 regional_source_volume, regional_outlet_count, normalized_score, article_share,
                 outlet_share, source_normalized_share, basis, formula_version, computed_at
          FROM regional_prominence WHERE cluster_id = ? ORDER BY normalized_score DESC`,

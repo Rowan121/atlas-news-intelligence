@@ -10,6 +10,12 @@ const env = {
   STALE_AFTER_SECONDS: "1800",
 } as Env;
 
+function expectPublicOutletCountContract(value: unknown): void {
+  const serialized = JSON.stringify(value);
+  expect(serialized.includes('"unique_outlet_count":2')).toBe(true);
+  expect(serialized.includes("unique_publisher_count")).toBe(false);
+}
+
 describe("Atlas Worker routes", () => {
   let store: MemoryTruthStore;
   let worker: ReturnType<typeof createWorker>;
@@ -391,6 +397,7 @@ describe("Atlas Worker routes", () => {
     const body = await response.json() as { data: { count: number; stories: typeof store.stories } };
     expect(body.data.count).toBe(1);
     expect(body.data.stories[0]?.cluster_id).toBe(story.cluster_id);
+    expectPublicOutletCountContract(body);
   });
 
   it("serves the Lane A/UI intelligence snapshot contract without an envelope", async () => {
@@ -747,7 +754,16 @@ describe("Atlas Worker routes", () => {
   it("returns story detail", async () => {
     const response = await get(`/api/stories/${story.cluster_id}`);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true, data: { cluster_id: story.cluster_id } });
+    const body = await response.json();
+    expect(body).toMatchObject({
+      ok: true,
+      data: {
+        cluster_id: story.cluster_id,
+        unique_outlet_count: 2,
+        regional_prominence: [{ unique_outlet_count: 2 }],
+      },
+    });
+    expectPublicOutletCountContract(body);
   });
 
   it("returns a typed missing-cluster failure", async () => {
@@ -887,8 +903,16 @@ describe("MCP surface", () => {
       params: { name: "atlas.explain_story_cluster", arguments: { cluster_id: story.cluster_id } },
     });
     expect(response).toMatchObject({
-      result: { isError: false, structuredContent: { cluster_id: story.cluster_id } },
+      result: {
+        isError: false,
+        structuredContent: {
+          cluster_id: story.cluster_id,
+          unique_outlet_count: 2,
+          regional_prominence: [{ unique_outlet_count: 2 }],
+        },
+      },
     });
+    expectPublicOutletCountContract(response);
   });
 
   it("enforces declared MCP schemas and normalizes query timestamps", async () => {
@@ -1110,10 +1134,16 @@ describe("A2A surface", () => {
     }));
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
+    const body = await response.json();
+    expect(body).toMatchObject({
       jsonrpc: "2.0",
-      result: { message: { parts: [{ data: { operation: "query_stories", count: 1 } }] } },
+      result: {
+        message: {
+          parts: [{ data: { operation: "query_stories", count: 1, stories: [{ unique_outlet_count: 2 }] } }],
+        },
+      },
     });
+    expectPublicOutletCountContract(body);
     expect(store.queries).toEqual([{ region: "TEST-EU", metric: "raw", limit: 7 }]);
   });
 
@@ -1214,18 +1244,41 @@ describe("A2A surface", () => {
     const response = await send({ operation: "query_stories", region: "test-eu", metric: "normalized", limit: 7 });
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("application/a2a+json");
-    expect(await response.json()).toMatchObject({
+    const body = await response.json();
+    expect(body).toMatchObject({
       message: {
         messageId: "request-a2a:response",
         role: "ROLE_AGENT",
-        parts: [{ data: { operation: "query_stories", count: 1, query: { region: "TEST-EU", limit: 7 } } }],
+        parts: [{
+          data: {
+            operation: "query_stories",
+            count: 1,
+            query: { region: "TEST-EU", limit: 7 },
+            stories: [{ unique_outlet_count: 2 }],
+          },
+        }],
       },
     });
+    expectPublicOutletCountContract(body);
   });
 
   it("explains a cluster and reports pipeline health", async () => {
     const detail = await send({ operation: "explain_story", cluster_id: story.cluster_id });
-    expect(await detail.json()).toMatchObject({ message: { parts: [{ data: { story: { cluster_id: story.cluster_id } } }] } });
+    const detailBody = await detail.json();
+    expect(detailBody).toMatchObject({
+      message: {
+        parts: [{
+          data: {
+            story: {
+              cluster_id: story.cluster_id,
+              unique_outlet_count: 2,
+              regional_prominence: [{ unique_outlet_count: 2 }],
+            },
+          },
+        }],
+      },
+    });
+    expectPublicOutletCountContract(detailBody);
     const health = await send({ operation: "pipeline_health" });
     expect(await health.json()).toMatchObject({ message: { parts: [{ data: { health: { status: "ok" } } }] } });
   });

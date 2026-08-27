@@ -115,7 +115,7 @@ export interface RegionalProminence {
   window_start: IsoTimestamp;
   window_end: IsoTimestamp;
   raw_article_count: number;
-  unique_publisher_count: number;
+  unique_outlet_count: number;
   regional_source_volume: number;
   regional_outlet_count: number;
   normalized_score: number;
@@ -134,7 +134,7 @@ export interface StorySummary {
   first_observed_at: IsoTimestamp;
   last_observed_at: IsoTimestamp;
   raw_article_count: number;
-  unique_publisher_count: number;
+  unique_outlet_count: number;
   normalized_prominence: number;
   cluster_confidence: number;
   membership_explanation: string;

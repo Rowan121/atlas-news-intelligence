@@ -6,7 +6,7 @@ import { D1TruthStore, parseSameStoryContext } from "../storage/d1";
 import { expect } from "./expect";
 
 function sqliteD1(database: DatabaseSync): D1Database {
-  return {
+  const d1 = {
     prepare(sql: string) {
       let bindings: unknown[] = [];
       const statement = {
@@ -18,10 +18,17 @@ function sqliteD1(database: DatabaseSync): D1Database {
           const results = database.prepare(sql).all(...bindings as never[]) as T[];
           return { success: true, results, meta: {} };
         },
+        async first<T>() {
+          return (database.prepare(sql).get(...bindings as never[]) ?? null) as T | null;
+        },
       };
       return statement;
     },
-  } as unknown as D1Database;
+    async batch(statements: Array<{ all(): Promise<unknown> }>) {
+      return Promise.all(statements.map((statement) => statement.all()));
+    },
+  };
+  return d1 as unknown as D1Database;
 }
 
 describe("D1 truth-store region filtering", () => {
@@ -56,7 +63,9 @@ describe("D1 truth-store region filtering", () => {
         'article-nepal', 'run-nepal', 'nepal-flood', 'https://example.invalid/nepal',
         'https://example.invalid/nepal', 'Nepal flood', 'Fixture Wire',
         'example.invalid', 'en', '2026-08-27T06:00:00.000Z',
-        '2026-08-27T06:01:00.000Z', 0.9, 'fixture', '{}', 'fixture',
+        '2026-08-27T06:01:00.000Z', 0.9, 'fixture',
+        '{"publisherOrigin":{"status":"unknown","value":null,"confidence":null,"method":"unavailable","evidence":[],"reason":"No origin evidence."},"editorialMarket":{"status":"unknown","value":null,"confidence":null,"method":"unavailable","evidence":[],"reason":"No editorial-market evidence."},"framing":{"status":"unknown","value":null,"confidence":null,"method":"unavailable","evidence":[],"reason":"No framing evidence."},"tone":{"status":"unknown","value":null,"confidence":null,"method":"unavailable","evidence":[],"reason":"No tone evidence."}}',
+        'fixture',
         '2026-08-27T06:01:00.000Z'
       );
       INSERT INTO story_locations (
@@ -80,15 +89,35 @@ describe("D1 truth-store region filtering", () => {
          'Cited China event location', 'provider_event_geotag', '2026-08-27T06:01:00.000Z'),
         ('evidence-us', 'run-nepal', 'origin-us', 'article-nepal', 'https://example.invalid/nepal',
          'Publisher registry origin', 'manual_confirmed', '2026-08-27T06:01:00.000Z');
+      INSERT INTO regional_prominence (
+        ingestion_run_id, cluster_id, region_code, window_start, window_end,
+        raw_article_count, unique_publisher_count, regional_source_volume,
+        regional_outlet_count, normalized_score, article_share, outlet_share,
+        source_normalized_share, basis, formula_version, computed_at
+      ) VALUES (
+        'run-nepal', 'nepal-flood', 'IN', '2026-08-27T06:00:00.000Z',
+        '2026-08-27T06:15:00.000Z', 2, 2, 5, 3, 0.8, 0.4, 0.6666666667,
+        0.4, 'event_location', 'atlas-regional-prominence-v1', '2026-08-27T06:15:00.000Z'
+      );
     `);
 
     const store = new D1TruthStore(sqliteD1(database));
     const query = { metric: "normalized" as const, limit: 10 };
-    expect((await store.listStories({ ...query, region: "IN" }, new Date(), 1800)).map((item) => item.cluster_id))
-      .toEqual(["nepal-flood"]);
+    const india = await store.listStories({ ...query, region: "IN" }, new Date(), 1800);
+    expect(india.map((item) => item.cluster_id)).toEqual(["nepal-flood"]);
+    expect(india[0]).toMatchObject({ unique_outlet_count: 2 });
+    expect((india[0] as unknown as Record<string, unknown>).unique_publisher_count).toBe(undefined);
     expect((await store.listStories({ ...query, region: "CH" }, new Date(), 1800)).map((item) => item.cluster_id))
       .toEqual(["nepal-flood"]);
     expect(await store.listStories({ ...query, region: "US" }, new Date(), 1800)).toEqual([]);
+
+    const detail = await store.getStory("nepal-flood");
+    expect(detail).toMatchObject({
+      unique_outlet_count: 2,
+      regional_prominence: [{ unique_outlet_count: 2 }],
+    });
+    expect((detail as unknown as Record<string, unknown>).unique_publisher_count).toBe(undefined);
+    expect((detail?.regional_prominence[0] as unknown as Record<string, unknown>).unique_publisher_count).toBe(undefined);
     database.close();
   });
 });

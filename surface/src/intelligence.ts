@@ -117,7 +117,7 @@ interface RegionAccumulator {
   rawProminence: number;
   normalizedProminence: number;
   clusterScores: Array<{ id: string; raw: number; normalized: number }>;
-  publisherIds: Set<string>;
+  outletIds: Set<string>;
 }
 
 export interface IntelligenceSnapshot {
@@ -443,7 +443,7 @@ function mapCluster(story: StoryDetail): UiCluster | null {
           regionLabel: entry.region_code,
           raw: {
             articleCount: entry.raw_article_count,
-            outletCount: entry.unique_publisher_count,
+            outletCount: entry.unique_outlet_count,
           },
           normalized: {
             score: Math.max(0, Math.min(1, entry.normalized_score)),
@@ -537,7 +537,7 @@ export async function buildIntelligenceSnapshot(
         rawProminence: 0,
         normalizedProminence: 0,
         clusterScores: [],
-        publisherIds: new Set<string>(),
+        outletIds: new Set<string>(),
       };
       if (location.confidence > existing.locationConfidence) {
         existing.label = location.label;
@@ -548,7 +548,7 @@ export async function buildIntelligenceSnapshot(
       existing.rawProminence += cluster.rawProminence;
       existing.normalizedProminence = Math.max(existing.normalizedProminence, cluster.normalizedProminence);
       existing.clusterScores.push({ id: cluster.id, raw: cluster.rawProminence, normalized: cluster.normalizedProminence });
-      for (const article of story.articles) existing.publisherIds.add(article.publisher_domain);
+      for (const article of story.articles) existing.outletIds.add(article.publisher_domain);
       regions.set(location.regionId, existing);
     }
   }
@@ -561,7 +561,7 @@ export async function buildIntelligenceSnapshot(
     rawProminence: region.rawProminence,
     normalizedProminence: region.normalizedProminence,
     storyCount: new Set(region.clusterScores.map((entry) => entry.id)).size,
-    sourceCount: region.publisherIds.size,
+    sourceCount: region.outletIds.size,
     topClusterIds: [...region.clusterScores]
       .sort((left, right) => metric === "raw" ? right.raw - left.raw : right.normalized - left.normalized)
       .map((entry) => entry.id),
