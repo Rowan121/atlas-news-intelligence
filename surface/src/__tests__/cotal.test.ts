@@ -43,4 +43,38 @@ describe("Cotal provenance adapter", () => {
     );
     expect(run.cotal_receipt?.agent).toBe("surface_runtime");
   });
+
+  it("preserves consistent before/after sponsor usage without credentials", () => {
+    const parsed = parseCotalReceipt({
+      ...receipt,
+      integrations: [{
+        provider: "tavily",
+        capability: "news_enrichment",
+        status: "succeeded",
+        observed_at: "2026-08-27T08:00:00.000Z",
+        external_request_id: "sanitized-request-id",
+        usage: { unit: "credits", before: 1000, after: 998, delta: -2 },
+        evidence_urls: ["https://docs.tavily.com/"],
+      }],
+    });
+    expect(parsed.integrations?.[0]).toMatchObject({
+      provider: "tavily",
+      usage: { before: 1000, after: 998, delta: -2 },
+    });
+  });
+
+  it("rejects inconsistent sponsor usage deltas", () => {
+    expect(() => parseCotalReceipt({
+      ...receipt,
+      integrations: [{
+        provider: "mitosis",
+        capability: "workflow_provenance",
+        status: "succeeded",
+        observed_at: "2026-08-27T08:00:00.000Z",
+        external_request_id: null,
+        usage: { unit: "credits", before: 500, after: 499, delta: 0 },
+        evidence_urls: [],
+      }],
+    })).toThrow(HttpProblem);
+  });
 });

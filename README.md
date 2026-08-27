@@ -15,7 +15,7 @@ The live GDELT loader produces a validated JSON snapshot, and the deterministic 
 | Data and truth pipeline | `src/` | Fetch GDELT/Tavily inputs, preserve evidence, geolocate events, cluster stories, and calculate raw/normalized prominence. |
 | Live GDELT one-shot loader | `src/ingestion/gdelt-stream/`, `scripts/load-gdelt-snapshot.ts` | Download and verify one coherent Events/Mentions/GKG batch, join it, enforce truth gates, and write one bounded JSON artifact. |
 | Public explorer | `ui/` | React, TypeScript, Vite, and MapLibre globe; requests the typed intelligence endpoint and renders explicit loading, stale, empty, and error states. |
-| API and agent surface | `surface/` | Cloudflare Worker with REST, MCP, health, D1 access, Cotal provenance, schema, and the draft Runtype product definition. |
+| API and agent surface | `surface/` | Cloudflare Worker with REST, MCP, read-only A2A, health, D1 access, Cotal/sponsor receipts, machine discovery, schema, and the draft Runtype product definition. |
 | Release shell | root `package.json`, `.github/workflows/ci.yml` | Reproducible install/check/test/build gate across all three packages. |
 
 The deployment shape is one Cloudflare Worker plus one static-asset bundle. Cloudflare serves `ui/dist` and performs the SPA fallback; requests under `/api/*`, plus `/health` and `/mcp`, run the Worker first. This keeps browser routes and hashed assets on the static path while ensuring API-like navigations never fall through to `index.html`.
@@ -27,7 +27,7 @@ GDELT (+ optional Tavily enrichment)
 evidence-preserving pipeline ──► validated snapshot / future D1 load
                                             │
                                             ▼
-                          Cloudflare Worker: REST + MCP + health
+                       Cloudflare Worker: REST + MCP + A2A + health
                                             │
                                             ▼
                               MapLibre analyst explorer
@@ -125,6 +125,18 @@ The first command reads the latest public GDELT stream once. The second performs
 - Test fixtures remain under test paths and cannot power the deployed explorer.
 
 The canonical schema and field-level evidence rules are in [`docs/DATA_CONTRACT.md`](docs/DATA_CONTRACT.md).
+
+## Machine discovery
+
+The deployed Worker exposes genuine public capabilities through conventional, no-key discovery routes:
+
+- `/docs` and `/index.md` for HTML/Markdown documentation
+- `/llms.txt`, `/robots.txt`, and `/sitemap.xml`
+- `/.well-known/api-catalog` plus `/openapi.json`
+- `/.well-known/mcp/server-card.json` plus the read-only `/mcp` endpoint
+- `/.well-known/agent-card.json` plus the read-only `/a2a/message:send` endpoint
+
+These surfaces are locally tested but are not claimed live until Cloudflare deployment and independent invocation evidence exist. The release-lane applicability audit and exact remaining blockers are in [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md).
 
 ## Product defaults
 

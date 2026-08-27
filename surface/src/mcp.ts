@@ -113,6 +113,22 @@ export async function handleMcp(
   }
 
   try {
+    if (body.method === "server/discover") {
+      return rpcResult(body.id, {
+        resultType: "complete",
+        supportedVersions: ["2026-07-28", "2025-06-18"],
+        capabilities: { tools: {} },
+        _meta: {
+          "io.modelcontextprotocol/serverInfo": {
+            name: "atlas-news-intelligence",
+            version: "0.1.0",
+          },
+        },
+        instructions: "Read-only global news intelligence. Preserve citations, event-location evidence, and coverage-region uncertainty.",
+        ttlMs: 300_000,
+        cacheScope: "public",
+      });
+    }
     if (body.method === "initialize") {
       return rpcResult(body.id, {
         protocolVersion: "2025-06-18",

@@ -14,12 +14,12 @@ This matrix is frozen for the build. Agents must use the working set and must no
 | Cotal | Working mesh and hosted-agent account | No builder credits by design; $300 judged prize | Foundational coordination/provenance plane |
 | Tenki | Working key; hosted sandboxes active | $110 was last observed, while event copy advertises $100 | Hosted Cotal sandboxes; direct use only if necessary |
 | Nebius | No direct key | Working indirectly through Cotal platform-issued Token Factory access | Models for hosted agents; never seek a direct key |
-| Runtype | Existing browser account; CLI OAuth not yet attached | $10 was last observed, not the advertised $50 | Required API/MCP/A2A surface and evals; use existing OAuth only |
+| Runtype | Working existing account access | $10 was last observed, not the advertised $50 | Required API/MCP/A2A surface and evals; publishing remains approval-gated |
 | Mitosis | Working key | 500 account credits were last observed; event publishes no builder-credit offer | Optional provenance/memory if it materially improves the product |
-| AIsa | Working key | $1 trial was last observed, not the advertised $100 | Deprioritized; hard cap below the existing balance |
+| AIsa | Excluded from this build | $1 trial was last observed, not the advertised $100 | Do not use |
 | Cloudflare | Existing account, Wrangler currently unauthenticated | Needs existing-account OAuth, not another API key | Workers/D1 deployment when the candidate is ready |
 | Hacker Bob | No API key by design | One later security scan | Final authorized scan only |
-| HUD | Intentionally unused | Overall-winner training credits, not build money | Out of scope |
+| HUD | Excluded from this build | Overall-winner training credits, not build money | Do not use |
 
 ## Non-negotiable access rules
 

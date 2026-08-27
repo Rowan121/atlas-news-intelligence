@@ -28,6 +28,10 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
+interface Fetcher {
+  fetch(request: Request): Promise<Response>;
+}
+
 interface ExportedHandler<Env = unknown> {
   fetch?: (request: Request, env: Env, ctx: ExecutionContext) => Response | Promise<Response>;
 }

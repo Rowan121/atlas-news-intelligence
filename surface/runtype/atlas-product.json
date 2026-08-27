@@ -1,7 +1,7 @@
 {
   "name": "Atlas News Intelligence",
   "slug": "atlas-news-intelligence",
-  "description": "Evidence-backed geographic news intelligence over live records, with explicit uncertainty and source comparison.",
+  "description": "Evidence-backed global news intelligence over live records, with explicit event-location, publisher-origin, source, and uncertainty boundaries. Cross-regional coverage and framing remain activation-gated until their evidence fields are present.",
   "mode": "read_only",
   "source_of_truth": {
     "type": "external_api",
@@ -29,7 +29,7 @@
       "slug": "compare-regional-coverage",
       "method": "GET",
       "path": "/api/v1/intelligence?window={window}&prominence={prominence}",
-      "description": "Compare raw and source-volume-normalized prominence without conflating publisher origin and event location."
+      "description": "Draft activation-gated capability: compare the same story across evidenced source or audience regions without conflating those regions with event location. Do not activate until the deployed response contains those evidence fields."
     },
     {
       "name": "Inspect Pipeline Health",
@@ -40,9 +40,36 @@
     }
   ],
   "surfaces": [
-    { "type": "rest_api", "status": "draft", "capabilities": "all", "response_shape": "wrapped" },
-    { "type": "mcp", "status": "draft", "capabilities": "all", "authentication": "api_key" },
-    { "type": "a2a", "status": "draft", "capabilities": "all", "authentication": "api_key" }
+    {
+      "type": "rest_api",
+      "status": "draft",
+      "capabilities": "all",
+      "authentication": "none",
+      "response_shape": "mixed_documented",
+      "discovery_path": "/.well-known/api-catalog",
+      "specification_path": "/openapi.json"
+    },
+    {
+      "type": "mcp",
+      "status": "draft",
+      "capabilities": "all",
+      "authentication": "none",
+      "transport": "streamable_http",
+      "endpoint_path": "/mcp",
+      "server_card_path": "/.well-known/mcp/server-card.json",
+      "protocol_versions": ["2026-07-28", "2025-06-18"]
+    },
+    {
+      "type": "a2a",
+      "status": "draft",
+      "capabilities": "all",
+      "authentication": "none",
+      "protocol_binding": "HTTP+JSON",
+      "protocol_version": "1.0",
+      "endpoint_path": "/a2a",
+      "agent_card_path": "/.well-known/agent-card.json",
+      "send_path": "/a2a/message:send"
+    }
   ],
   "eval_suites": [
     {
@@ -95,6 +122,17 @@
         "external_api_calls_per_read": 0,
         "max_result_count": 100
       }
+    },
+    {
+      "name": "agent-surface-conformance",
+      "severity": "gate",
+      "target": "all",
+      "criteria": [
+        "The API catalog and OpenAPI paths resolve to deployed public reads.",
+        "MCP discovery, tool listing, and one representative read invocation succeed.",
+        "The A2A Agent Card matches the deployed HTTP+JSON endpoint and one structured read invocation succeeds.",
+        "No surface advertises authentication, mutation, payments, or provider usage that Atlas does not actually expose."
+      ]
     }
   ]
 }

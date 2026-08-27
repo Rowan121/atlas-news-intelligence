@@ -2,23 +2,37 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "atlas-news-intelligence-api",
   "main": "src/index.ts",
-  "compatibility_date": "2026-08-26",
+  "compatibility_date": "2026-08-27",
   "assets": {
     "directory": "../ui/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": [
+      "/",
+      "/api",
       "/api/*",
       "/health",
-      "/mcp"
+      "/mcp",
+      "/a2a",
+      "/a2a/*",
+      "/robots.txt",
+      "/sitemap.xml",
+      "/llms.txt",
+      "/index.md",
+      "/docs",
+      "/docs/*",
+      "/integrations",
+      "/pricing",
+      "/openapi.json",
+      "/.well-known/*"
     ]
   },
   "observability": {
     "enabled": true
   },
   "vars": {
-    "ENVIRONMENT": "development",
-    "CORS_ORIGIN": "*",
+    "ENVIRONMENT": "production",
+    "CORS_ORIGIN": "self",
     "STALE_AFTER_SECONDS": "1800"
   },
   "d1_databases": [

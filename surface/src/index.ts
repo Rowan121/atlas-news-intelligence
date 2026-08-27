@@ -1,4 +1,17 @@
 import type { ProminenceMetric, StoryQuery } from "./contracts";
+import { handleA2aSend } from "./a2a";
+import {
+  a2aAgentCard,
+  apiCatalog,
+  attachDiscoveryHeaders,
+  docs,
+  integrations,
+  llms,
+  mcpServerCard,
+  openApi,
+  robots,
+  sitemap,
+} from "./discovery";
 import { failure, HttpProblem, json, parsePositiveInt, parseTimestamp, success } from "./http";
 import { buildIntelligenceSnapshot, type IntelligenceWindow } from "./intelligence";
 import { handleMcp } from "./mcp";
@@ -7,6 +20,7 @@ import { D1TruthStore } from "./storage/d1";
 
 export interface Env {
   DB: D1Database;
+  ASSETS?: Fetcher;
   BUILD_VERSION?: string;
   CORS_ORIGIN?: string;
   ENVIRONMENT?: string;
@@ -27,6 +41,32 @@ function parseStaleAfter(value: string | undefined): number {
 
 function methodProblem(): HttpProblem {
   return new HttpProblem(405, "method_not_allowed", "Method not allowed");
+}
+
+function readMethod(request: Request): void {
+  if (request.method !== "GET" && request.method !== "HEAD") throw methodProblem();
+}
+
+function withoutBodyForHead(request: Request, response: Response): Response {
+  if (request.method !== "HEAD") return response;
+  return new Response(null, { status: response.status, statusText: response.statusText, headers: response.headers });
+}
+
+function corsValues(request: Request, configured: string | undefined): Record<string, string> {
+  const origin = request.headers.get("Origin");
+  const ownOrigin = new URL(request.url).origin;
+  const policy = configured ?? "self";
+  const allowed = policy === "*"
+    ? "*"
+    : policy === "self"
+      ? origin === ownOrigin ? origin : undefined
+      : policy;
+  return {
+    ...(allowed === undefined ? {} : { "Access-Control-Allow-Origin": allowed }),
+    "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, Mcp-Session-Id, MCP-Protocol-Version, A2A-Version, A2A-Extensions",
+    Vary: "Origin, Accept",
+  };
 }
 
 function parseStoryQuery(url: URL): StoryQuery {
@@ -62,18 +102,103 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
       const staleAfterSeconds = parseStaleAfter(env.STALE_AFTER_SECONDS);
       const store = dependencies.store ?? new D1TruthStore(env.DB);
 
-      const corsHeaders = {
-        "Access-Control-Allow-Origin": env.CORS_ORIGIN ?? "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, Mcp-Session-Id",
-        Vary: "Origin",
-      };
+      const corsHeaders = corsValues(request, env.CORS_ORIGIN);
 
       try {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
 
+        if (url.pathname === "/robots.txt") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, robots(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/sitemap.xml") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, sitemap(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/llms.txt") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, llms(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/docs" || url.pathname === "/docs/index.md" || url.pathname === "/index.md" || url.pathname === "/api") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, docs(request));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/integrations") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, integrations(request));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/.well-known/api-catalog") {
+          readMethod(request);
+          const response = apiCatalog(url.origin, request.method === "HEAD");
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/openapi.json") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, openApi(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/.well-known/mcp/server-card.json" || url.pathname === "/.well-known/mcp.json") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, mcpServerCard(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/.well-known/agent-card.json" || url.pathname === "/a2a") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, a2aAgentCard(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/a2a/message:send") {
+          if (request.method !== "POST") throw methodProblem();
+          const response = await handleA2aSend(request, store, now, staleAfterSeconds, requestId);
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/a2a/tasks") {
+          readMethod(request);
+          const response = withoutBodyForHead(request, json({ tasks: [] }, {
+            headers: { "Content-Type": "application/a2a+json; charset=utf-8", "Cache-Control": "no-store", "A2A-Version": "1.0" },
+          }));
+          response.headers.set("Content-Type", "application/a2a+json; charset=utf-8");
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
         if (url.pathname === "/") {
-          if (request.method !== "GET") throw methodProblem();
+          readMethod(request);
+          if (env.ASSETS !== undefined) {
+            const asset = await env.ASSETS.fetch(request);
+            const response = attachDiscoveryHeaders(new Response(request.method === "HEAD" ? null : asset.body, {
+              status: asset.status,
+              statusText: asset.statusText,
+              headers: asset.headers,
+            }));
+            corsHeadersFor(response.headers, corsHeaders);
+            return response;
+          }
           const response = success(
             {
               service: "atlas-news-intelligence",
@@ -85,29 +210,35 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
                 story: "/api/stories/{cluster_id}",
                 intelligence: "/api/v1/intelligence?window=24h&prominence=normalized",
                 mcp: "/mcp",
+                a2a: "/.well-known/agent-card.json",
+                docs: "/docs",
+                openapi: "/openapi.json",
+                api_catalog: "/.well-known/api-catalog",
               },
             },
             requestId,
             now,
             { headers: { "Cache-Control": "public, max-age=300" } },
           );
+          attachDiscoveryHeaders(response);
           corsHeadersFor(response.headers, corsHeaders);
           return response;
         }
 
         if (url.pathname === "/health") {
-          if (request.method !== "GET") throw methodProblem();
+          readMethod(request);
           const health = await store.getHealth(now, staleAfterSeconds);
           const response = success(health, requestId, now, {
             status: health.status === "unavailable" ? 503 : 200,
             headers: { "Cache-Control": "no-store" },
           });
-          corsHeadersFor(response.headers, corsHeaders);
-          return response;
+          const output = withoutBodyForHead(request, response);
+          corsHeadersFor(output.headers, corsHeaders);
+          return output;
         }
 
         if (url.pathname === "/api/stories") {
-          if (request.method !== "GET") throw methodProblem();
+          readMethod(request);
           const query = parseStoryQuery(url);
           const stories = await store.listStories(query, now, staleAfterSeconds);
           const response = success(
@@ -116,12 +247,13 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
             now,
             { headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=120" } },
           );
-          corsHeadersFor(response.headers, corsHeaders);
-          return response;
+          const output = withoutBodyForHead(request, response);
+          corsHeadersFor(output.headers, corsHeaders);
+          return output;
         }
 
         if (url.pathname === "/api/v1/intelligence") {
-          if (request.method !== "GET") throw methodProblem();
+          readMethod(request);
           const windowValue = url.searchParams.get("window") ?? "24h";
           const prominenceValue = url.searchParams.get("prominence") ?? "normalized";
           if (windowValue !== "6h" && windowValue !== "24h" && windowValue !== "7d") {
@@ -143,13 +275,14 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           const response = json(snapshot, {
             headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=120" },
           });
-          corsHeadersFor(response.headers, corsHeaders);
-          return response;
+          const output = withoutBodyForHead(request, response);
+          corsHeadersFor(output.headers, corsHeaders);
+          return output;
         }
 
         const match = url.pathname.match(/^\/api\/stories\/([^/]+)$/);
         if (match !== null) {
-          if (request.method !== "GET") throw methodProblem();
+          readMethod(request);
           const rawId = match[1];
           if (rawId === undefined) throw new HttpProblem(400, "bad_request", "cluster_id is required");
           const clusterId = decodeURIComponent(rawId);
@@ -161,8 +294,9 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           const response = success(story, requestId, now, {
             headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=120" },
           });
-          corsHeadersFor(response.headers, corsHeaders);
-          return response;
+          const output = withoutBodyForHead(request, response);
+          corsHeadersFor(output.headers, corsHeaders);
+          return output;
         }
 
         if (url.pathname === "/mcp") {

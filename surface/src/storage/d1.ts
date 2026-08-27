@@ -11,6 +11,7 @@ import type {
   StorySummary,
 } from "../contracts";
 import { HttpProblem } from "../http";
+import { parseCotalReceipt } from "../provenance/cotal";
 import type { TruthStore } from "../store";
 
 interface ClusterRow {
@@ -60,6 +61,7 @@ interface PipelineRow {
   error_kind: string | null;
   error_message: string | null;
   retryable: number;
+  cotal_receipt_json: string | null;
 }
 
 interface HealthRow {
@@ -85,7 +87,16 @@ function mapSummary(row: ClusterRow, location: LocationRow | null): StorySummary
 
 function mapPipeline(row: PipelineRow | null): PipelineRun | null {
   if (row === null) return null;
-  return { ...row, retryable: row.retryable === 1 };
+  let cotalReceipt = null;
+  if (row.cotal_receipt_json !== null) {
+    try {
+      cotalReceipt = parseCotalReceipt(JSON.parse(row.cotal_receipt_json));
+    } catch {
+      cotalReceipt = null;
+    }
+  }
+  const { cotal_receipt_json: _storedReceipt, ...pipeline } = row;
+  return { ...pipeline, retryable: row.retryable === 1, cotal_receipt: cotalReceipt };
 }
 
 export class D1TruthStore implements TruthStore {
@@ -210,7 +221,7 @@ export class D1TruthStore implements TruthStore {
       ).bind(since, since, since, since),
       this.db.prepare(
         `SELECT run_id, source, status, started_at, completed_at, source_watermark_at,
-                records_seen, records_upserted, error_kind, error_message, retryable
+                records_seen, records_upserted, error_kind, error_message, retryable, cotal_receipt_json
          FROM pipeline_runs ORDER BY started_at DESC LIMIT 1`,
       ),
     ]);

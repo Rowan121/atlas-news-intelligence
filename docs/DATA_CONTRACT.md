@@ -35,3 +35,9 @@ The normalized score is the mean of article share and source-normalized share. D
 GDELT is public and requires no key. Tavily accepts a key only through constructor/environment injection; keys never appear in URLs, errors, diagnostics, or records. Source calls return typed failures for timeout, authentication, rate limiting, HTTP, network, and malformed responses. An empty or failed upstream response produces an empty/degraded pipeline result—never fallback stories.
 
 The 24-hour truth slice is valid only when a current cluster has a cited event location and at least two independent outlets. If no cluster meets that bar, the result explicitly reports why.
+
+## Coordination and integration receipts
+
+Each persisted pipeline run may carry one sanitized Cotal coordination receipt. It identifies the agent/task, optional commit, exercised checks, artifact paths, public evidence URLs, blockers, and next step. The latest run exposes that receipt through `/health`; invalid stored receipt JSON is never treated as proof.
+
+A receipt may contain integration observations for Tavily, Tenki, Runtype, Mitosis, Cotal/Nebius, or another genuinely invoked provider. Each observation records provider, capability, status, ISO timestamp, optional sanitized external request ID, public evidence URLs, and optional usage `{unit,before,after,delta}`. When usage is present, `delta` must equal `after - before`; when a provider does not expose usage it remains `null`. Configuration, an account balance, or an available key is never enough to claim integration usage. Receipts must not contain credentials, authorization headers, cookies, PII, or internal URLs.

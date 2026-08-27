@@ -30,7 +30,7 @@ describe("GDELT snapshot to D1 seed", () => {
       status: "succeeded",
       records_seen: 6,
       records_upserted: 7,
-      cotal_receipt: { agent: "atlas_data", task_id: "news.data.live-stream", commit: "248046f" },
+      cotal_receipt: { agent: "atlas_data", task_id: "news.data.live-stream", commit: null },
     });
   });
 

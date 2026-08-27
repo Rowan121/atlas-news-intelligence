@@ -388,12 +388,12 @@ export function convertSnapshotToD1(snapshot: IntelligenceSnapshot): D1SeedDatas
     cotal_receipt: {
       agent: "atlas_data",
       task_id: "news.data.live-stream",
-      commit: "248046f",
-      tests: ["52/52", "typecheck"],
+      commit: null,
+      tests: ["snapshot contract validated", "D1 export invariants validated"],
       artifact_paths: ["artifacts/gdelt-latest.json"],
       evidence_urls: snapshot.source.files.map((file) => file.url),
       blockers: [],
-      next: "convert evidence-backed snapshot to the Surface/D1 contract",
+      next: "apply the evidence-backed SQL only after the approved release gate",
     },
   };
   const latestStoryAt = clusters.map((cluster) => cluster.story.last_observed_at).sort().at(-1) ?? null;
@@ -417,6 +417,7 @@ export function convertSnapshotToD1(snapshot: IntelligenceSnapshot): D1SeedDatas
       error_kind: run.error_kind,
       error_message: run.error_message,
       retryable: run.retryable,
+      cotal_receipt: run.cotal_receipt,
     },
     failures_24h: 0,
     cluster_count_24h: clusters.length,

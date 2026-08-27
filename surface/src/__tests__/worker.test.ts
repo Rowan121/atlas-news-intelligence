@@ -33,6 +33,112 @@ describe("Atlas Worker routes", () => {
     });
   });
 
+  it("serves machine discovery without touching storage", async () => {
+    const robots = await get("/robots.txt");
+    expect(robots.status).toBe(200);
+    expect(robots.headers.get("content-type")).toContain("text/plain");
+    expect(await robots.text()).toContain("Sitemap: https://atlas.example/sitemap.xml");
+
+    const sitemap = await get("/sitemap.xml");
+    expect(sitemap.headers.get("content-type")).toContain("application/xml");
+    expect(await sitemap.text()).toContain("<loc>https://atlas.example/docs</loc>");
+
+    const llms = await get("/llms.txt");
+    expect(await llms.text()).toContain("Event location, publisher origin, and audience-region evidence are distinct");
+  });
+
+  it("negotiates equivalent Markdown documentation", async () => {
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/docs", { headers: { Accept: "text/markdown" } }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/markdown");
+    expect(response.headers.get("vary")).toContain("Accept");
+    expect(await response.text()).toContain("## Public REST API");
+  });
+
+  it("publishes an RFC 9727 linkset and a matching HEAD relation", async () => {
+    const response = await get("/.well-known/api-catalog");
+    expect(response.headers.get("content-type")).toContain("application/linkset+json");
+    const body = await response.json() as { linkset: Array<{ anchor: string }> };
+    expect(body.linkset[0]?.anchor).toBe("https://atlas.example/.well-known/api-catalog");
+
+    const head = await worker.fetch!(
+      new Request("https://atlas.example/.well-known/api-catalog", { method: "HEAD" }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(head.status).toBe(200);
+    expect(head.headers.get("link")).toContain('rel="api-catalog"');
+    expect(await head.text()).toBe("");
+  });
+
+  it("publishes only real public API paths in OpenAPI", async () => {
+    const response = await get("/openapi.json");
+    expect(response.headers.get("content-type")).toContain("application/vnd.oai.openapi+json");
+    expect(await response.json()).toMatchObject({
+      openapi: "3.1.0",
+      servers: [{ url: "https://atlas.example" }],
+      paths: {
+        "/health": {},
+        "/api/v1/intelligence": {},
+        "/api/stories": {},
+        "/api/stories/{cluster_id}": {},
+      },
+    });
+  });
+
+  it("publishes truthful MCP and A2A discovery cards", async () => {
+    const mcp = await get("/.well-known/mcp/server-card.json");
+    expect(await mcp.json()).toMatchObject({
+      protocolVersion: "2026-07-28",
+      transport: { type: "streamable-http", endpoint: "https://atlas.example/mcp" },
+    });
+    const a2a = await get("/.well-known/agent-card.json");
+    expect(await a2a.json()).toMatchObject({
+      supportedInterfaces: [{ url: "https://atlas.example/a2a", protocolBinding: "HTTP+JSON", protocolVersion: "1.0" }],
+      capabilities: { streaming: false, pushNotifications: false },
+    });
+  });
+
+  it("uses self-only CORS without requiring the final Worker hostname", async () => {
+    const selfEnv = { ...env, CORS_ORIGIN: "self" };
+    const sameOrigin = await worker.fetch!(
+      new Request("https://atlas.example/health", { headers: { Origin: "https://atlas.example" } }),
+      selfEnv,
+      {} as ExecutionContext,
+    );
+    expect(sameOrigin.headers.get("access-control-allow-origin")).toBe("https://atlas.example");
+    const foreign = await worker.fetch!(
+      new Request("https://atlas.example/health", { headers: { Origin: "https://other.example" } }),
+      selfEnv,
+      {} as ExecutionContext,
+    );
+    expect(foreign.headers.get("access-control-allow-origin")).toBe(null);
+  });
+
+  it("adds discovery links while forwarding the real static homepage asset", async () => {
+    const assetEnv = {
+      ...env,
+      ASSETS: {
+        async fetch(): Promise<Response> {
+          return new Response("<!doctype html><html lang=\"en\"><body>Atlas explorer</body></html>", {
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          });
+        },
+      },
+    };
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/"),
+      assetEnv,
+      {} as ExecutionContext,
+    );
+    expect(await response.text()).toContain("Atlas explorer");
+    expect(response.headers.get("link")).toContain("/.well-known/api-catalog");
+  });
+
   it("returns a typed stories envelope", async () => {
     const response = await get("/api/stories");
     expect(response.status).toBe(200);
@@ -200,6 +306,22 @@ describe("MCP surface", () => {
     });
   });
 
+  it("supports current stateless MCP discovery while retaining legacy initialization", async () => {
+    const response = await rpc({
+      jsonrpc: "2.0",
+      id: "discover",
+      method: "server/discover",
+      params: { _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" } },
+    });
+    expect(response).toMatchObject({
+      result: {
+        resultType: "complete",
+        supportedVersions: ["2026-07-28", "2025-06-18"],
+        cacheScope: "public",
+      },
+    });
+  });
+
   it("lists read-only product tools", async () => {
     const response = await rpc({ jsonrpc: "2.0", id: 2, method: "tools/list" });
     const result = response.result as { tools: Array<{ name: string }> };
@@ -235,5 +357,70 @@ describe("MCP surface", () => {
   it("returns JSON-RPC method-not-found", async () => {
     const response = await rpc({ jsonrpc: "2.0", id: 5, method: "resources/list" });
     expect(response).toMatchObject({ error: { code: -32601 } });
+  });
+});
+
+describe("A2A surface", () => {
+  let store: MemoryTruthStore;
+  let worker: ReturnType<typeof createWorker>;
+
+  beforeEach(() => {
+    store = new MemoryTruthStore();
+    worker = createWorker({ store, clock: () => now, requestId: () => "request-a2a" });
+  });
+
+  async function send(data: unknown): Promise<Response> {
+    return worker.fetch!(
+      new Request("https://atlas.example/a2a/message:send", {
+        method: "POST",
+        headers: { "Content-Type": "application/a2a+json", "A2A-Version": "1.0" },
+        body: JSON.stringify({
+          message: { messageId: "client-message", role: "ROLE_USER", parts: [{ data }] },
+        }),
+      }),
+      env,
+      {} as ExecutionContext,
+    );
+  }
+
+  it("returns current story summaries through a real read-only skill", async () => {
+    const response = await send({ operation: "query_stories", region: "test-eu", metric: "normalized", limit: 7 });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/a2a+json");
+    expect(await response.json()).toMatchObject({
+      message: {
+        messageId: "request-a2a:response",
+        role: "ROLE_AGENT",
+        parts: [{ data: { operation: "query_stories", count: 1, query: { region: "TEST-EU", limit: 7 } } }],
+      },
+    });
+  });
+
+  it("explains a cluster and reports pipeline health", async () => {
+    const detail = await send({ operation: "explain_story", cluster_id: story.cluster_id });
+    expect(await detail.json()).toMatchObject({ message: { parts: [{ data: { story: { cluster_id: story.cluster_id } } }] } });
+    const health = await send({ operation: "pipeline_health" });
+    expect(await health.json()).toMatchObject({ message: { parts: [{ data: { health: { status: "ok" } } }] } });
+  });
+
+  it("rejects malformed and unknown A2A operations without a stack trace", async () => {
+    const response = await send({ operation: "spend_money" });
+    expect(response.status).toBe(400);
+    expect(response.headers.get("content-type")).toContain("application/problem+json");
+    expect(await response.json()).toMatchObject({ title: "Invalid A2A operation", status: 400 });
+  });
+
+  it("returns a typed A2A version-negotiation error", async () => {
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/a2a/message:send", {
+        method: "POST",
+        headers: { "Content-Type": "application/a2a+json", "A2A-Version": "0.3" },
+        body: JSON.stringify({ message: { messageId: "client-message", role: "ROLE_USER", parts: [{ data: { operation: "pipeline_health" } }] } }),
+      }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ supportedVersions: ["1.0"] });
   });
 });

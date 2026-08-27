@@ -101,6 +101,7 @@ export interface PipelineRun {
   error_kind: string | null;
   error_message: string | null;
   retryable: boolean;
+  cotal_receipt: CotalReceipt | null;
 }
 
 export interface PipelineHealth {
@@ -126,6 +127,22 @@ export interface CotalReceipt {
   evidence_urls: string[];
   blockers: string[];
   next: string | null;
+  integrations?: IntegrationReceipt[];
+}
+
+export interface IntegrationReceipt {
+  provider: string;
+  capability: string;
+  status: "succeeded" | "degraded" | "failed";
+  observed_at: IsoTimestamp;
+  external_request_id: string | null;
+  usage: {
+    unit: string;
+    before: number;
+    after: number;
+    delta: number;
+  } | null;
+  evidence_urls: string[];
 }
 
 export interface PipelineRunInput {
