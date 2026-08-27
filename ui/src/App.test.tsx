@@ -330,6 +330,30 @@ describe("App live-data states", () => {
     expect(screen.queryByText("Editorial-market heat withheld")).not.toBeInTheDocument();
   });
 
+  it("distinguishes outlet editions that share a parent publisher", async () => {
+    const sharedNetworkSnapshot: IntelligenceSnapshot = {
+      ...comparisonSnapshot,
+      clusters: [{
+        ...comparisonSnapshot.clusters[0]!,
+        sources: comparisonSnapshot.clusters[0]!.sources.map((source, index) => ({
+          ...source,
+          publisher: "iheart.com",
+          publisherDomain: index === 0 ? "1075theriver.iheart.com" : "q102.iheart.com",
+        })),
+      }],
+    };
+    const client: NewsIntelligenceClient = {
+      getSnapshot: vi.fn().mockResolvedValue(sharedNetworkSnapshot),
+    };
+    render(<App client={client} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Major flood response begins in Queensland/i }));
+
+    expect(await screen.findByText("1075theriver.iheart.com")).toBeInTheDocument();
+    expect(screen.getByText("q102.iheart.com")).toBeInTheDocument();
+    expect(screen.getAllByText(/Publisher\/network: iheart\.com/)).toHaveLength(2);
+  });
+
   it("never turns event geography or publisher origin into editorial-market heat", async () => {
     const sourceWithoutEditorialMarket = {
       ...comparisonSnapshot.clusters[0]!.sources[0]!,

@@ -192,7 +192,7 @@ function ToneBar({ source }: { source: SourceCoverage }) {
     ? `${source.tone.value.replace("_", " ")} · ${Math.round(source.tone.confidence * 100)}% confidence`
     : "Tone not assessed";
   return (
-    <div className="tone-block" aria-label={`Coverage tone for ${source.publisher}: ${label}`}>
+    <div className="tone-block" aria-label={`Coverage tone for ${source.publisherDomain}: ${label}`}>
       <div className="tone-label-row">
         <span>Critical / negative</span>
         <strong>{label}</strong>
@@ -207,7 +207,7 @@ function ToneBar({ source }: { source: SourceCoverage }) {
 }
 
 function SourceVariantCard({ source }: { source: SourceCoverage }) {
-  const brand = publisherColor(source.publisher);
+  const brand = publisherColor(source.publisherDomain);
   const cardStyle = { "--publisher-color": brand } as CSSProperties;
   const publisherOrigin = source.publisherOrigin.status === "observed"
     ? source.publisherOrigin.value.label
@@ -221,10 +221,13 @@ function SourceVariantCard({ source }: { source: SourceCoverage }) {
   return (
     <article className="source-variant-card" style={cardStyle}>
       <header className="source-identity">
-        <span className="publisher-mark" aria-hidden="true">{publisherInitials(source.publisher)}</span>
+        <span className="publisher-mark" aria-hidden="true">{publisherInitials(source.publisherDomain)}</span>
         <span>
-          <strong>{source.publisher}</strong>
-          <small>Publisher origin: {publisherOrigin}</small>
+          <strong>{source.publisherDomain}</strong>
+          <small>
+            {source.publisher !== source.publisherDomain && `Publisher/network: ${source.publisher} · `}
+            Publisher origin: {publisherOrigin}
+          </small>
         </span>
         <span className="source-language">{source.language.toLocaleUpperCase()}</span>
       </header>
@@ -245,7 +248,7 @@ function SourceVariantCard({ source }: { source: SourceCoverage }) {
         <div><dt>Framing</dt><dd>{framing}</dd></div>
       </dl>
       {source.editorialMarket.status === "observed" && (
-        <div className="editorial-market-proof" aria-label={`Primary editorial market evidence for ${source.publisher}`}>
+        <div className="editorial-market-proof" aria-label={`Primary editorial market evidence for ${source.publisherDomain}`}>
           <strong>Editorial-market evidence</strong>
           <ul>
             {source.editorialMarket.evidence.map((evidence, index) => (
