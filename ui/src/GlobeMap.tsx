@@ -136,7 +136,7 @@ export function GlobeMap({
     markersRef.current = [];
 
     clusters.forEach((cluster) => {
-      const location = cluster.eventLocations[0];
+      const location = cluster.eventLocations.find((candidate) => candidate.isPrimary) ?? cluster.eventLocations[0];
       if (!location) return;
       const value = prominenceMode === "raw" ? cluster.rawProminence : cluster.normalizedProminence;
       const button = document.createElement("button");
@@ -212,7 +212,7 @@ export function GlobeMap({
 
   useEffect(() => {
     const cluster = clusters.find((item) => item.id === selectedClusterId);
-    const location = cluster?.eventLocations[0];
+    const location = cluster?.eventLocations.find((candidate) => candidate.isPrimary) ?? cluster?.eventLocations[0];
     if (!location || !mapRef.current) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     mapRef.current.easeTo({
