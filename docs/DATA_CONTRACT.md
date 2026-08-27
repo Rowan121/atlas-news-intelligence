@@ -33,8 +33,10 @@ documented outlet profiles needed by the current real same-story slice. All
 other outlets remain explicitly unknown rather than receiving a guessed market.
 
 Conflict is detected only when evidence-backed stances on the same normalized
-claim come from distinct publishers. With no extracted claims—or claims from
-only one publisher—the result is `not_assessed`, not `false`. Omission likewise
+claim come from independent publisher networks. Distinct outlet editions under
+one parent network do not establish independence. With no extracted claims—or
+claims from only one publisher network—the result is `not_assessed`, not
+`false`. Omission likewise
 stays `not_assessed` until a defensible regional coverage baseline exists.
 
 All timestamps are ISO-8601 UTC strings. Confidence values are finite numbers in `[0, 1]`. URLs must be HTTP(S). `validateStoryCluster` and `validateTruthSlice` return structured issues; they never silently repair truth records.

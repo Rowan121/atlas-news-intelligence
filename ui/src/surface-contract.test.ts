@@ -32,7 +32,7 @@ describe("live GDELT → Surface → UI contract", () => {
     expect(parsed.data.clusters).toHaveLength(1);
     expect(parsed.data.clusters[0]).toMatchObject({
       rawProminence: 2,
-      publisherCount: 2,
+      outletCount: 2,
       languageCount: 1,
       prominence: {
         basis: "event_location",

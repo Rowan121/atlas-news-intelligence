@@ -50,6 +50,10 @@ interface GlobeMapProps {
   onSelectRegion: (id: string) => void;
 }
 
+export function eventMarkerAriaLabel(title: string, locationLabel: string, outletCount: number): string {
+  return `${title}, event location ${locationLabel}, ${outletCount} outlets`;
+}
+
 type InlineMapStyle = Exclude<
   NonNullable<ConstructorParameters<typeof MapLibreMap>[0]["style"]>,
   string
@@ -412,7 +416,7 @@ export function GlobeMap({
         button.style.setProperty("--marker-scale", String(Math.max(0.72, Math.min(1.8, 0.72 + value))));
         button.setAttribute(
           "aria-label",
-          `${cluster.canonicalTitle}, event location ${location.label}, ${cluster.publisherCount} publishers`,
+          eventMarkerAriaLabel(cluster.canonicalTitle, location.label, cluster.outletCount),
         );
         button.title = `${cluster.canonicalTitle} — event location: ${location.label}`;
         button.addEventListener("click", (event) => {

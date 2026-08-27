@@ -7,8 +7,17 @@ import {
   createReferenceGraticule,
   createReferenceMapStyle,
   EditorialMarketHeatLegend,
+  eventMarkerAriaLabel,
   installReferenceGeography,
 } from "./GlobeMap";
+
+describe("event marker semantics", () => {
+  it("describes distinct outlet editions without inflating parent-publisher count", () => {
+    expect(eventMarkerAriaLabel("Relief story", "Colombia", 11)).toBe(
+      "Relief story, event location Colombia, 11 outlets",
+    );
+  });
+});
 
 describe("editorial-market heat legend", () => {
   it("discloses each market's confidence, method, and cited evidence", () => {

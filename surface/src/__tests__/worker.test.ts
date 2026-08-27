@@ -306,7 +306,7 @@ describe("Atlas Worker routes", () => {
     expect(snapshot.clusters[0]?.sources[0]?.audienceExposure).toBe(undefined);
   });
 
-  it("builds SAME-STORY editorial-market heat and conflict only from cited cross-publisher evidence", async () => {
+  it("builds SAME-STORY editorial-market heat and conflict only from cited cross-network evidence", async () => {
     const compared = structuredClone(story);
     const first = compared.articles[0]!;
     first.same_story.editorialMarket = {
@@ -418,7 +418,7 @@ describe("Atlas Worker routes", () => {
           {
             regionCode: "TEST-EU",
             rawArticleCount: 2,
-            uniquePublisherCount: 2,
+            uniqueOutletCount: 2,
             sourceNormalizedShare: 0.75,
             coordinates: {
               latitude: 48.8,
@@ -430,7 +430,7 @@ describe("Atlas Worker routes", () => {
           {
             regionCode: "TEST-NA",
             rawArticleCount: 1,
-            uniquePublisherCount: 1,
+            uniqueOutletCount: 1,
             sourceNormalizedShare: 0.25,
             coordinates: null,
           },
@@ -445,6 +445,49 @@ describe("Atlas Worker routes", () => {
         { editorialMarket: { status: "observed", value: { regionCode: "TEST-EU" } }, framing: { status: "unknown" } },
         { editorialMarket: { status: "observed", value: { regionCode: "TEST-EU" } }, framing: { status: "observed", value: "disputes" } },
       ],
+    });
+  });
+
+  it("does not treat outlet editions under one parent network as independent conflict evidence", async () => {
+    const compared = structuredClone(story);
+    const first = compared.articles[0]!;
+    compared.articles.push({
+      ...structuredClone(first),
+      article_id: "test-affiliate-article",
+      canonical_url: "https://affiliate.fixture.invalid/test-only/article",
+      source_url: "https://affiliate.fixture.invalid/test-only/article",
+      publisher_name: first.publisher_name,
+      publisher_domain: "affiliate.fixture.invalid",
+    });
+    compared.claims = [
+      {
+        claim_id: "same-network-support",
+        normalized_claim: "the harbor is closed",
+        stance: "supports",
+        confidence: 0.9,
+        evidence_article_id: first.article_id,
+        evidence_quote: "The harbor is closed.",
+      },
+      {
+        claim_id: "same-network-dispute",
+        normalized_claim: "the harbor is closed",
+        stance: "disputes",
+        confidence: 0.8,
+        evidence_article_id: "test-affiliate-article",
+        evidence_quote: "The harbor remains open.",
+      },
+    ];
+    store.stories = [compared];
+
+    const response = await get("/api/v1/intelligence?window=24h&prominence=normalized");
+    const body = await response.json() as {
+      clusters: Array<{ signals: { conflict: { status: string; reason: string | null } } }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.clusters[0]?.signals.conflict).toMatchObject({
+      status: "not_assessed",
+      reason: "Conflict requires evidence-backed claims from at least two independent publisher networks.",
     });
   });
 

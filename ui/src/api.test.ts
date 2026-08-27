@@ -80,7 +80,7 @@ const fixture = {
         reason: "No evidence-backed primary editorial-market metadata.",
       },
       articleCount: 2,
-      publisherCount: 2,
+      outletCount: 2,
       languageCount: 1,
       firstObservedAt: "2026-08-27T00:00:00.000Z",
       lastObservedAt: "2026-08-27T00:58:00.000Z",
@@ -214,7 +214,7 @@ describe("HttpNewsIntelligenceClient", () => {
             regionCode: "PO",
             label: "Publisher test origin",
             rawArticleCount: 1,
-            uniquePublisherCount: 1,
+            uniqueOutletCount: 1,
             sourceNormalizedShare: 1,
             coordinates: {
               latitude: 10,
@@ -305,7 +305,7 @@ describe("HttpNewsIntelligenceClient", () => {
             regionCode: "EM",
             label: "Primary test market",
             rawArticleCount: 1,
-            uniquePublisherCount: 1,
+            uniqueOutletCount: 1,
             sourceNormalizedShare: 1,
             coordinates: {
               latitude: 11,

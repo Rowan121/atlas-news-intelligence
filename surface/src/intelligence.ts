@@ -71,7 +71,7 @@ interface UiCoverageHeat {
     regionCode: string;
     label: string;
     rawArticleCount: number;
-    uniquePublisherCount: number;
+    uniqueOutletCount: number;
     sourceNormalizedShare: number;
     coordinates: null | {
       latitude: number;
@@ -99,7 +99,7 @@ interface UiCluster {
   };
   coverageHeat: UiCoverageHeat;
   articleCount: number;
-  publisherCount: number;
+  outletCount: number;
   languageCount: number;
   firstObservedAt: string;
   lastObservedAt: string;
@@ -235,20 +235,20 @@ function conflictSignal(story: StoryDetail): UiSignalAssessment {
     };
   }
   const articleById = new Map(story.articles.map((article) => [article.article_id, article]));
-  const claimPublishers = new Set(
+  const claimPublisherNetworks = new Set(
     story.claims.flatMap((claim) => {
       const article = articleById.get(claim.evidence_article_id);
-      return article === undefined ? [] : [article.publisher_domain];
+      return article === undefined ? [] : [article.publisher_name];
     }),
   );
-  if (claimPublishers.size < 2) {
+  if (claimPublisherNetworks.size < 2) {
     return {
       status: "not_assessed",
       confidence: null,
       method: "unavailable",
       summary: null,
       evidence: [],
-      reason: "Conflict requires evidence-backed claims from at least two distinct publishers.",
+      reason: "Conflict requires evidence-backed claims from at least two independent publisher networks.",
     };
   }
   const byClaim = new Map<string, ClaimEvidence[]>();
@@ -265,7 +265,7 @@ function conflictSignal(story: StoryDetail): UiSignalAssessment {
       if (supportArticle === undefined) continue;
       const dispute = disputing.find((candidate) => {
         const candidateArticle = articleById.get(candidate.evidence_article_id);
-        return candidateArticle !== undefined && candidateArticle.publisher_domain !== supportArticle.publisher_domain;
+        return candidateArticle !== undefined && candidateArticle.publisher_name !== supportArticle.publisher_name;
       });
       if (dispute === undefined) continue;
       const disputeArticle = articleById.get(dispute.evidence_article_id)!;
@@ -273,7 +273,7 @@ function conflictSignal(story: StoryDetail): UiSignalAssessment {
         status: "detected",
         confidence: Math.min(support.confidence, dispute.confidence),
         method: "claim_stance_comparison",
-        summary: `Distinct publishers support and dispute: ${normalizedClaim}`,
+        summary: `Independent publisher networks support and dispute: ${normalizedClaim}`,
         evidence: [claimEvidence(supportArticle, support), claimEvidence(disputeArticle, dispute)],
         reason: null,
       };
@@ -283,7 +283,7 @@ function conflictSignal(story: StoryDetail): UiSignalAssessment {
     status: "not_detected",
     confidence: Math.min(...story.claims.map((claim) => claim.confidence)),
     method: "claim_stance_comparison",
-    summary: "No opposed stances were found among the evidence-backed cross-publisher claims.",
+    summary: "No opposed stances were found among evidence-backed claims from independent publisher networks.",
     evidence: story.claims.flatMap((claim) => {
       const article = articleById.get(claim.evidence_article_id);
       return article === undefined ? [] : [claimEvidence(article, claim)];
@@ -334,8 +334,8 @@ function coverageHeat(sources: UiSource[]): UiCoverageHeat {
   const assignments = new Map<string, {
     label: string;
     articleIds: Set<string>;
-    publishers: Set<string>;
-    byPublisher: Map<string, number>;
+    outlets: Set<string>;
+    byOutlet: Map<string, number>;
     coordinates: null | {
       latitude: number;
       longitude: number;
@@ -345,20 +345,20 @@ function coverageHeat(sources: UiSource[]): UiCoverageHeat {
       sourceId: string;
     };
   }>();
-  const publisherTotals = new Map<string, number>();
+  const outletTotals = new Map<string, number>();
   for (const source of observed) {
     const market = source.editorialMarket.value;
-    publisherTotals.set(source.publisherDomain, (publisherTotals.get(source.publisherDomain) ?? 0) + 1);
+    outletTotals.set(source.publisherDomain, (outletTotals.get(source.publisherDomain) ?? 0) + 1);
     const entry = assignments.get(market.regionCode) ?? {
       label: market.label,
       articleIds: new Set<string>(),
-      publishers: new Set<string>(),
-      byPublisher: new Map<string, number>(),
+      outlets: new Set<string>(),
+      byOutlet: new Map<string, number>(),
       coordinates: null,
     };
     entry.articleIds.add(source.id);
-    entry.publishers.add(source.publisherDomain);
-    entry.byPublisher.set(source.publisherDomain, (entry.byPublisher.get(source.publisherDomain) ?? 0) + 1);
+    entry.outlets.add(source.publisherDomain);
+    entry.byOutlet.set(source.publisherDomain, (entry.byOutlet.get(source.publisherDomain) ?? 0) + 1);
     if (
       market.coordinates !== undefined
       && (
@@ -382,8 +382,8 @@ function coverageHeat(sources: UiSource[]): UiCoverageHeat {
   }
   const markets = [...assignments.entries()].map(([regionCode, entry]) => {
     let normalized = 0;
-    for (const [publisher, total] of publisherTotals) {
-      normalized += total === 0 ? 0 : (entry.byPublisher.get(publisher) ?? 0) / total;
+    for (const [outlet, total] of outletTotals) {
+      normalized += total === 0 ? 0 : (entry.byOutlet.get(outlet) ?? 0) / total;
     }
     const coordinates = entry.coordinates === null
       ? null
@@ -398,8 +398,8 @@ function coverageHeat(sources: UiSource[]): UiCoverageHeat {
       regionCode,
       label: entry.label,
       rawArticleCount: entry.articleIds.size,
-      uniquePublisherCount: entry.publishers.size,
-      sourceNormalizedShare: publisherTotals.size === 0 ? 0 : normalized / publisherTotals.size,
+      uniqueOutletCount: entry.outlets.size,
+      sourceNormalizedShare: outletTotals.size === 0 ? 0 : normalized / outletTotals.size,
       coordinates,
     };
   }).sort((left, right) => right.sourceNormalizedShare - left.sourceNormalizedShare || left.regionCode.localeCompare(right.regionCode));
@@ -460,7 +460,7 @@ function mapCluster(story: StoryDetail): UiCluster | null {
     },
     coverageHeat: coverageHeat(sources),
     articleCount: story.articles.length,
-    publisherCount: new Set(story.articles.map((article) => article.publisher_domain)).size,
+    outletCount: new Set(story.articles.map((article) => article.publisher_domain)).size,
     languageCount: new Set(story.articles.map((article) => article.language)).size,
     firstObservedAt: story.first_observed_at,
     lastObservedAt: story.last_observed_at,

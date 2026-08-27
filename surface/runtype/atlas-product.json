@@ -15,7 +15,7 @@
       "slug": "query-dominant-stories",
       "method": "GET",
       "path": "/api/v1/intelligence?window={window}&prominence={prominence}",
-      "description": "Query current story clusters by event region, time window, and raw or normalized prominence."
+      "description": "Query current story clusters for a rolling time window, ranked by raw or source-normalized prominence. Event regions are returned as an evidence dimension; this route does not accept a region filter."
     },
     {
       "name": "Explain Story Cluster",

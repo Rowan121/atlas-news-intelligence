@@ -164,7 +164,7 @@ function StoryCard({
       <span className="story-card-main">
         <span className="story-meta">
           <span><LocateFixed size={13} /> Event: {location?.label ?? "Location unresolved"}</span>
-          <span>{cluster.publisherCount} outlets</span>
+          <span>{cluster.outletCount} outlets</span>
         </span>
         <strong>{cluster.canonicalTitle}</strong>
         {cluster.summary && <span className="story-summary">{cluster.summary}</span>}
@@ -290,7 +290,7 @@ function FocusedStory({ cluster }: { cluster: StoryCluster }) {
             {additionalLocationCount > 0 ? ` + ${additionalLocationCount} cited ${additionalLocationCount === 1 ? "location" : "locations"}` : ""}
           </strong>
         </span>
-        <span><Signal size={15} /><small>Compared coverage</small><strong>{cluster.publisherCount} outlets · {cluster.articleCount} articles</strong></span>
+        <span><Signal size={15} /><small>Compared coverage</small><strong>{cluster.outletCount} outlets · {cluster.articleCount} articles</strong></span>
         <span><CheckCircle2 size={15} /><small>Same-story confidence</small><strong>{Math.round(cluster.membershipConfidence * 100)}%</strong></span>
       </div>
       <p className="truth-caption">
@@ -334,6 +334,7 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
         cluster.summary,
         ...cluster.eventLocations.map((location) => location.label),
         ...cluster.sources.map((source) => source.publisher),
+        ...cluster.sources.map((source) => source.publisherDomain),
       ].some((value) => value.toLocaleLowerCase().includes(normalizedQuery));
     });
   }, [query, selectedRegionId, snapshot?.clusters]);
@@ -492,7 +493,7 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
         </div>
         <div className="search-control">
           <Search size={16} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search stories, places, or publishers" placeholder="Search stories, places, publishers…" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} aria-label="Search stories, places, outlets, or publisher networks" placeholder="Search stories, places, outlets…" />
           {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}
         </div>
       </section>

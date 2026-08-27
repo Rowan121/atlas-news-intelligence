@@ -135,7 +135,7 @@ const comparisonSnapshot: IntelligenceSnapshot = {
         reason: "No evidence-backed primary editorial-market metadata.",
       },
       articleCount: 2,
-      publisherCount: 2,
+      outletCount: 2,
       languageCount: 1,
       firstObservedAt: "2026-08-27T00:00:00.000Z",
       lastObservedAt: "2026-08-27T01:00:00.000Z",
@@ -206,7 +206,7 @@ const observedComparisonSnapshot: IntelligenceSnapshot = {
         regionCode: "AU",
         label: "Australia",
         rawArticleCount: 2,
-        uniquePublisherCount: 2,
+        uniqueOutletCount: 2,
         sourceNormalizedShare: 1,
         coordinates: {
           latitude: -25.3,
@@ -347,6 +347,8 @@ describe("App live-data states", () => {
     };
     render(<App client={client} />);
 
+    const search = await screen.findByRole("textbox", { name: /Search stories, places, outlets/i });
+    fireEvent.change(search, { target: { value: "q102.iheart.com" } });
     fireEvent.click(await screen.findByRole("button", { name: /Major flood response begins in Queensland/i }));
 
     expect(await screen.findByText("1075theriver.iheart.com")).toBeInTheDocument();

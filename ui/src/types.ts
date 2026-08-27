@@ -130,7 +130,7 @@ export interface CoverageHeat {
     regionCode: string;
     label: string;
     rawArticleCount: number;
-    uniquePublisherCount: number;
+    uniqueOutletCount: number;
     sourceNormalizedShare: number;
     coordinates: null | (Coordinates & {
       confidence: number;
@@ -152,7 +152,7 @@ export interface StoryCluster {
   prominence: ClusterProminence;
   coverageHeat: CoverageHeat;
   articleCount: number;
-  publisherCount: number;
+  outletCount: number;
   languageCount: number;
   firstObservedAt: string;
   lastObservedAt: string;
