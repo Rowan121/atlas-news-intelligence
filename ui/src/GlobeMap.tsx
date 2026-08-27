@@ -7,6 +7,9 @@ import {
   type GeoJSONSource,
   type MapMouseEvent,
 } from "maplibre-gl";
+import { feature } from "topojson-client";
+import type { GeometryCollection, Topology } from "topojson-specification";
+import countriesTopologyJson from "world-atlas/countries-110m.json";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { ProminenceMode, RegionDominance, StoryCluster } from "./types";
 
@@ -36,6 +39,109 @@ const MAP_STYLE =
 const COVERAGE_SOURCE = "atlas-coverage-markets";
 const COVERAGE_HEAT = "atlas-coverage-heat";
 const COVERAGE_POINTS = "atlas-coverage-points";
+const REFERENCE_COUNTRIES_SOURCE = "atlas-reference-countries";
+const REFERENCE_COUNTRIES_FILL = "atlas-reference-countries-fill";
+const REFERENCE_COUNTRIES_LINE = "atlas-reference-countries-line";
+const REFERENCE_GRATICULE_SOURCE = "atlas-reference-graticule";
+const REFERENCE_GRATICULE_LINE = "atlas-reference-graticule-line";
+
+const countriesTopology = countriesTopologyJson as unknown as Topology<{
+  countries: GeometryCollection;
+}>;
+// world-atlas is derived from public-domain Natural Earth data. Bundling this
+// low-resolution geometry keeps the globe legible even while remote style
+// tiles are loading; it is reference geography, never news/audience evidence.
+const REFERENCE_COUNTRIES = feature(countriesTopology, countriesTopology.objects.countries);
+
+export function createReferenceGraticule() {
+  const lines: number[][][] = [];
+  for (let longitude = -180; longitude < 180; longitude += 30) {
+    const coordinates: number[][] = [];
+    for (let latitude = -80; latitude <= 80; latitude += 5) {
+      coordinates.push([longitude, latitude]);
+    }
+    lines.push(coordinates);
+  }
+  for (let latitude = -60; latitude <= 60; latitude += 30) {
+    const coordinates: number[][] = [];
+    for (let longitude = -180; longitude <= 180; longitude += 5) {
+      coordinates.push([longitude, latitude]);
+    }
+    lines.push(coordinates);
+  }
+  return {
+    type: "FeatureCollection" as const,
+    features: lines.map((coordinates) => ({
+      type: "Feature" as const,
+      properties: {},
+      geometry: { type: "LineString" as const, coordinates },
+    })),
+  };
+}
+
+const REFERENCE_GRATICULE = createReferenceGraticule();
+
+export function installReferenceGeography(map: MapLibreMap) {
+  const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
+  const landFillBeforeLayer = map.getLayer("water") ? "water" : firstSymbolLayer;
+
+  if (!map.getSource(REFERENCE_COUNTRIES_SOURCE)) {
+    map.addSource(REFERENCE_COUNTRIES_SOURCE, {
+      type: "geojson",
+      data: REFERENCE_COUNTRIES,
+    });
+  }
+  if (!map.getLayer(REFERENCE_COUNTRIES_FILL)) {
+    map.addLayer(
+      {
+        id: REFERENCE_COUNTRIES_FILL,
+        type: "fill",
+        source: REFERENCE_COUNTRIES_SOURCE,
+        paint: {
+          "fill-color": "#d7dfd3",
+          "fill-opacity": 0.94,
+        },
+      },
+      landFillBeforeLayer,
+    );
+  }
+  if (!map.getSource(REFERENCE_GRATICULE_SOURCE)) {
+    map.addSource(REFERENCE_GRATICULE_SOURCE, {
+      type: "geojson",
+      data: REFERENCE_GRATICULE,
+    });
+  }
+  if (!map.getLayer(REFERENCE_GRATICULE_LINE)) {
+    map.addLayer(
+      {
+        id: REFERENCE_GRATICULE_LINE,
+        type: "line",
+        source: REFERENCE_GRATICULE_SOURCE,
+        paint: {
+          "line-color": "#71838f",
+          "line-opacity": 0.34,
+          "line-width": 0.7,
+        },
+      },
+      firstSymbolLayer,
+    );
+  }
+  if (!map.getLayer(REFERENCE_COUNTRIES_LINE)) {
+    map.addLayer(
+      {
+        id: REFERENCE_COUNTRIES_LINE,
+        type: "line",
+        source: REFERENCE_COUNTRIES_SOURCE,
+        paint: {
+          "line-color": "#52636f",
+          "line-opacity": 0.9,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.7, 5, 1.35],
+        },
+      },
+      firstSymbolLayer,
+    );
+  }
+}
 
 /**
  * Keep the light basemap legible against Atlas's white interface. These
@@ -130,6 +236,7 @@ export function GlobeMap({
     map.on("style.load", () => {
       map.setProjection({ type: "globe" });
       applyLightBasemapContrast(map);
+      installReferenceGeography(map);
       setMapReady(true);
     });
     map.on("click", (event: MapMouseEvent) => {

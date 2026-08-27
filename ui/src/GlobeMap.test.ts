@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Map as MapLibreMap } from "maplibre-gl";
-import { applyLightBasemapContrast } from "./GlobeMap";
+import {
+  applyLightBasemapContrast,
+  createReferenceGraticule,
+  installReferenceGeography,
+} from "./GlobeMap";
 
 describe("light basemap contrast", () => {
   it("makes the default globe's land, water, and borders distinguishable", () => {
@@ -50,6 +54,69 @@ describe("light basemap contrast", () => {
       "background",
       "background-color",
       "#edf0eb",
+    );
+  });
+});
+
+describe("bundled reference geography", () => {
+  it("provides a deterministic latitude/longitude frame", () => {
+    const graticule = createReferenceGraticule();
+
+    expect(graticule.features).toHaveLength(17);
+    expect(graticule.features.every((item) => item.geometry.type === "LineString")).toBe(true);
+    expect(graticule.features.some((item) =>
+      item.geometry.coordinates.every((coordinate) => coordinate[1] === 0),
+    )).toBe(true);
+  });
+
+  it("installs real country geometry and graticule beneath labels", () => {
+    const sources = new Map<string, unknown>();
+    const layers = new Map<string, { type: string }>([["water", { type: "fill" }]]);
+    const addSource = vi.fn((id: string, source: unknown) => sources.set(id, source));
+    const addLayer = vi.fn((layer: { id: string; type: string }) => {
+      layers.set(layer.id, { type: layer.type });
+    });
+    const map = {
+      getStyle: () => ({ layers: [{ id: "place-label", type: "symbol" }] }),
+      getSource: (id: string) => sources.get(id),
+      addSource,
+      getLayer: (id: string) => layers.get(id),
+      addLayer,
+    } as unknown as MapLibreMap;
+
+    installReferenceGeography(map);
+
+    expect(addSource).toHaveBeenCalledTimes(2);
+    const countriesCall = addSource.mock.calls.find(
+      ([id]) => id === "atlas-reference-countries",
+    );
+    expect(countriesCall?.[1]).toMatchObject({
+      type: "geojson",
+      data: { type: "FeatureCollection", features: expect.any(Array) },
+    });
+    const countriesSource = countriesCall?.[1] as {
+      data: { features: unknown[] };
+    };
+    expect(countriesSource.data.features.length).toBeGreaterThan(150);
+    expect(addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "atlas-reference-countries-fill",
+        type: "fill",
+        source: "atlas-reference-countries",
+      }),
+      "water",
+    );
+    expect(addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "atlas-reference-countries-line",
+        type: "line",
+        source: "atlas-reference-countries",
+      }),
+      "place-label",
+    );
+    expect(addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "atlas-reference-graticule-line", type: "line" }),
+      "place-label",
     );
   });
 });
