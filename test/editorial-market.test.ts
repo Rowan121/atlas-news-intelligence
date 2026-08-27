@@ -6,10 +6,15 @@ import {
 
 describe("editorial-market registry", () => {
   it("resolves only documented outlet profiles and normalizes www", () => {
-    expect(registeredEditorialMarketDomains()).toEqual([
+    expect(registeredEditorialMarketDomains()).toEqual(expect.arrayContaining([
+      "1075theriver.iheart.com",
       "albuquerqueexpress.com",
       "australiannews.net",
-    ]);
+      "hot1079.iheart.com",
+      "q102.iheart.com",
+      "wjbt.iheart.com",
+    ]));
+    expect(registeredEditorialMarketDomains()).toHaveLength(13);
     expect(resolveOutletEditorialProfile("WWW.ALBUQUERQUEEXPRESS.COM")?.editorialMarket).toMatchObject({
       status: "observed",
       value: { regionCode: "US-NM-ABQ", label: "Albuquerque metropolitan area, New Mexico" },
@@ -17,6 +22,25 @@ describe("editorial-market registry", () => {
       confidence: 0.99,
     });
     expect(resolveOutletEditorialProfile("unverified.example")).toBeUndefined();
+  });
+
+  it("maps current station editions to distinct documented editorial markets", () => {
+    const nashville = resolveOutletEditorialProfile("1075theriver.iheart.com")!;
+    const philadelphia = resolveOutletEditorialProfile("q102.iheart.com")!;
+
+    expect(nashville.editorialMarket).toMatchObject({
+      status: "observed",
+      value: { regionCode: "US-TN-NASHVILLE", label: "Nashville, Tennessee" },
+      method: "documented_outlet_market",
+    });
+    expect(philadelphia.editorialMarket).toMatchObject({
+      status: "observed",
+      value: { regionCode: "US-PA-PHILADELPHIA", label: "Philadelphia, Pennsylvania" },
+      method: "documented_outlet_market",
+    });
+    expect(nashville.editorialMarket.value.regionCode).not.toBe(
+      philadelphia.editorialMarket.value.regionCode,
+    );
   });
 
   it("keeps publisher location distinct from primary editorial market", () => {
