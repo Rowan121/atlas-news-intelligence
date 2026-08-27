@@ -97,9 +97,14 @@ function parseStoryQuery(url: URL): StoryQuery {
 export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHandler<Env> {
   return {
     async fetch(request, env): Promise<Response> {
+      const url = new URL(request.url);
+      if (env.ENVIRONMENT === "production" && url.protocol === "http:") {
+        url.protocol = "https:";
+        return new Response(null, { status: 308, headers: { Location: url.toString() } });
+      }
+
       const now = dependencies.clock?.() ?? new Date();
       const requestId = dependencies.requestId?.() ?? crypto.randomUUID();
-      const url = new URL(request.url);
       const staleAfterSeconds = parseStaleAfter(env.STALE_AFTER_SECONDS);
       const store = dependencies.store ?? new D1TruthStore(env.DB);
 

@@ -23,6 +23,39 @@ describe("Atlas Worker routes", () => {
     return worker.fetch!(new Request(`https://atlas.example${path}`), env, {} as ExecutionContext);
   }
 
+  it("redirects production HTTP before routing or storage while HTTPS passes through", async () => {
+    const productionEnv = { ...env, ENVIRONMENT: "production" };
+    const redirect = await worker.fetch!(
+      new Request("http://atlas.example/api/stories?metric=raw", { method: "POST" }),
+      productionEnv,
+      {} as ExecutionContext,
+    );
+
+    expect(redirect.status).toBe(308);
+    expect(redirect.headers.get("location")).toBe("https://atlas.example/api/stories?metric=raw");
+    expect(store.queries).toEqual([]);
+
+    const secure = await worker.fetch!(
+      new Request("https://atlas.example/api/stories?metric=raw"),
+      productionEnv,
+      {} as ExecutionContext,
+    );
+    expect(secure.status).toBe(200);
+    expect(store.queries).toEqual([{ metric: "raw", limit: 20 }]);
+  });
+
+  it("does not force HTTPS outside production", async () => {
+    const response = await worker.fetch!(
+      new Request("http://127.0.0.1:8787/api/stories"),
+      { ...env, ENVIRONMENT: "development" },
+      {} as ExecutionContext,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBe(null);
+    expect(store.queries).toEqual([{ metric: "normalized", limit: 20 }]);
+  });
+
   it("describes the service without reading storage", async () => {
     const response = await get("/");
     expect(response.status).toBe(200);
