@@ -1,6 +1,6 @@
 # Release and agent-readiness audit
 
-The P0 candidate is deployed on the existing Cloudflare Worker and D1 resources. The final build uses real GDELT records, a visible MapLibre globe, evidence-backed primary editorial-market heat, and genuine REST/MCP/A2A surfaces. The full local release gate and a 25-check production smoke passed after the last live-only asset security fix. The one approved Hacker Bob scan was consumed once and its two response observations were remediated. The complete production receipt is [here](./PRODUCTION_RELEASE_2026-08-27.md); Agent D's independent final ORA/IsItAgentReady verification is deliberately last.
+The original frozen P0 candidate was deployed on the existing Cloudflare Worker and D1 resources and passed its recorded release gate, 25-check smoke, Hacker Bob remediation, and Agent D review. A later read-only Cloudflare inspection now proves product commit `586d818` is live at 100% as version `49f153cb-61ac-4584-aa8d-79323fa85e73`; the latest D1 run is healthy. That newer live version still needs fresh official Ora/IsItAgentReady scans and an exact-version Agent D pass before final submission readiness may be claimed. The current attribution-ledger commit is documentation-only. See the [current version receipt](./receipts/production-version-2026-08-27T2209Z.json) and the [frozen production receipt](./PRODUCTION_RELEASE_2026-08-27.md).
 
 ## Truthful profile
 
@@ -25,7 +25,7 @@ After this candidate:
 - MCP retains the stable `2025-06-18` initialize flow and adds current stateless `server/discover`, plus a public server card.
 - A real read-only A2A v1 JSON-RPC interface and HTTP+JSON binding accept structured `query_stories`, `explain_story`, and `pipeline_health` requests and return source-of-truth results. A strict method-scoped v0.3 adapter serves the existing Runtype client without weakening v1 or accepting free-form text. The Agent Card advertises only real operations and no auth, streaming, push, or writes.
 - `CORS_ORIGIN=self` allows same-origin browser/API use without guessing the Worker hostname and rejects foreign origins unless an explicit origin is later approved.
-- The latest D1 pipeline-run query now exposes an optional sanitized Cotal receipt when one exists. The final proof correctly returns `cotal_receipt: null`: its source JSON contained no Cotal receipt, so this candidate makes no Cotal/Nebius or other sponsor-usage claim. Optional future sponsor receipts validate provider, capability, timestamp, status, external request ID, evidence URLs, and mathematically consistent before/after/delta usage.
+- The latest D1 pipeline-run query now exposes an optional sanitized Cotal receipt when one exists. The frozen production proof correctly returns `cotal_receipt: null`: its source JSON contained no Cotal receipt, so that ingestion run makes no embedded sponsor-usage claim. This does not erase separately scoped build-time Cotal/Tenki/Nebius coordination, Tavily recovery, Mitosis SDK exercise, Runtype, Cloudflare, Hacker Bob, or Immersive Commons evidence. Optional receipts validate provider, capability, timestamp, status, external request ID, evidence URLs, and mathematically consistent before/after/delta usage.
 - Selective Worker-first routing prevents the SPA fallback from turning missing conventional or machine paths into misleading HTML 200 responses.
 - The document response now contains a meaningful no-JavaScript product identity, explanation, and ordinary links to documentation, current read-only intelligence, integration provenance, OpenAPI, and A2A discovery. The POST-only MCP endpoint is labeled as an endpoint rather than presented as a GET navigation link.
 - The browser contract separates the initial world-news view from a selected same-story comparison view. Source membership, event location, primary editorial-market heat, framing, and tone each retain their own truth status; unavailable evidence is shown as unavailable.
@@ -54,16 +54,16 @@ After this candidate:
 | Localization | English only | `<html lang="en">`; locale parity N/A |
 | Canonical origin/redirects | PASS | HTTP 308 to HTTPS; HSTS only on production HTTPS |
 | Runtype product/capability | BLOCKED AT EVAL AUTH | Genuine final A2A execution. One explicitly authorized eval-only key authenticated to the correct organization, but Runtype rejected its displayed `EVALS:READ`/`EVALS:WRITE` scopes with 403 before suite creation. Surfaces remain draft. |
-| External ORA/IsItAgentReady | FINAL AGENT D GATE | Existing Agent D owns the complete attached-document checklist and final frozen-origin verdict |
+| External ORA/IsItAgentReady | FROZEN BASELINES / RESCAN REQUIRED AFTER NEXT DEPLOY | Agent D passed the frozen engineering candidate but did not invent new official scanner scores |
 | Hacker Bob | CONSUMED / REMEDIATED | One scan only; HSTS/clickjacking observations fixed; no second scan permitted |
 
 ## Remaining gate
 
-Only the same existing Agent D's final independent ORA/IsItAgentReady pass remains. The atomic D1 refresh, Worker deploy, live browser/REST/MCP/A2A/security verification, final Runtype execution, and one Hacker Bob scan are complete. Any implementation change after Agent D's verdict invalidates that verdict and requires a new independent pass.
+The frozen deployment passed the same existing Agent D's independent engineering review. For later repository recovery changes to become the submission candidate, they still require a separately approved deployment, fresh production Ora/IsItAgentReady scans, exact live-version evidence, and a new independent Agent D pass on that frozen deployment. The atomic D1 refresh, prior Worker deploy, live browser/REST/MCP/A2A/security verification, final Runtype execution, and one Hacker Bob scan remain valid only for the recorded production version.
 
 Runtype activation remains intentionally blocked rather than silently waived. Rowan authorized exactly one new eval-only management credential. It was created in Test, reduced from the UI's unusable `EVALS:*` wildcard to explicit `EVALS:READ` and `EVALS:WRITE`, rotated under the same key ID, stored in Runtype's `runtype.api-key/v1` format with mode `0600`, and authenticated successfully to the Atlas organization. Nevertheless, `GET /v1/eval/suites` and a non-writing hash probe to `POST /v1/eval/ensure` returned 403 before any suite could be created. Runtype's synchronous `/v1/eval/run` also excludes external agents; the documented external-agent path is `/v1/eval/submit`, which could not be reached because suite creation was denied. The sanitized receipt is [`receipts/runtype-eval-gate-2026-08-27.json`](./receipts/runtype-eval-gate-2026-08-27.json). Eval usage remained `0/100`, no personal provider key was attached, and all surfaces remain draft.
 
-Tavily, Tenki, Mitosis, and Cotal/Nebius are not claimed as used without sanitized final-run receipts. None of these limits justifies creating another credential or account, hunting for a key, attaching a personal provider key, or enabling AIsa/HUD.
+The event ecosystem was used across different phases and evidence levels. Cotal coordinated the hosted workforce; Tenki supplied its sandbox substrate; Nebius supplied platform-issued models; Tavily performed bounded local news search/extraction; Mitosis was authenticated and exercised through its SDK; Runtype, Cloudflare, Hacker Bob, and Immersive Commons served their recorded roles. The [usage ledger](./SPONSOR_USAGE.md) states exactly which claims are machine-receipted, coordination-observed, build-only, production, blocked, or not deployed. None of these facts justifies creating another credential or account, hunting for a key, attaching a personal provider key, or enabling AIsa/HUD.
 
 ## Current evidence profile
 
@@ -71,7 +71,7 @@ The P0 proof is a checksum-replayed real GDELT batch `20260827170000`: 111 store
 
 ## Sponsor receipt contract
 
-An integration counts as evidenced only when attached to the Cotal receipt for the relevant run. Example shape (values illustrative, not a claim of actual use):
+Runtime-integration claims require a receipt for the relevant run. Build-time coordination, security scans, authenticated tool exercise, event operations, and hosting may have separate evidence, but must be labeled with their phase and evidence class instead of being silently promoted to production runtime usage. Example runtime observation shape (values illustrative, not a claim of actual use):
 
 ```json
 {
@@ -125,7 +125,7 @@ npm run verify:release
 all install, typecheck, test, build, and Wrangler dry-run gates passed
 ```
 
-The final deployed runtime build is `074da0c4683686d17d5b7b4ea31541384a31d2d6`; Cloudflare deployment version `af5a6aee-18e6-4467-b4e4-b9fb93c87e58` serves it. The valid P0 source, generated-seed, and production-refresh hashes remain recorded in the approved payload ledger. The source contains no fabricated sponsor receipt; sponsor claims require separate sanitized integration evidence.
+The frozen receipt covers runtime build `074da0c4683686d17d5b7b4ea31541384a31d2d6` and Cloudflare version `af5a6aee-18e6-4467-b4e4-b9fb93c87e58`. The later [current version receipt](./receipts/production-version-2026-08-27T2209Z.json) proves product commit `586d818` is now live at 100% as Cloudflare version `49f153cb-61ac-4584-aa8d-79323fa85e73`. The valid P0 source, generated-seed, and production-refresh hashes remain recorded in the approved payload ledger. The source contains no fabricated sponsor receipt; claims use the separate evidence levels in the [usage ledger](./SPONSOR_USAGE.md).
 
 Full `npm run verify:release` remains the merge/deploy preflight because it also builds the changing UI and performs the Wrangler bundle dry-run.
 

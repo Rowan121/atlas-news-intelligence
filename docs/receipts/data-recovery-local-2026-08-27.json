@@ -105,11 +105,11 @@
     },
     {
       "path": "docs/receipts/cotal-pipeline-handoff-2026-08-27.json",
-      "sha256": "1d126e8ff402535f2e72fbb01f4b52294f7599f71d83e2e301546f0e0eb4258f"
+      "sha256": "6f7f228f29b6edf7bf6edfd58d5a13b00b7c0b69e059de1d5c417f312217c7dd"
     }
   ],
   "deployment": {
     "performed": false,
-    "reason": "Explicit user prohibition on push and deploy."
+    "reason": "The under-target local data candidate was deliberately not deployed; later repository publication does not change that boundary."
   }
 }

@@ -1,0 +1,31 @@
+{
+  "receipt_version": 1,
+  "kind": "production_version_readback",
+  "observed_at": "2026-08-27T22:45:36.281Z",
+  "write_performed_by_this_audit": false,
+  "cloudflare": {
+    "deployment_id": "f2b4980c-af54-4de9-bfaa-9deea61fe4e8",
+    "version_id": "49f153cb-61ac-4584-aa8d-79323fa85e73",
+    "percentage": 100,
+    "deployed_at": "2026-08-27T22:09:49.115043Z",
+    "build_version": "586d81828549a71cb501b1700f1db6777eeb7692",
+    "worker": "atlas-news-intelligence-api",
+    "database": "atlas-news-intelligence-prod"
+  },
+  "health": {
+    "status": "ok",
+    "cluster_count_24h": 189,
+    "article_count_24h": 230,
+    "active_source_count": 1,
+    "latest_story_at": "2026-08-27T22:30:00.000Z",
+    "latest_run": {
+      "run_id": "gdelt:20260827223000",
+      "status": "succeeded",
+      "completed_at": "2026-08-27T22:31:24.894Z",
+      "records_seen": 12889,
+      "records_upserted": 1104,
+      "cotal_receipt": null
+    }
+  },
+  "remaining_boundary": "This readback proves the deployed product commit and current D1 health. It is not a fresh Ora/IsItAgentReady score or an exact-version Agent D verdict."
+}
