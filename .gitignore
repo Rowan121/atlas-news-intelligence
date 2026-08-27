@@ -11,3 +11,4 @@ coverage/
 .claude/
 .cotal/
 hack-ws/
+artifacts/*.json
