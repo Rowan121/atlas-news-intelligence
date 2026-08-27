@@ -95,7 +95,7 @@ If a provider does not expose usage, `usage` is `null`; never invent a numeric d
 
 ```text
 npm --prefix surface run check
-53 tests passed; Surface typecheck passed
+55 tests passed; Surface typecheck passed
 
 npm run typecheck
 passed
@@ -104,7 +104,12 @@ npm test
 73 tests passed
 
 npm --prefix ui test
-13 tests passed; UI build passed
+14 tests passed; UI build passed
+
+npm audit
+npm --prefix ui audit
+npm --prefix surface audit
+0 vulnerabilities in each audit
 
 ATLAS_BASE_URL=http://127.0.0.1:8788 \
 ATLAS_EXPECTED_RUN_ID=gdelt:20260827091500 \
@@ -114,10 +119,10 @@ node scripts/smoke-local.mjs
 17/17 HTTP checks passed against the built UI + Worker + isolated local D1
 
 npm run verify:release
-all dependency audit, typecheck, test, build, and Wrangler dry-run gates passed
+all install, typecheck, test, build, and Wrangler dry-run gates passed
 ```
 
-The frozen local candidate was `257cc5240ba9a09129880fdbb8ece4ceab2e6aca`. Its corrected seed `/tmp/atlas-receipt-fix.sql` has SHA-256 `1b7d8e521e844587a5408b9bbddc2cf4319f8c884c13ff40e18fc9c8e0f8d71f`; its source `/tmp/atlas-news-integration/artifacts/gdelt-same-story-proof.json` has SHA-256 `fa11c15088e0486654354eca41aa977bce1bc68775305e0a4d64814bc6fcfc61`. The source contains no Cotal receipt, so the imported run's `cotal_receipt` is `null`.
+The frozen product/code candidate is `f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650`. The later commit containing this documentation ledger is not a new product/code candidate; its distinct SHA is reported in the release handoff because a Git commit cannot embed its own final SHA. The corrected seed `/tmp/atlas-receipt-fix.sql` has SHA-256 `1b7d8e521e844587a5408b9bbddc2cf4319f8c884c13ff40e18fc9c8e0f8d71f`; its source `/tmp/atlas-news-integration/artifacts/gdelt-same-story-proof.json` has SHA-256 `fa11c15088e0486654354eca41aa977bce1bc68775305e0a4d64814bc6fcfc61`. The source contains no Cotal receipt, so the imported run's `cotal_receipt` is `null`.
 
 Full `npm run verify:release` remains the merge/deploy preflight because it also builds the changing UI and performs the Wrangler bundle dry-run.
 

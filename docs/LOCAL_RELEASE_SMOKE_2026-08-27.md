@@ -6,15 +6,15 @@ An earlier local run produced different asset hashes and seed counts. That recei
 
 ## Candidate and runtime
 
-- Candidate: `257cc5240ba9a09129880fdbb8ece4ceab2e6aca`
+- Frozen product/code candidate: `f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650`
+- Documentation-ledger commit: the later commit containing this file; it changes only the two release documents, is not a new product/code candidate, and its distinct SHA is reported in the release handoff
 - Candidate worktree: `/tmp/atlas-news-ui-correction`
 - Independent verification copy: `/tmp/atlas-agent-d-final2.rlJBKb`
 - Local origin: `http://127.0.0.1:8788`
 - Local-only persistence: `/tmp/atlas-agent-d-d1-final2.2q9IJh`
-- Final smoke completed: `2026-08-27T10:42:18.515Z`
 - Result: 17/17 HTTP checks passed
 
-The runtime process/session identifier was ephemeral and is deliberately not treated as release evidence. The candidate SHA, inputs, response hashes, assertions, and counts below are the durable receipt.
+The final runtime's wall-clock and process/session identifier were ephemeral and are deliberately not treated as immutable release evidence. The frozen code SHA, inputs, reproducible build hashes, assertions, and counts below are the durable receipt.
 
 ## Input and built-asset hashes
 
@@ -23,8 +23,8 @@ The runtime process/session identifier was ephemeral and is deliberately not tre
 | `surface/schema/schema.sql` | `f3d30b54bd56066b149c19dc425f71778f2512073ebb86bb489bf1bda339f6ee` |
 | Source `/tmp/atlas-news-integration/artifacts/gdelt-same-story-proof.json` | `fa11c15088e0486654354eca41aa977bce1bc68775305e0a4d64814bc6fcfc61` |
 | Corrected seed `/tmp/atlas-receipt-fix.sql` | `1b7d8e521e844587a5408b9bbddc2cf4319f8c884c13ff40e18fc9c8e0f8d71f` |
-| Served `ui/dist/index.html` | `b330c991ad85bda576b6e6549fcc569b30963f2d73c4601eb380c5baaa8e3544` |
-| Served `ui/dist/assets/index-CMnXF4Mo.js` | `2ce729365e15c5bcd813f789852e0f5bfe8871ed9b0851d10c5182286940c117` |
+| Served `ui/dist/index.html` | `d2b5abe4178206f738e71dccc07d3134a84d14dfbb29dabac97231e403f4dfa5` |
+| Served `ui/dist/assets/index-DTMesOzy.js` | `46afa349c8ee6b813d5073ee8cf1e77350f034ada05c065b669c60851a84ee53` |
 | Served `ui/dist/assets/index-DCaFNjwV.css` | `1e1bc0d7bf73faee75ab8568d8c7a42c323560f08c9510d5a0e1011390307618` |
 
 The source JSON contains no Cotal receipt. The corrected SQL therefore imports `cotal_receipt_json` as `NULL`, and the API truthfully exposes `cotal_receipt: null`. This receipt makes no Cotal/Nebius or other sponsor-usage claim.
@@ -34,10 +34,13 @@ The source JSON contains no Cotal receipt. The corrected SQL therefore imports `
 ```sh
 npm run typecheck
 npm test                              # 73 tests
-npm --prefix ui test                  # 13 tests
+npm --prefix ui test                  # 14 tests
 npm --prefix ui run build
-npm --prefix surface run check        # 53 tests + Surface typecheck
+npm --prefix surface run check        # 55 tests + Surface typecheck
 npm --prefix surface run build
+npm audit                             # 0 vulnerabilities
+npm --prefix ui audit                 # 0 vulnerabilities
+npm --prefix surface audit            # 0 vulnerabilities
 
 cd surface
 npx wrangler d1 execute atlas-news-intelligence-local --local \
@@ -87,12 +90,11 @@ The exact retained response hashes for the final run are:
 
 | Response | SHA-256 | Reproducibility note |
 |---|---|---|
-| Root HTML | `b330c991ad85bda576b6e6549fcc569b30963f2d73c4601eb380c5baaa8e3544` | Reproducible built asset |
-| JavaScript asset | `2ce729365e15c5bcd813f789852e0f5bfe8871ed9b0851d10c5182286940c117` | Reproducible built asset |
+| Root HTML | `d2b5abe4178206f738e71dccc07d3134a84d14dfbb29dabac97231e403f4dfa5` | Reproducible built asset |
+| JavaScript asset | `46afa349c8ee6b813d5073ee8cf1e77350f034ada05c065b669c60851a84ee53` | Reproducible built asset |
 | CSS asset | `1e1bc0d7bf73faee75ab8568d8c7a42c323560f08c9510d5a0e1011390307618` | Reproducible built asset |
-| 24-hour normalized intelligence | `a00526ac2b89f7a5d01556f493f7224b8ec81a0a8ef9e55f7136f579b4a5554d` | Receipt-specific because the response contains dynamic request/generation metadata |
 
-The other route bodies also passed their semantic assertions, but their receipt-specific hashes are not promoted here as reproducible build identifiers.
+The 24-hour intelligence response passed its semantic assertions, but its body contains time-variant request/generation metadata. Its digest is intentionally omitted rather than frozen as an immutable build identifier. The other dynamic route bodies are treated the same way.
 
 ## Semantic findings and limits
 
