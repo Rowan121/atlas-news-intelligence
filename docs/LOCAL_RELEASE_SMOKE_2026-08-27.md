@@ -9,9 +9,10 @@ An earlier local run produced different asset hashes and seed counts. That recei
 - Frozen product/code candidate: `f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650`
 - Documentation-ledger commit: the later commit containing this file; it changes only the two release documents, is not a new product/code candidate, and its distinct SHA is reported in the release handoff
 - Candidate worktree: `/tmp/atlas-news-ui-correction`
-- Independent verification copy: `/tmp/atlas-agent-d-final2.rlJBKb`
+- Clean Agent D archive of the frozen f7 candidate: `/tmp/atlas-agent-d-f7.zCBDgz`
+- Fresh independent f7 proof SQL/D1 load: `/tmp/atlas-agent-d-f7-d1.4pUWlr`
+- Exact f7 smoke-server persistence: `/tmp/atlas-news-final2-8788.13cNcf`
 - Local origin: `http://127.0.0.1:8788`
-- Local-only persistence: `/tmp/atlas-agent-d-d1-final2.2q9IJh`
 - Result: 17/17 HTTP checks passed
 
 The final runtime's wall-clock and process/session identifier were ephemeral and are deliberately not treated as immutable release evidence. The frozen code SHA, inputs, reproducible build hashes, assertions, and counts below are the durable receipt.
@@ -43,14 +44,17 @@ npm --prefix ui audit                 # 0 vulnerabilities
 npm --prefix surface audit            # 0 vulnerabilities
 
 cd surface
+# Fresh independent proof-load check; this is distinct from the smoke server.
 npx wrangler d1 execute atlas-news-intelligence-local --local \
-  --persist-to /tmp/atlas-agent-d-d1-final2.2q9IJh \
+  --persist-to /tmp/atlas-agent-d-f7-d1.4pUWlr \
   --file schema/schema.sql
 npx wrangler d1 execute atlas-news-intelligence-local --local \
-  --persist-to /tmp/atlas-agent-d-d1-final2.2q9IJh \
+  --persist-to /tmp/atlas-agent-d-f7-d1.4pUWlr \
   --file /tmp/atlas-receipt-fix.sql
+
+# The exact 17-check f7 HTTP receipt used this separate local persistence.
 npx wrangler dev --local --ip 127.0.0.1 --port 8788 \
-  --persist-to /tmp/atlas-agent-d-d1-final2.2q9IJh
+  --persist-to /tmp/atlas-news-final2-8788.13cNcf
 
 cd ..
 ATLAS_BASE_URL=http://127.0.0.1:8788 \
@@ -62,7 +66,7 @@ ATLAS_EXPECTED_COVERAGE_STATUS=unavailable \
 node scripts/smoke-local.mjs
 ```
 
-The isolated D1 held one pipeline run, 20 clusters, and 21 unique article records. The intelligence response exposed 14 event regions. The run was truthfully `degraded`; it remained readable and did not fabricate unavailable coverage-market evidence.
+The fresh independent proof load verified one pipeline run, 20 clusters, and 21 unique article records. The separate f7 smoke-server persistence produced the 17/17 HTTP receipt and an intelligence response with 14 event regions. The run was truthfully `degraded`; it remained readable and did not fabricate unavailable coverage-market evidence.
 
 ## Final HTTP results
 
