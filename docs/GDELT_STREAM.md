@@ -28,6 +28,31 @@ article is retained; membership reasons and location-evidence rows are unioned;
 raw and source-normalized prominence are then recomputed over the merged corpus.
 Headline similarity by itself is never a merge gate.
 
+## Incomplete latest-batch recovery
+
+GDELT 2.x publishes quarter-hour batches and exposes both a latest-file list
+and a checksum-bearing master file list. In practice, the latest list can
+briefly reference a GKG object that its file host still returns as HTTP 404.
+Atlas handles only that narrow publication-lag case:
+
+1. Fetch the advertised GKG first. Events and Mentions are not useful to Atlas
+   without the exact-batch GKG join.
+2. On a file HTTP 404 only, request a size-capped HTTP range from the tail of
+   `masterfilelist.txt`.
+3. Consider at most four prior 15-minute slots by default (hard maximum eight),
+   newest first, and require one Events, one Mentions, and one GKG checksum row
+   with the exact same batch timestamp.
+4. Download the candidate GKG first, then Events and Mentions. Every file must
+   match the master list's byte count and MD5 before parsing.
+5. Mark the resulting snapshot `degraded` and name both the advertised and
+   selected batch in its warnings and diagnostics.
+
+Network errors, HTTP 5xx, rate limits, checksum mismatches, malformed archives,
+parse failures, and empty joins never trigger older-data fallback. A fallback
+candidate with an integrity failure stops the run rather than silently walking
+farther back. Callers can set `fallbackBatches: 0` to disable recovery. Atlas
+never synthesizes records or trusts guessed historical filenames.
+
 ## Local D1 seed export
 
 Convert a successful snapshot into the existing Surface schema without making
@@ -72,6 +97,8 @@ deploy, or schedule ingestion.
 Data attribution: **The GDELT Project**, https://www.gdeltproject.org/.
 
 - GDELT data streams and 15-minute cadence: https://www.gdeltproject.org/data.html
+- GDELT 2.x checksum-bearing master list: https://data.gdeltproject.org/gdeltv2/masterfilelist.txt
+- GDELT 2.0 realtime and master/latest lists: https://blog.gdeltproject.org/gdelt-2-0-our-global-world-in-realtime/
 - Events and Mentions codebook: https://data.gdeltproject.org/documentation/GDELT-Event_Codebook-V2.0.pdf
 - GKG 2.1 codebook: https://data.gdeltproject.org/documentation/GDELT-Global_Knowledge_Graph_Codebook-V2.1.pdf
 - GKG page-title encoding: https://blog.gdeltproject.org/unescaping-article-titles-in-the-gkg-2-0/

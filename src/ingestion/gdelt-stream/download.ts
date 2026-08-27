@@ -16,6 +16,7 @@ export class GdeltStreamError extends Error {
     readonly kind: GdeltLoadErrorKind,
     message: string,
     readonly retryable: boolean,
+    readonly httpStatus?: number,
   ) {
     super(message);
     this.name = "GdeltStreamError";
@@ -88,6 +89,7 @@ export async function fetchCappedBytes(
   stage: GdeltLoadStage,
   maxBytes: number,
   policy: FetchPolicy = {},
+  requestHeaders: Record<string, string> = {},
 ): Promise<Uint8Array> {
   const fetchImpl = policy.fetch ?? fetch;
   const timeoutMs = policy.timeoutMs ?? 20_000;
@@ -101,7 +103,10 @@ export async function fetchCappedBytes(
     let retryDelay = initialBackoffMs * 2 ** attempt;
     try {
       const response = await fetchImpl(url, {
-        headers: { Accept: "text/plain, application/zip, application/octet-stream" },
+        headers: {
+          Accept: "text/plain, application/zip, application/octet-stream",
+          ...requestHeaders,
+        },
         redirect: "follow",
         signal: controller.signal,
       });
@@ -115,6 +120,7 @@ export async function fetchCappedBytes(
           "http",
           `GDELT ${stage} download returned HTTP ${response.status}.`,
           response.status === 408 || response.status >= 500,
+          response.status,
         );
       }
       return await responseBytes(response, maxBytes, stage);

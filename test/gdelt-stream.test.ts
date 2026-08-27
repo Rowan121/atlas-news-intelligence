@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { strToU8, zipSync } from "fflate";
 import { fetchCappedBytes, GdeltStreamError, unzipSingleCsv, verifyManifestBytes } from "../src/ingestion/gdelt-stream/download.js";
 import { loadLatestGdeltSnapshot } from "../src/ingestion/gdelt-stream/loader.js";
-import { parseLastUpdate } from "../src/ingestion/gdelt-stream/manifest.js";
+import { parseLastUpdate, parseMasterFileTail } from "../src/ingestion/gdelt-stream/manifest.js";
 import { parseEventsTsv, parseGkgTsv, parseMentionsTsv } from "../src/ingestion/gdelt-stream/parsers.js";
 import { buildIntelligenceSnapshot, validateIntelligenceSnapshot } from "../src/ingestion/gdelt-stream/snapshot.js";
 import type { GdeltFileKind, GdeltManifest, GdeltStreamLimits } from "../src/ingestion/gdelt-stream/types.js";
@@ -81,10 +81,20 @@ function streamFixture(mentionText = mentionRow()): {
   manifest: string;
   files: Record<string, Uint8Array>;
 } {
+  return streamFixtureAt(BATCH, mentionText);
+}
+
+function streamFixtureAt(batchId: string, mentionText?: string): {
+  manifest: string;
+  files: Record<string, Uint8Array>;
+} {
+  const eventText = eventRow().replaceAll(BATCH, batchId);
+  const resolvedMentions = (mentionText ?? mentionRow()).replaceAll(BATCH, batchId);
+  const gkgText = gkgRow().replaceAll(BATCH, batchId);
   const files = {
-    [`https://data.gdeltproject.org/gdeltv2/${BATCH}.export.CSV.zip`]: zipped(`${BATCH}.export.CSV`, eventRow()),
-    [`https://data.gdeltproject.org/gdeltv2/${BATCH}.mentions.CSV.zip`]: zipped(`${BATCH}.mentions.CSV`, mentionText),
-    [`https://data.gdeltproject.org/gdeltv2/${BATCH}.gkg.csv.zip`]: zipped(`${BATCH}.gkg.csv`, gkgRow()),
+    [`https://data.gdeltproject.org/gdeltv2/${batchId}.export.CSV.zip`]: zipped(`${batchId}.export.CSV`, eventText),
+    [`https://data.gdeltproject.org/gdeltv2/${batchId}.mentions.CSV.zip`]: zipped(`${batchId}.mentions.CSV`, resolvedMentions),
+    [`https://data.gdeltproject.org/gdeltv2/${batchId}.gkg.csv.zip`]: zipped(`${batchId}.gkg.csv`, gkgText),
   };
   const manifest = Object.entries(files)
     .map(([url, bytes]) => `${bytes.byteLength} ${md5(bytes)} ${url.replace("https:", "http:")}`)
@@ -126,6 +136,32 @@ describe("GDELT 2.x stream loader", () => {
     expect(() => parseLastUpdate(fixture.manifest.replace(`${BATCH}.gkg`, "20260827061500.gkg"))).toThrow(
       /one batch timestamp/,
     );
+  });
+
+  it("extracts only prior coherent quarter-hour batches from a bounded master-list tail", () => {
+    const prior = streamFixtureAt("20260827054500");
+    const older = streamFixtureAt("20260827053000");
+    const latest = streamFixtureAt(BATCH);
+    const candidates = parseMasterFileTail(
+      ["truncated range-boundary row", older.manifest, prior.manifest, latest.manifest].join("\n"),
+      BATCH,
+      2,
+    );
+
+    expect(candidates.map((candidate) => candidate.batchId)).toEqual([
+      "20260827054500",
+      "20260827053000",
+    ]);
+    expect(candidates[0]!.files.gkg.md5).toBe(parseLastUpdate(prior.manifest).files.gkg.md5);
+  });
+
+  it("rejects malformed complete rows inside the master-list tail", () => {
+    const prior = streamFixtureAt("20260827054500");
+    expect(() => parseMasterFileTail(
+      ["partial-first-row", prior.manifest, "1 bad row"].join("\n"),
+      BATCH,
+      1,
+    )).toThrow(/bytes, MD5, and a URL/);
   });
 
   it("parses official Events/Mentions/GKG columns and unescapes page titles", () => {
@@ -317,6 +353,150 @@ describe("GDELT 2.x stream loader", () => {
     expect(result.snapshot.statistics).toMatchObject({ clustersEmitted: 1, articlesEmitted: 1 });
     expect(result.snapshot.validationIssues).toEqual([]);
     expect(result.snapshot.source.attribution).toContain("GDELT Project");
+  });
+
+  it("falls back to the newest checksum-verified prior batch when an advertised GKG is missing", async () => {
+    const latest = streamFixtureAt(BATCH);
+    const missingPrior = streamFixtureAt("20260827054500");
+    const completePrior = streamFixtureAt("20260827053000");
+    const manifestUrl = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt";
+    const masterFileListUrl = "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt";
+    const masterTail = [
+      "truncated range-boundary row",
+      completePrior.manifest,
+      missingPrior.manifest,
+      latest.manifest,
+    ].join("\n");
+    const requests: string[] = [];
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      const url = String(input);
+      requests.push(url);
+      if (url === manifestUrl) return new Response(latest.manifest, { status: 200 });
+      if (url === masterFileListUrl) {
+        expect(new Headers(init?.headers).get("range")).toBe("bytes=-64000");
+        return new Response(masterTail, { status: 206 });
+      }
+      if (
+        url === parseLastUpdate(latest.manifest).files.gkg.url
+        || url === parseLastUpdate(missingPrior.manifest).files.gkg.url
+      ) {
+        return new Response(null, { status: 404 });
+      }
+      const bytes = completePrior.files[url] ?? missingPrior.files[url] ?? latest.files[url];
+      return bytes === undefined
+        ? new Response(null, { status: 404 })
+        : new Response(bytes as unknown as BodyInit, {
+            status: 200,
+            headers: { "content-length": String(bytes.byteLength) },
+          });
+    });
+
+    const result = await loadLatestGdeltSnapshot({
+      manifestUrl,
+      masterFileListUrl,
+      fallbackBatches: 4,
+      fetchPolicy: { fetch: fetchMock, attempts: 1 },
+      clock: { now: () => new Date(NOW) },
+      limits: tinyLimits(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.batchId).toBe("20260827053000");
+    expect(result.snapshot.health.status).toBe("degraded");
+    expect(result.snapshot.health.warnings.join(" ")).toContain("prior checksum-verified batch");
+    expect(result.snapshot.clusters[0]!.health).toEqual(result.snapshot.health);
+    expect(result.diagnostics.join(" ")).toContain("fallback candidate 20260827054500 missing gkg");
+    expect(result.diagnostics.join(" ")).toContain("fallback selected 20260827053000");
+    expect(requests).not.toContain(parseLastUpdate(latest.manifest).files.events.url);
+    expect(validateIntelligenceSnapshot(result.snapshot)).toEqual([]);
+  });
+
+  it("does not reinterpret non-404 failures as publication lag", async () => {
+    const latest = streamFixtureAt(BATCH);
+    const manifestUrl = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt";
+    const masterFileListUrl = "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt";
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === manifestUrl) return new Response(latest.manifest, { status: 200 });
+      if (url === parseLastUpdate(latest.manifest).files.gkg.url) return new Response(null, { status: 503 });
+      if (url === masterFileListUrl) throw new Error("master list must not be requested");
+      return new Response(null, { status: 404 });
+    });
+
+    const result = await loadLatestGdeltSnapshot({
+      manifestUrl,
+      masterFileListUrl,
+      fetchPolicy: { fetch: fetchMock, attempts: 1 },
+      clock: { now: () => new Date(NOW) },
+      limits: tinyLimits(),
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { stage: "gkg", kind: "http", retryable: true } });
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).not.toContain(masterFileListUrl);
+  });
+
+  it("stops on a fallback checksum mismatch instead of silently walking farther back", async () => {
+    const latest = streamFixtureAt(BATCH);
+    const prior = streamFixtureAt("20260827054500");
+    const older = streamFixtureAt("20260827053000");
+    const manifestUrl = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt";
+    const masterFileListUrl = "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt";
+    const latestGkg = parseLastUpdate(latest.manifest).files.gkg.url;
+    const priorGkg = parseLastUpdate(prior.manifest).files.gkg.url;
+    const olderGkg = parseLastUpdate(older.manifest).files.gkg.url;
+    const corrupt = prior.files[priorGkg]!.slice();
+    corrupt[10] = corrupt[10]! ^ 1;
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === manifestUrl) return new Response(latest.manifest, { status: 200 });
+      if (url === masterFileListUrl) {
+        return new Response(
+          ["partial", older.manifest, prior.manifest, latest.manifest].join("\n"),
+          { status: 206 },
+        );
+      }
+      if (url === latestGkg) return new Response(null, { status: 404 });
+      if (url === priorGkg) return new Response(corrupt as unknown as BodyInit, { status: 200 });
+      const bytes = older.files[url] ?? prior.files[url] ?? latest.files[url];
+      return bytes === undefined ? new Response(null, { status: 404 }) : new Response(bytes as unknown as BodyInit);
+    });
+
+    const result = await loadLatestGdeltSnapshot({
+      manifestUrl,
+      masterFileListUrl,
+      fetchPolicy: { fetch: fetchMock, attempts: 1 },
+      clock: { now: () => new Date(NOW) },
+      limits: tinyLimits(),
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { stage: "gkg", kind: "checksum_mismatch" } });
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).not.toContain(olderGkg);
+  });
+
+  it("allows callers to disable bounded prior-batch fallback", async () => {
+    const latest = streamFixtureAt(BATCH);
+    const manifestUrl = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt";
+    const masterFileListUrl = "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt";
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === manifestUrl) return new Response(latest.manifest, { status: 200 });
+      if (url === parseLastUpdate(latest.manifest).files.gkg.url) return new Response(null, { status: 404 });
+      if (url === masterFileListUrl) throw new Error("master list must not be requested");
+      return new Response(null, { status: 404 });
+    });
+
+    const result = await loadLatestGdeltSnapshot({
+      manifestUrl,
+      masterFileListUrl,
+      fallbackBatches: 0,
+      fetchPolicy: { fetch: fetchMock, attempts: 1 },
+      clock: { now: () => new Date(NOW) },
+      limits: tinyLimits(),
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { stage: "gkg", kind: "http" } });
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).not.toContain(masterFileListUrl);
   });
 
   it("returns an honest no-qualified-records envelope", async () => {

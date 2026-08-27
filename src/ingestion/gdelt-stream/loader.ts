@@ -1,7 +1,12 @@
 import type { Clock } from "../sources.js";
 import { systemClock } from "../sources.js";
 import { fetchCappedBytes, GdeltStreamError, unzipSingleCsv, verifyManifestBytes, type FetchPolicy } from "./download.js";
-import { DEFAULT_LAST_UPDATE_URL, parseLastUpdate } from "./manifest.js";
+import {
+  DEFAULT_LAST_UPDATE_URL,
+  DEFAULT_MASTER_FILE_LIST_URL,
+  parseLastUpdate,
+  parseMasterFileTail,
+} from "./manifest.js";
 import { parseEventsTsv, parseGkgTsv, parseMentionsTsv } from "./parsers.js";
 import { buildIntelligenceSnapshot, validateIntelligenceSnapshot } from "./snapshot.js";
 import type {
@@ -9,8 +14,10 @@ import type {
   GdeltJoinGates,
   GdeltLoadFailure,
   GdeltLoadResult,
+  GdeltManifest,
   GdeltManifestEntry,
   GdeltStreamLimits,
+  IntelligenceSnapshot,
 } from "./types.js";
 
 const MEBIBYTE = 1024 * 1024;
@@ -41,6 +48,9 @@ export const DEFAULT_GDELT_JOIN_GATES: GdeltJoinGates = {
   requireGkgPageTitle: true,
 };
 
+export const DEFAULT_GDELT_FALLBACK_BATCHES = 4;
+export const HARD_GDELT_FALLBACK_BATCHES = 8;
+
 type PartialLimits = Partial<{
   lastUpdateBytes: number;
   compressedBytes: Partial<Record<GdeltFileKind, number>>;
@@ -52,6 +62,8 @@ type PartialLimits = Partial<{
 
 export interface LoadLatestGdeltOptions {
   manifestUrl?: string;
+  masterFileListUrl?: string;
+  fallbackBatches?: number;
   limits?: PartialLimits;
   fetchPolicy?: FetchPolicy;
   clock?: Clock;
@@ -149,6 +161,106 @@ async function downloadTable(
   return unzipSingleCsv(bytes, entry.kind, currentLimits.decompressedBytes[entry.kind]);
 }
 
+function fallbackBatchCount(value: number | undefined): number {
+  if (value === undefined) return DEFAULT_GDELT_FALLBACK_BATCHES;
+  if (!Number.isSafeInteger(value) || value < 0 || value > HARD_GDELT_FALLBACK_BATCHES) {
+    throw new Error(`fallbackBatches must be an integer between 0 and ${HARD_GDELT_FALLBACK_BATCHES}.`);
+  }
+  return value;
+}
+
+function isMissingPublishedFile(error: unknown): error is GdeltStreamError {
+  return error instanceof GdeltStreamError
+    && error.kind === "http"
+    && error.httpStatus === 404
+    && (error.stage === "events" || error.stage === "mentions" || error.stage === "gkg");
+}
+
+async function loadManifestSnapshot(
+  manifest: GdeltManifest,
+  generatedAt: string,
+  currentLimits: GdeltStreamLimits,
+  policy: FetchPolicy,
+  diagnostics: string[],
+): Promise<IntelligenceSnapshot> {
+  // GKG is the largest and historically latest-arriving member. Fetch it
+  // first so an incomplete advertised batch fails before downloading the two
+  // smaller tables that cannot form a usable Atlas join without it.
+  const gkgText = await downloadTable(manifest.files.gkg, currentLimits, policy);
+
+  const eventsText = await downloadTable(manifest.files.events, currentLimits, policy);
+  const events = parseEventsTsv(eventsText, currentLimits.rows.events);
+  diagnostics.push(`events ${events.diagnostics.rowsAccepted}/${events.diagnostics.rowsSeen}`);
+
+  const mentionsText = await downloadTable(manifest.files.mentions, currentLimits, policy);
+  const mentions = parseMentionsTsv(mentionsText, currentLimits.rows.mentions);
+  diagnostics.push(`mentions ${mentions.diagnostics.rowsAccepted}/${mentions.diagnostics.rowsSeen}`);
+
+  const eventIdsWithCoordinates = new Set(
+    events.records.filter((event) => event.actionGeo !== undefined).map((event) => event.globalEventId),
+  );
+  const candidateDocuments = new Set(
+    mentions.records
+      .filter(
+        (mention) =>
+          mention.mentionType === DEFAULT_GDELT_JOIN_GATES.mentionType
+          && mention.inRawText
+          && mention.confidence >= DEFAULT_GDELT_JOIN_GATES.minimumConfidence
+          && eventIdsWithCoordinates.has(mention.globalEventId),
+      )
+      .map((mention) => mention.mentionIdentifier),
+  );
+
+  const gkg = parseGkgTsv(gkgText, currentLimits.rows.gkg, candidateDocuments);
+  diagnostics.push(`gkg joined candidates ${gkg.diagnostics.rowsAccepted}/${gkg.diagnostics.rowsSeen}`);
+
+  const snapshot = buildIntelligenceSnapshot({
+    manifest,
+    events,
+    mentions,
+    gkg,
+    generatedAt,
+    limits: currentLimits,
+    gates: DEFAULT_GDELT_JOIN_GATES,
+  });
+  if (snapshot.clusters.length === 0) {
+    throw new GdeltStreamError(
+      "join",
+      "no_qualified_records",
+      "The selected GDELT batch contained no records passing all event/mention/GKG truth gates.",
+      true,
+    );
+  }
+  const snapshotIssues = validateIntelligenceSnapshot(snapshot);
+  if (snapshotIssues.length > 0 || snapshot.validationIssues.length > 0) {
+    throw new GdeltStreamError(
+      "validation",
+      "parse_invalid",
+      `GDELT snapshot failed ${snapshotIssues.length + snapshot.validationIssues.length} validation checks.`,
+      false,
+    );
+  }
+  diagnostics.push(`emitted ${snapshot.statistics.clustersEmitted} clusters / ${snapshot.statistics.articlesEmitted} articles`);
+  return snapshot;
+}
+
+function markFallback(
+  snapshot: IntelligenceSnapshot,
+  advertisedBatchId: string,
+): IntelligenceSnapshot {
+  const warning = `latest advertised GDELT batch ${advertisedBatchId} was incomplete; used prior checksum-verified batch ${snapshot.batchId}.`;
+  const health = {
+    ...snapshot.health,
+    status: "degraded" as const,
+    warnings: [...snapshot.health.warnings, warning],
+  };
+  return {
+    ...snapshot,
+    health,
+    clusters: snapshot.clusters.map((cluster) => ({ ...cluster, health })),
+  };
+}
+
 export async function loadLatestGdeltSnapshot(
   options: LoadLatestGdeltOptions = {},
 ): Promise<GdeltLoadResult> {
@@ -156,8 +268,10 @@ export async function loadLatestGdeltSnapshot(
   const generatedAt = clock.now().toISOString();
   const diagnostics: string[] = [];
   let currentLimits: GdeltStreamLimits;
+  let maxFallbackBatches: number;
   try {
     currentLimits = limits(options.limits);
+    maxFallbackBatches = fallbackBatchCount(options.fallbackBatches);
   } catch (error) {
     return failure(
       generatedAt,
@@ -166,6 +280,7 @@ export async function loadLatestGdeltSnapshot(
     );
   }
   const manifestUrl = options.manifestUrl ?? DEFAULT_LAST_UPDATE_URL;
+  const masterFileListUrl = options.masterFileListUrl ?? DEFAULT_MASTER_FILE_LIST_URL;
   const policy = options.fetchPolicy ?? {};
   try {
     const manifestBytes = await fetchCappedBytes(manifestUrl, "manifest", currentLimits.lastUpdateBytes, policy);
@@ -181,63 +296,66 @@ export async function loadLatestGdeltSnapshot(
         false,
       );
     }
-    diagnostics.push(`batch ${manifest.batchId}`);
+    diagnostics.push(`advertised batch ${manifest.batchId}`);
 
-    const eventsText = await downloadTable(manifest.files.events, currentLimits, policy);
-    const events = parseEventsTsv(eventsText, currentLimits.rows.events);
-    diagnostics.push(`events ${events.diagnostics.rowsAccepted}/${events.diagnostics.rowsSeen}`);
+    try {
+      const snapshot = await loadManifestSnapshot(manifest, generatedAt, currentLimits, policy, diagnostics);
+      return { ok: true, snapshot, diagnostics };
+    } catch (latestError) {
+      if (!isMissingPublishedFile(latestError) || maxFallbackBatches === 0) throw latestError;
+      diagnostics.push(
+        `advertised batch ${manifest.batchId} missing ${latestError.stage} (HTTP 404); checking prior checksum manifests`,
+      );
 
-    const mentionsText = await downloadTable(manifest.files.mentions, currentLimits, policy);
-    const mentions = parseMentionsTsv(mentionsText, currentLimits.rows.mentions);
-    diagnostics.push(`mentions ${mentions.diagnostics.rowsAccepted}/${mentions.diagnostics.rowsSeen}`);
+      let candidates: GdeltManifest[];
+      try {
+        const masterBytes = await fetchCappedBytes(
+          masterFileListUrl,
+          "manifest",
+          currentLimits.lastUpdateBytes,
+          policy,
+          { Range: `bytes=-${currentLimits.lastUpdateBytes}` },
+        );
+        const masterText = new TextDecoder("utf-8", { fatal: false }).decode(masterBytes);
+        candidates = parseMasterFileTail(
+          masterText,
+          manifest.batchId,
+          maxFallbackBatches,
+          masterFileListUrl,
+        );
+      } catch (fallbackManifestError) {
+        diagnostics.push(
+          `fallback manifest unavailable: ${fallbackManifestError instanceof GdeltStreamError
+            ? `${fallbackManifestError.kind}/${fallbackManifestError.stage}`
+            : "invalid master tail"}`,
+        );
+        throw latestError;
+      }
 
-    const eventIdsWithCoordinates = new Set(
-      events.records.filter((event) => event.actionGeo !== undefined).map((event) => event.globalEventId),
-    );
-    const candidateDocuments = new Set(
-      mentions.records
-        .filter(
-          (mention) =>
-            mention.mentionType === DEFAULT_GDELT_JOIN_GATES.mentionType &&
-            mention.inRawText &&
-            mention.confidence >= DEFAULT_GDELT_JOIN_GATES.minimumConfidence &&
-            eventIdsWithCoordinates.has(mention.globalEventId),
-        )
-        .map((mention) => mention.mentionIdentifier),
-    );
+      for (const candidate of candidates) {
+        diagnostics.push(`fallback candidate ${candidate.batchId}`);
+        try {
+          const snapshot = await loadManifestSnapshot(candidate, generatedAt, currentLimits, policy, diagnostics);
+          const marked = markFallback(snapshot, manifest.batchId);
+          diagnostics.push(`fallback selected ${candidate.batchId}`);
+          return { ok: true, snapshot: marked, diagnostics };
+        } catch (candidateError) {
+          if (isMissingPublishedFile(candidateError)) {
+            diagnostics.push(`fallback candidate ${candidate.batchId} missing ${candidateError.stage} (HTTP 404)`);
+            continue;
+          }
+          throw candidateError;
+        }
+      }
 
-    const gkgText = await downloadTable(manifest.files.gkg, currentLimits, policy);
-    const gkg = parseGkgTsv(gkgText, currentLimits.rows.gkg, candidateDocuments);
-    diagnostics.push(`gkg joined candidates ${gkg.diagnostics.rowsAccepted}/${gkg.diagnostics.rowsSeen}`);
-
-    const snapshot = buildIntelligenceSnapshot({
-      manifest,
-      events,
-      mentions,
-      gkg,
-      generatedAt,
-      limits: currentLimits,
-      gates: DEFAULT_GDELT_JOIN_GATES,
-    });
-    if (snapshot.clusters.length === 0) {
       throw new GdeltStreamError(
-        "join",
-        "no_qualified_records",
-        "The latest GDELT batch contained no records passing all event/mention/GKG truth gates.",
+        latestError.stage,
+        "http",
+        `Latest GDELT batch ${manifest.batchId} was incomplete and no prior complete checksum manifest was available within ${maxFallbackBatches * 15} minutes.`,
         true,
+        404,
       );
     }
-    const snapshotIssues = validateIntelligenceSnapshot(snapshot);
-    if (snapshotIssues.length > 0 || snapshot.validationIssues.length > 0) {
-      throw new GdeltStreamError(
-        "validation",
-        "parse_invalid",
-        `GDELT snapshot failed ${snapshotIssues.length + snapshot.validationIssues.length} validation checks.`,
-        false,
-      );
-    }
-    diagnostics.push(`emitted ${snapshot.statistics.clustersEmitted} clusters / ${snapshot.statistics.articlesEmitted} articles`);
-    return { ok: true, snapshot, diagnostics };
   } catch (error) {
     const normalized =
       error instanceof GdeltStreamError

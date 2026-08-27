@@ -1,6 +1,7 @@
 import type { GdeltFileKind, GdeltManifest, GdeltManifestEntry } from "./types.js";
 
 export const DEFAULT_LAST_UPDATE_URL = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt";
+export const DEFAULT_MASTER_FILE_LIST_URL = "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt";
 
 const SUFFIXES: Record<GdeltFileKind, string> = {
   events: ".export.CSV.zip",
@@ -74,4 +75,63 @@ export function parseLastUpdate(
       gkg: byKind.get("gkg")!,
     },
   };
+}
+
+/**
+ * Parse only a bounded HTTP range from the tail of masterfilelist.txt and
+ * return prior coherent 15-minute batches newest-first. The first line may be
+ * truncated by the range boundary; every subsequent non-empty row remains
+ * strict and checksum-bearing.
+ */
+export function parseMasterFileTail(
+  text: string,
+  beforeBatchId: string,
+  maxAgeBatches = 8,
+  manifestUrl = DEFAULT_MASTER_FILE_LIST_URL,
+): GdeltManifest[] {
+  const beforeIso = gdeltTimestampToIso(beforeBatchId);
+  if (beforeIso === undefined) throw new Error("Fallback boundary did not contain a valid GDELT timestamp.");
+  if (!Number.isSafeInteger(maxAgeBatches) || maxAgeBatches < 1 || maxAgeBatches > 8) {
+    throw new Error("Fallback batch window must be between 1 and 8.");
+  }
+
+  const lines = text.split(/\r?\n/);
+  const entries: GdeltManifestEntry[] = [];
+  for (const [index, raw] of lines.entries()) {
+    const line = raw.trim();
+    if (line.length === 0) continue;
+    try {
+      entries.push(parseLine(line));
+    } catch (error) {
+      if (index === 0) continue;
+      throw error;
+    }
+  }
+
+  const beforeMs = Date.parse(beforeIso);
+  const byBatch = new Map<string, Map<GdeltFileKind, GdeltManifestEntry>>();
+  for (const entry of entries) {
+    const timestamp = gdeltTimestampToIso(entry.batchId);
+    if (timestamp === undefined) continue;
+    const ageMs = beforeMs - Date.parse(timestamp);
+    if (ageMs <= 0 || ageMs % (15 * 60_000) !== 0 || ageMs > maxAgeBatches * 15 * 60_000) continue;
+    const group = byBatch.get(entry.batchId) ?? new Map<GdeltFileKind, GdeltManifestEntry>();
+    if (group.has(entry.kind)) throw new Error(`GDELT master list repeated ${entry.kind} for batch ${entry.batchId}.`);
+    group.set(entry.kind, entry);
+    byBatch.set(entry.batchId, group);
+  }
+
+  return [...byBatch.entries()]
+    .filter(([, group]) => group.size === 3)
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([batchId, group]) => ({
+      manifestUrl,
+      batchId,
+      batchTimestamp: gdeltTimestampToIso(batchId)!,
+      files: {
+        events: group.get("events")!,
+        mentions: group.get("mentions")!,
+        gkg: group.get("gkg")!,
+      },
+    }));
 }
