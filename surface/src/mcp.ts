@@ -122,12 +122,16 @@ export async function handleMcp(
   now: Date,
   staleAfterSeconds: number,
 ): Promise<Record<string, unknown> | null> {
-  let body: JsonRpcRequest;
+  let parsed: unknown;
   try {
-    body = await request.json() as JsonRpcRequest;
+    parsed = await request.json();
   } catch {
     return rpcError(null, -32700, "Parse error");
   }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return rpcError(null, -32600, "Invalid Request");
+  }
+  const body = parsed as JsonRpcRequest;
   if (body.jsonrpc !== "2.0" || typeof body.method !== "string") {
     return rpcError(body.id, -32600, "Invalid Request");
   }

@@ -10,7 +10,7 @@ interface A2AMessage {
 }
 
 interface SendMessageRequest {
-  message?: A2AMessage;
+  message?: unknown;
 }
 
 type A2AOperation =
@@ -32,6 +32,10 @@ function problem(status: number, title: string, detail: string): Response {
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function parseTimestamp(value: unknown, field: string): string | undefined {
@@ -123,22 +127,30 @@ export async function handleA2aSend(
       },
     });
   }
-  let body: SendMessageRequest;
+  let parsed: unknown;
   try {
-    body = await request.json() as SendMessageRequest;
+    parsed = await request.json();
   } catch {
     return problem(400, "Invalid A2A request", "Request body must be valid JSON");
   }
-  const message = body.message;
+  if (!isRecord(parsed)) {
+    return problem(400, "Invalid A2A request", "Request body must be a JSON object");
+  }
+  const body = parsed as SendMessageRequest;
+  const messageCandidate = body.message;
   if (
-    message === undefined
-    || typeof message.messageId !== "string"
-    || message.messageId === ""
-    || message.role !== "ROLE_USER"
-    || !Array.isArray(message.parts)
+    !isRecord(messageCandidate)
+    || typeof messageCandidate.messageId !== "string"
+    || messageCandidate.messageId === ""
+    || messageCandidate.role !== "ROLE_USER"
+    || !Array.isArray(messageCandidate.parts)
   ) {
     return problem(400, "Invalid A2A request", "messageId, ROLE_USER, and a parts array are required");
   }
+  if (!messageCandidate.parts.every(isRecord)) {
+    return problem(400, "Invalid A2A request", "Every message part must be an object");
+  }
+  const message = messageCandidate as unknown as A2AMessage;
   const dataParts = message.parts.filter((part) => Object.hasOwn(part, "data"));
   if (dataParts.length !== 1) {
     return problem(400, "Invalid A2A request", "Exactly one structured data part is required");

@@ -598,6 +598,15 @@ describe("MCP surface", () => {
     });
   });
 
+  it("returns a JSON-RPC client error for a null request body", async () => {
+    const response = await rpc(null);
+    expect(response).toEqual({
+      jsonrpc: "2.0",
+      id: null,
+      error: { code: -32600, message: "Invalid Request" },
+    });
+  });
+
   it("supports current stateless MCP discovery while retaining legacy initialization", async () => {
     const response = await rpc({
       jsonrpc: "2.0",
@@ -729,6 +738,38 @@ describe("A2A surface", () => {
       {} as ExecutionContext,
     );
   }
+
+  async function sendEnvelope(body: string): Promise<Response> {
+    return worker.fetch!(
+      new Request("https://atlas.example/a2a/message:send", {
+        method: "POST",
+        headers: { "Content-Type": "application/a2a+json", "A2A-Version": "1.0" },
+        body,
+      }),
+      env,
+      {} as ExecutionContext,
+    );
+  }
+
+  it("returns A2A client errors for null envelopes, messages, and parts", async () => {
+    const bodies = [
+      "null",
+      JSON.stringify({ message: null }),
+      JSON.stringify({
+        message: { messageId: "client-message", role: "ROLE_USER", parts: [null] },
+      }),
+    ];
+
+    for (const body of bodies) {
+      const response = await sendEnvelope(body);
+      expect(response.status).toBe(400);
+      expect(response.headers.get("content-type")).toContain("application/problem+json");
+      expect(await response.json()).toMatchObject({
+        title: "Invalid A2A request",
+        status: 400,
+      });
+    }
+  });
 
   it("returns current story summaries through a real read-only skill", async () => {
     const response = await send({ operation: "query_stories", region: "test-eu", metric: "normalized", limit: 7 });
