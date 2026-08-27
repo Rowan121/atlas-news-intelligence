@@ -33,6 +33,43 @@ describe("Atlas Worker routes", () => {
     });
   });
 
+  it("negotiates Markdown and explicit fallback semantics on the root", async () => {
+    const markdown = await worker.fetch!(
+      new Request("https://atlas.example/", { headers: { Accept: "text/markdown" } }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(markdown.status).toBe(200);
+    expect(markdown.headers.get("content-type")).toContain("text/markdown");
+    expect(await markdown.text()).toContain("# Atlas News Intelligence");
+
+    const assetEnv = {
+      ...env,
+      ASSETS: {
+        async fetch(): Promise<Response> {
+          return new Response("<!doctype html><html lang=\"en\"><body>Atlas explorer</body></html>", {
+            headers: { "Content-Type": "text/html; charset=utf-8" },
+          });
+        },
+      },
+    };
+    const html = await worker.fetch!(
+      new Request("https://atlas.example/", { headers: { Accept: "text/markdown;q=0, text/html;q=1" } }),
+      assetEnv,
+      {} as ExecutionContext,
+    );
+    expect(html.status).toBe(200);
+    expect(html.headers.get("content-type")).toContain("text/html");
+
+    const unacceptable = await worker.fetch!(
+      new Request("https://atlas.example/", { headers: { Accept: "application/pdf" } }),
+      assetEnv,
+      {} as ExecutionContext,
+    );
+    expect(unacceptable.status).toBe(406);
+    expect(unacceptable.headers.get("content-type")).toContain("application/problem+json");
+  });
+
   it("serves machine discovery without touching storage", async () => {
     const robots = await get("/robots.txt");
     expect(robots.status).toBe(200);
@@ -424,9 +461,15 @@ describe("Atlas Worker routes", () => {
     expect(response.status).toBe(400);
   });
 
-  it("rejects an invalid timestamp", async () => {
-    const response = await get("/api/stories?since=yesterday-ish");
-    expect(response.status).toBe(400);
+  it("rejects permissive but non-RFC3339 timestamps", async () => {
+    for (const value of ["1", "2026-08-26", "2026-02-30T00:00:00Z", "2026-08-26 01:00:00Z"]) {
+      const response = await get(`/api/stories?since=${encodeURIComponent(value)}`);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        ok: false,
+        error: { kind: "bad_request", message: "since must be an RFC 3339 date-time", retryable: false },
+      });
+    }
   });
 
   it("rejects a reversed time window", async () => {
@@ -598,6 +641,21 @@ describe("MCP surface", () => {
     });
   });
 
+  it("returns a tool error for a non-RFC3339 timestamp", async () => {
+    const response = await rpc({
+      jsonrpc: "2.0",
+      id: "invalid-time",
+      method: "tools/call",
+      params: { name: "atlas.query_dominant_stories", arguments: { since: "1" } },
+    });
+    expect(response).toMatchObject({
+      result: {
+        isError: true,
+        structuredContent: { error: "since must be an RFC 3339 date-time" },
+      },
+    });
+  });
+
   it("returns no body for JSON-RPC notifications", async () => {
     const response = await worker.fetch!(
       new Request("https://atlas.example/mcp", {
@@ -676,6 +734,17 @@ describe("A2A surface", () => {
     expect(response.status).toBe(400);
     expect(response.headers.get("content-type")).toContain("application/problem+json");
     expect(await response.json()).toMatchObject({ title: "Invalid A2A operation", status: 400 });
+  });
+
+  it("returns a protocol error for a non-RFC3339 timestamp", async () => {
+    const response = await send({ operation: "query_stories", since: "1" });
+    expect(response.status).toBe(400);
+    expect(response.headers.get("content-type")).toContain("application/problem+json");
+    expect(await response.json()).toMatchObject({
+      title: "Invalid A2A operation",
+      status: 400,
+      detail: "since must be an RFC 3339 date-time",
+    });
   });
 
   it("returns a typed A2A version-negotiation error", async () => {

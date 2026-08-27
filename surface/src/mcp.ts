@@ -1,4 +1,5 @@
 import type { StoryQuery } from "./contracts";
+import { normalizeRfc3339DateTime } from "./date-time";
 import { HttpProblem } from "./http";
 import type { TruthStore } from "./store";
 
@@ -81,10 +82,9 @@ function assertOnlyKeys(value: Record<string, unknown>, allowed: readonly string
 
 function timestamp(value: unknown, field: string): string | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
-    throw new HttpProblem(400, "bad_request", `${field} must be an ISO-8601 timestamp`);
-  }
-  return new Date(value).toISOString();
+  const normalized = typeof value === "string" ? normalizeRfc3339DateTime(value) : null;
+  if (normalized === null) throw new HttpProblem(400, "bad_request", `${field} must be an RFC 3339 date-time`);
+  return normalized;
 }
 
 function parseQuery(argumentsValue: unknown): StoryQuery {

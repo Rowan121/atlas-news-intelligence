@@ -1,4 +1,5 @@
 import type { ProminenceMetric, StoryQuery } from "./contracts";
+import { normalizeRfc3339DateTime } from "./date-time";
 import type { TruthStore } from "./store";
 
 interface A2AMessage {
@@ -35,10 +36,9 @@ function problem(status: number, title: string, detail: string): Response {
 
 function parseTimestamp(value: unknown, field: string): string | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
-    throw new Error(`${field} must be an ISO-8601 timestamp`);
-  }
-  return new Date(value).toISOString();
+  const normalized = typeof value === "string" ? normalizeRfc3339DateTime(value) : null;
+  if (normalized === null) throw new Error(`${field} must be an RFC 3339 date-time`);
+  return normalized;
 }
 
 function parseOperation(raw: unknown): A2AOperation {

@@ -4,6 +4,7 @@ import {
   a2aAgentCard,
   apiCatalog,
   attachDiscoveryHeaders,
+  documentationRepresentation,
   docs,
   integrations,
   llms,
@@ -189,6 +190,11 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
 
         if (url.pathname === "/") {
           readMethod(request);
+          if (documentationRepresentation(request) !== "html") {
+            const response = withoutBodyForHead(request, docs(request));
+            corsHeadersFor(response.headers, corsHeaders);
+            return response;
+          }
           if (env.ASSETS !== undefined) {
             const asset = await env.ASSETS.fetch(request);
             const response = attachDiscoveryHeaders(new Response(request.method === "HEAD" ? null : asset.body, {

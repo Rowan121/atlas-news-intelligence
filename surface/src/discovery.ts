@@ -43,7 +43,7 @@ function mediaQuality(accept: string, mediaType: string): number {
   return bestQuality;
 }
 
-function documentationRepresentation(request: Request): "markdown" | "html" | null {
+export function documentationRepresentation(request: Request): "markdown" | "html" | null {
   if (new URL(request.url).pathname.endsWith(".md")) return "markdown";
   const accept = request.headers.get("Accept") ?? "";
   const markdown = mediaQuality(accept, "text/markdown");

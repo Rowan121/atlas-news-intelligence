@@ -1,4 +1,5 @@
 import type { ErrorKind, FailureEnvelope, SuccessEnvelope } from "./contracts";
+import { normalizeRfc3339DateTime } from "./date-time";
 
 export class HttpProblem extends Error {
   constructor(
@@ -62,9 +63,7 @@ export function parsePositiveInt(value: string | null, fallback: number, max: nu
 
 export function parseTimestamp(value: string | null, field: string): string | undefined {
   if (value === null) return undefined;
-  const parsed = new Date(value);
-  if (!Number.isFinite(parsed.getTime())) {
-    throw new HttpProblem(400, "bad_request", `${field} must be an ISO-8601 timestamp`);
-  }
-  return parsed.toISOString();
+  const normalized = normalizeRfc3339DateTime(value);
+  if (normalized === null) throw new HttpProblem(400, "bad_request", `${field} must be an RFC 3339 date-time`);
+  return normalized;
 }
