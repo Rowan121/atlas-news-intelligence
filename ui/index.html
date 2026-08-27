@@ -3,13 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#07100f" />
-    <meta name="description" content="Atlas is a geographic intelligence view of the world's news." />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="Atlas compares how the same current story is covered across regions and outlets without conflating event location, publisher origin, or audience exposure." />
     <title>Atlas — Global news intelligence</title>
   </head>
   <body>
     <a class="skip-link" href="#story-feed">Skip to story feed</a>
     <div id="root"></div>
+    <noscript>
+      <main style="max-width:760px;margin:48px auto;padding:0 24px;font:16px/1.6 system-ui;color:#17202a">
+        <h1>Atlas — global news intelligence</h1>
+        <p>Atlas maps current events and compares how the same story is covered across outlets and evidenced coverage markets. Event location, publisher origin, and audience exposure remain separate facts.</p>
+        <nav aria-label="Atlas resources">
+          <a href="/api/v1/intelligence?window=24h&amp;prominence=normalized">Current 24-hour intelligence (JSON)</a>
+          · <a href="/health">Service health</a>
+          · <a href="/mcp">MCP endpoint</a>
+        </nav>
+        <p>The interactive globe requires JavaScript; the linked public interfaces remain available without it.</p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

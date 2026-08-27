@@ -1,12 +1,11 @@
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   ArrowUpRight,
   CheckCircle2,
-  ChevronRight,
   Clock3,
   Globe2,
-  Layers3,
   LocateFixed,
   Menu,
   RefreshCw,
@@ -15,16 +14,16 @@ import {
   ShieldAlert,
   Signal,
   SlidersHorizontal,
-  Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { AtlasApiError, createDefaultClient } from "./api";
-import { GlobeMap } from "./GlobeMap";
+import { GlobeMap, type CoverageHeatPoint } from "./GlobeMap";
 import type {
   NewsIntelligenceClient,
   ProminenceMode,
   RegionDominance,
+  SourceCoverage,
   StoryCluster,
   TimeWindow,
 } from "./types";
@@ -79,6 +78,18 @@ function statusMessage(error: Error) {
   };
 }
 
+function publisherColor(publisher: string) {
+  let hash = 0;
+  for (const character of publisher) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  const palette = ["#2457d6", "#b42318", "#126b55", "#7a3db8", "#9a5b13", "#176b87", "#a72c62"];
+  return palette[hash % palette.length];
+}
+
+function publisherInitials(publisher: string) {
+  const normalized = publisher.replace(/^www\./, "").split(".")[0] ?? publisher;
+  return normalized.slice(0, 2).toLocaleUpperCase();
+}
+
 function RegionRail({
   regions,
   selectedId,
@@ -91,13 +102,14 @@ function RegionRail({
   onSelect: (id: string | null) => void;
 }) {
   return (
-    <nav className="region-rail" aria-label="Filter by region">
+    <nav className="region-rail" aria-label="Filter stories by event place">
       <button
         type="button"
         className={!selectedId ? "region-pill is-active" : "region-pill"}
         onClick={() => onSelect(null)}
+        aria-pressed={!selectedId}
       >
-        <Globe2 size={15} /> Global
+        <Globe2 size={14} /> Everywhere
       </button>
       {regions.map((region) => (
         <button
@@ -122,123 +134,105 @@ function RegionRail({
 function StoryCard({
   cluster,
   mode,
-  selected,
   onSelect,
 }: {
   cluster: StoryCluster;
   mode: ProminenceMode;
-  selected: boolean;
   onSelect: () => void;
 }) {
   const location = cluster.eventLocations[0];
   return (
-    <button
-      type="button"
-      className={selected ? "story-card is-selected" : "story-card"}
-      onClick={onSelect}
-      aria-current={selected ? "true" : undefined}
-    >
+    <button type="button" className="story-card" onClick={onSelect}>
       <span className="story-rank" aria-label={`Prominence ${formatProminence(cluster, mode)}`}>
         {formatProminence(cluster, mode)}
       </span>
       <span className="story-card-main">
         <span className="story-meta">
-          <span><LocateFixed size={13} /> {location?.label ?? "Location unresolved"}</span>
-          <span>{cluster.publisherCount} publishers</span>
-          <span>{cluster.languageCount} languages</span>
+          <span><LocateFixed size={13} /> Event: {location?.label ?? "Location unresolved"}</span>
+          <span>{cluster.publisherCount} outlets</span>
         </span>
         <strong>{cluster.canonicalTitle}</strong>
-        <span className="story-summary">{cluster.summary}</span>
+        {cluster.summary && <span className="story-summary">{cluster.summary}</span>}
         <span className="signal-row">
           {cluster.signals.conflict && (
-            <span className="signal-badge signal-conflict"><Scale size={13} /> Conflicting claims</span>
+            <span className="signal-badge signal-conflict"><Scale size={13} /> Claims differ</span>
           )}
           {cluster.signals.underreported && (
             <span className="signal-badge signal-gap"><ShieldAlert size={13} /> Coverage gap</span>
           )}
           <span className="confidence-badge">
-            {Math.round(cluster.membershipConfidence * 100)}% cluster confidence
+            {Math.round(cluster.membershipConfidence * 100)}% same-story confidence
           </span>
         </span>
       </span>
-      <ChevronRight className="story-arrow" size={18} aria-hidden="true" />
+      <span className="story-open-label">Compare</span>
     </button>
   );
 }
 
-function SourceDrawer({ cluster, onClose }: { cluster: StoryCluster; onClose: () => void }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    closeRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  const eventLocation = cluster.eventLocations[0];
+function ToneBar({ source }: { source: SourceCoverage }) {
+  // Claim stance is not sentiment. Until the evidence-backed framing contract
+  // supplies a score, the UI states that the assessment is unavailable.
   return (
-    <div className="drawer-backdrop" onMouseDown={onClose}>
-      <aside
-        className="source-drawer"
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Source comparison for ${cluster.canonicalTitle}`}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className="drawer-header">
-          <div>
-            <span className="eyebrow">Source comparison</span>
-            <h2>{cluster.canonicalTitle}</h2>
-          </div>
-          <button ref={closeRef} className="icon-button" type="button" onClick={onClose} aria-label="Close source comparison">
-            <X size={20} />
-          </button>
-        </header>
-
-        <div className="truth-strip">
-          <div><LocateFixed size={17} /><span><small>Event location</small>{eventLocation?.label ?? "Unresolved"}</span></div>
-          <div><Layers3 size={17} /><span><small>Compared coverage</small>{cluster.publisherCount} publishers · {cluster.articleCount} articles</span></div>
-          <div><Signal size={17} /><span><small>Cluster confidence</small>{Math.round(cluster.membershipConfidence * 100)}%</span></div>
-        </div>
-
-        {(cluster.signals.conflict || cluster.signals.underreported) && (
-          <section className="analysis-note" aria-label="Coverage analysis">
-            <Sparkles size={18} />
-            <div>
-              <strong>What differs across coverage</strong>
-              {cluster.signals.conflictSummary && <p>{cluster.signals.conflictSummary}</p>}
-              {cluster.signals.undercoverageSummary && <p>{cluster.signals.undercoverageSummary}</p>}
-            </div>
-          </section>
-        )}
-
-        <section className="source-list" aria-label="Sources">
-          {cluster.sources.map((source) => (
-            <article className="source-card" key={source.id}>
-              <div className="source-card-head">
-                <div>
-                  <strong>{source.publisher}</strong>
-                  <span className="publisher-origin">
-                    Publisher origin: {source.publisherOrigin?.label ?? "not verified"}
-                  </span>
-                </div>
-                <span className={`claim-position claim-${source.claimPosition}`}>{source.claimPosition}</span>
-              </div>
-              <h3>{source.articleTitle}</h3>
-              {source.excerpt && <p>{source.excerpt}</p>}
-              <footer>
-                <span>{source.language.toUpperCase()} · {formatRelativeTime(source.publishedAt).replace("Updated ", "")}</span>
-                <a href={source.url} target="_blank" rel="noreferrer">
-                  Read original <ArrowUpRight size={14} />
-                </a>
-              </footer>
-            </article>
-          ))}
-        </section>
-      </aside>
+    <div className="tone-block" aria-label={`Framing tone for ${source.publisher} has not been assessed`}>
+      <div className="tone-label-row">
+        <span>Critical / negative</span>
+        <strong>Framing not assessed</strong>
+        <span>Supportive / positive</span>
+      </div>
+      <div className="tone-track is-unknown">
+        <span className="tone-marker" style={{ left: "50%" }} />
+      </div>
     </div>
+  );
+}
+
+function SourceVariantCard({ source }: { source: SourceCoverage }) {
+  const brand = publisherColor(source.publisher);
+  const cardStyle = { "--publisher-color": brand } as CSSProperties;
+  return (
+    <article className="source-variant-card" style={cardStyle}>
+      <header className="source-identity">
+        <span className="publisher-mark" aria-hidden="true">{publisherInitials(source.publisher)}</span>
+        <span>
+          <strong>{source.publisher}</strong>
+          <small>Publisher origin: {source.publisherOrigin?.label ?? "not verified"}</small>
+        </span>
+        <span className="source-language">{source.language.toLocaleUpperCase()}</span>
+      </header>
+      <h3>{source.articleTitle}</h3>
+      {source.excerpt && <p className="source-excerpt">{source.excerpt}</p>}
+      <dl className="geography-facts">
+        <div><dt>Coverage market</dt><dd>Not evidenced in this record</dd></div>
+        <div><dt>Audience exposure</dt><dd>Not measured</dd></div>
+      </dl>
+      <ToneBar source={source} />
+      <footer>
+        <span>{formatRelativeTime(source.publishedAt).replace("Updated ", "")}</span>
+        <a href={source.url} target="_blank" rel="noreferrer">
+          Read original <ArrowUpRight size={14} />
+        </a>
+      </footer>
+    </article>
+  );
+}
+
+function FocusedStory({ cluster }: { cluster: StoryCluster }) {
+  const location = cluster.eventLocations[0];
+  return (
+    <article className="focused-story-card" aria-label="Selected story">
+      <span className="mode-chip">Selected same-story cluster</span>
+      <h1>{cluster.canonicalTitle}</h1>
+      {cluster.summary && <p>{cluster.summary}</p>}
+      <div className="focused-story-facts">
+        <span><LocateFixed size={15} /><small>Event happened in</small><strong>{location?.label ?? "Unresolved"}</strong></span>
+        <span><Signal size={15} /><small>Compared coverage</small><strong>{cluster.publisherCount} outlets · {cluster.articleCount} articles</strong></span>
+        <span><CheckCircle2 size={15} /><small>Same-story confidence</small><strong>{Math.round(cluster.membershipConfidence * 100)}%</strong></span>
+      </div>
+      <p className="truth-caption">
+        The event location anchors the story. Heat appears only from separately evidenced coverage markets; it never represents reader location by assumption.
+      </p>
+    </article>
   );
 }
 
@@ -246,10 +240,11 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
   const [window, setWindow] = useState<TimeWindow>("24h");
   const [prominence, setProminence] = useState<ProminenceMode>("normalized");
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
-  const [selectedClusterId, setSelectedClusterId] = useState<string | null>(null);
-  const [drawerClusterId, setDrawerClusterId] = useState<string | null>(null);
+  const [focusedClusterId, setFocusedClusterId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const comparisonHeadingRef = useRef<HTMLHeadingElement>(null);
+  const overviewHeadingRef = useRef<HTMLHeadingElement>(null);
   const { state, retry } = useSnapshot(client, window, prominence);
   const snapshot = state.data;
 
@@ -268,31 +263,42 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
   }, [query, selectedRegionId, snapshot?.clusters]);
 
   useEffect(() => {
-    if (clusters.length === 0) {
-      setSelectedClusterId(null);
-      return;
+    if (focusedClusterId && !snapshot?.clusters.some((cluster) => cluster.id === focusedClusterId)) {
+      setFocusedClusterId(null);
     }
-    if (!clusters.some((cluster) => cluster.id === selectedClusterId)) {
-      setSelectedClusterId(clusters[0].id);
-    }
-  }, [clusters, selectedClusterId]);
+  }, [focusedClusterId, snapshot?.clusters]);
 
-  const selectedCluster = clusters.find((cluster) => cluster.id === selectedClusterId) ?? null;
-  const drawerCluster = snapshot?.clusters.find((cluster) => cluster.id === drawerClusterId) ?? null;
+  const focusedCluster = snapshot?.clusters.find((cluster) => cluster.id === focusedClusterId) ?? null;
+  const viewMode = focusedCluster ? "story" : "overview";
   const regions = snapshot?.regions ?? [];
   const health = snapshot?.health;
+
+  // Filled only by evidence-backed coverage-market records. Publisher origin is
+  // deliberately excluded because it is not proof of distribution or exposure.
+  const coverageHeatPoints: CoverageHeatPoint[] = [];
 
   const onSelectRegion = (id: string | null) => {
     setSelectedRegionId(id);
     setMobilePanelOpen(true);
   };
 
+  const enterStoryMode = (id: string) => {
+    setFocusedClusterId(id);
+    setMobilePanelOpen(true);
+    requestAnimationFrame(() => comparisonHeadingRef.current?.focus());
+  };
+
+  const leaveStoryMode = () => {
+    setFocusedClusterId(null);
+    requestAnimationFrame(() => overviewHeadingRef.current?.focus());
+  };
+
   return (
-    <div className="app-shell">
+    <div className={`app-shell mode-${viewMode}`}>
       <header className="topbar">
-        <a className="brand" href="#top" aria-label="Atlas home">
-          <span className="brand-mark"><Globe2 size={22} /></span>
-          <span><strong>ATLAS</strong><small>Global news intelligence</small></span>
+        <a className="brand" href="#top" aria-label="Atlas home" onClick={leaveStoryMode}>
+          <span className="brand-mark"><Globe2 size={20} /></span>
+          <span><strong>ATLAS</strong><small>Compare how the world covers one story</small></span>
         </a>
         <div className="topbar-center">
           <span className={`health-indicator health-${health?.status ?? "connecting"}`}>
@@ -309,12 +315,16 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             <RefreshCw className={state.status === "loading" ? "is-spinning" : ""} size={18} />
           </button>
           <button className="mobile-menu-button" type="button" onClick={() => setMobilePanelOpen((open) => !open)} aria-label="Toggle story panel">
-            <Menu size={19} /> Stories
+            <Menu size={19} /> {viewMode === "story" ? "Coverage" : "Stories"}
           </button>
         </div>
       </header>
 
       <section className="control-deck" aria-label="Intelligence controls">
+        <div className="view-status">
+          <span className={`view-status-dot is-${viewMode}`} />
+          {viewMode === "story" ? "Comparing one story" : "Exploring events"}
+        </div>
         <div className="time-control segmented-control" aria-label="Time window">
           {WINDOW_OPTIONS.map((option) => (
             <button
@@ -344,24 +354,34 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
       </section>
 
       <main id="top" className="workspace">
-        <section className="map-stage" aria-label="Geographic news map">
+        <section className="map-stage" aria-label={viewMode === "story" ? "Selected story coverage map" : "Geographic news map"}>
           <GlobeMap
-            clusters={clusters}
+            clusters={viewMode === "story" && focusedCluster ? [focusedCluster] : clusters}
             regions={regions}
-            selectedClusterId={selectedClusterId}
+            selectedClusterId={focusedClusterId}
             prominenceMode={prominence}
-            onSelectCluster={(id) => {
-              setSelectedClusterId(id);
-              setMobilePanelOpen(true);
-            }}
+            viewMode={viewMode}
+            coverageHeatPoints={coverageHeatPoints}
+            onSelectCluster={enterStoryMode}
             onSelectRegion={onSelectRegion}
           />
 
-          <div className="map-title">
-            <span className="eyebrow">Live geographic signal</span>
-            <h1>What is shaping attention<br />around the world?</h1>
-            <p>Stories are placed where events happen—not where publishers are headquartered.</p>
-          </div>
+          {focusedCluster ? (
+            <FocusedStory cluster={focusedCluster} />
+          ) : (
+            <div className="map-title">
+              <span className="eyebrow">Global event view</span>
+              <h1>Choose a place.<br />Then compare one story.</h1>
+              <p>Start with where an event happened. Select a story to reveal every matched version, regional coverage evidence, and framing differences.</p>
+            </div>
+          )}
+
+          {viewMode === "story" && coverageHeatPoints.length === 0 && (
+            <div className="coverage-unavailable-note" role="note">
+              <ShieldAlert size={16} />
+              <span><strong>Coverage heat withheld</strong> No verified coverage-market coordinates are attached to this cluster yet.</span>
+            </div>
+          )}
 
           {state.status === "loading" && !snapshot && (
             <div className="map-state-card" role="status">
@@ -391,32 +411,57 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             <div className="health-deck" aria-label="Pipeline health">
               <div><Activity size={15} /><span><small>Pipeline</small>{snapshot.health.status}</span></div>
               <div><Signal size={15} /><span><small>Sources</small>{snapshot.health.activeSourceCount}</span></div>
-              <div><Globe2 size={15} /><span><small>Regions</small>{snapshot.health.regionCount}</span></div>
+              <div><Globe2 size={15} /><span><small>Event places</small>{snapshot.health.regionCount}</span></div>
               <div><Clock3 size={15} /><span><small>Window</small>{window}</span></div>
             </div>
           )}
         </section>
 
-        <aside id="story-feed" className={`story-panel${mobilePanelOpen ? " is-open" : ""}`} aria-label="Dominant stories">
+        <aside id="story-feed" className={`story-panel${mobilePanelOpen ? " is-open" : ""}`} aria-label={viewMode === "story" ? "Same-story coverage" : "Stories by event place"}>
           <div className="story-panel-head">
-            <div><span className="eyebrow">Regional pulse</span><h2>Dominant stories</h2></div>
-            <span className="story-count">{clusters.length}</span>
+            <div>
+              <span className="eyebrow">{viewMode === "story" ? "Cross-regional comparison" : "Stories by event place"}</span>
+              {focusedCluster ? (
+                <h2 ref={comparisonHeadingRef} tabIndex={-1}>News stories like “{focusedCluster.canonicalTitle}”</h2>
+              ) : (
+                <h2 ref={overviewHeadingRef} tabIndex={-1}>What happened where</h2>
+              )}
+            </div>
+            {focusedCluster ? (
+              <button className="back-button" type="button" onClick={leaveStoryMode}><ArrowLeft size={15} /> Back</button>
+            ) : (
+              <span className="story-count">{clusters.length}</span>
+            )}
             <button className="mobile-close" type="button" onClick={() => setMobilePanelOpen(false)} aria-label="Close story panel"><X size={18} /></button>
           </div>
-          <RegionRail regions={regions} selectedId={selectedRegionId} mode={prominence} onSelect={onSelectRegion} />
+
+          {!focusedCluster && (
+            <RegionRail regions={regions} selectedId={selectedRegionId} mode={prominence} onSelect={onSelectRegion} />
+          )}
 
           <div className="feed-label">
-            <span>{prominence === "raw" ? "Coverage volume" : "Region-normalized prominence"}</span>
-            <span className="metric-explainer">
-              {prominence === "raw" ? "Observed article count" : "Adjusted for regional source volume"}
-            </span>
+            {focusedCluster ? (
+              <>
+                <span>{focusedCluster.sources.length} matched versions</span>
+                <span className="metric-explainer">Same event · different outlets and framing</span>
+              </>
+            ) : (
+              <>
+                <span>{prominence === "raw" ? "Observed coverage volume" : "Event-region prominence"}</span>
+                <span className="metric-explainer">
+                  {prominence === "raw" ? "Article count" : "Normalized by regional source volume"}
+                </span>
+              </>
+            )}
           </div>
 
-          <div className="story-list">
-            {clusters.map((cluster) => (
-              <StoryCard key={cluster.id} cluster={cluster} mode={prominence} selected={cluster.id === selectedClusterId} onSelect={() => setSelectedClusterId(cluster.id)} />
-            ))}
-            {snapshot && clusters.length === 0 && (
+          <div className={`story-list${focusedCluster ? " is-comparison" : ""}`}>
+            {focusedCluster
+              ? focusedCluster.sources.map((source) => <SourceVariantCard key={source.id} source={source} />)
+              : clusters.map((cluster) => (
+                  <StoryCard key={cluster.id} cluster={cluster} mode={prominence} onSelect={() => enterStoryMode(cluster.id)} />
+                ))}
+            {snapshot && !focusedCluster && clusters.length === 0 && (
               <div className="feed-empty">
                 <Search size={20} />
                 <strong>No matching verified coverage</strong>
@@ -430,16 +475,14 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             )}
           </div>
 
-          {selectedCluster && (
-            <div className="selected-story-action">
-              <div><span>Selected event</span><strong>{selectedCluster.eventLocations[0]?.label ?? "Location unresolved"}</strong></div>
-              <button type="button" onClick={() => setDrawerClusterId(selectedCluster.id)}>Compare {selectedCluster.publisherCount} publishers <ChevronRight size={16} /></button>
+          {focusedCluster && (
+            <div className="comparison-footnote">
+              <strong>What the map means</strong>
+              <span>Heat = evidenced outlet coverage market. Publisher origin and audience exposure stay separate and may be unknown.</span>
             </div>
           )}
         </aside>
       </main>
-
-      {drawerCluster && <SourceDrawer cluster={drawerCluster} onClose={() => setDrawerClusterId(null)} />}
     </div>
   );
 }
