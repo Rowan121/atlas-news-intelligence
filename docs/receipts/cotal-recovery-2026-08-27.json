@@ -1,0 +1,162 @@
+{
+  "receipt_version": 1,
+  "kind": "cotal_recovery",
+  "observed_at": "2026-08-27T21:32:06Z",
+  "repository": {
+    "branch": "codex/ui-story-comparison",
+    "candidate_commit": "b0eed886313537749576d9145a37a7c1899b6781"
+  },
+  "constraints_observed": {
+    "read_only_except_existing_team_message": true,
+    "login_attempted": false,
+    "credential_search_attempted": false,
+    "credential_content_read_or_printed": false,
+    "agent_or_account_created": false,
+    "team_or_channel_mutated": false,
+    "product_code_changed": false
+  },
+  "coordination_baseline": {
+    "channel": "team.rowan",
+    "lanes": [
+      {
+        "seat": "atlas_data",
+        "lane": "A",
+        "recorded_state": "INTEGRATED — SAME-STORY CONTRACT VERIFIED LOCALLY",
+        "recorded_commits": [
+          "10a894e",
+          "248046f",
+          "d19e0ec",
+          "a30f5a9"
+        ],
+        "latest_recorded_checks": "85/85 tests plus strict TypeScript"
+      },
+      {
+        "seat": "globe_ui",
+        "lane": "B",
+        "recorded_state": "READY_FOR_INTEGRATION",
+        "recorded_commits": [
+          "c9511bd"
+        ],
+        "latest_recorded_checks": "5/5 tests plus production build"
+      },
+      {
+        "seat": "surface_runtime",
+        "lane": "C",
+        "recorded_state": "READY FOR COORDINATOR INTEGRATION",
+        "recorded_commits": [
+          "8dc6fa6"
+        ],
+        "latest_recorded_checks": "26/26 tests plus strict TypeScript"
+      },
+      {
+        "seat": "proof_gate",
+        "lane": "D",
+        "recorded_state": "BOOTSTRAP",
+        "recorded_commits": [],
+        "latest_recorded_checks": null
+      }
+    ]
+  },
+  "mesh": {
+    "cli_version": "0.33.1",
+    "space": "hack",
+    "mode": "user",
+    "transport": "tls_required_websocket",
+    "transport_status": "reachable",
+    "live_snapshot_status": "blocked_no_user_auth",
+    "presence_summary": {
+      "idle_agents": 5,
+      "idle_non_agent_endpoints": 8,
+      "expected_atlas_seats_visible": [],
+      "expected_atlas_seats_missing": [
+        "atlas_data",
+        "globe_ui",
+        "surface_runtime",
+        "proof_gate"
+      ]
+    },
+    "channel_registry": {
+      "default_replay": true,
+      "explicit_entries": 0
+    },
+    "manager_status": "unreachable"
+  },
+  "ordered_evidence": [
+    {
+      "order": 1,
+      "command": "cotal --version",
+      "exit_code": 0,
+      "sanitized_result": "cotal-ai and installed first-party connectors report version 0.33.1"
+    },
+    {
+      "order": 2,
+      "command": "cotal meshes",
+      "exit_code": 0,
+      "sanitized_result": "the registered current mesh is hack in user mode over a TLS-required WebSocket transport"
+    },
+    {
+      "order": 3,
+      "command": "cotal status --space hack",
+      "exit_code": 0,
+      "sanitized_result": "mesh transport is reachable; the live snapshot is unavailable",
+      "exact_blocker": "space \"hack\" has no user-auth material on this machine - user-mode status reads run where `cotal up --user-auth` provisioned the space"
+    },
+    {
+      "order": 4,
+      "command": "cotal endpoints --space hack",
+      "exit_code": 0,
+      "sanitized_result": "13 idle presence entries were observed: 5 agents and 8 non-agent endpoints; none of the four expected Atlas seat names appeared"
+    },
+    {
+      "order": 5,
+      "command": "cotal channels list --space hack",
+      "exit_code": 0,
+      "sanitized_result": "default replay is enabled and the explicit channel registry contains no entries"
+    },
+    {
+      "order": 6,
+      "command": "cotal ps --space hack --wide",
+      "exit_code": 1,
+      "exact_error": "no manager reachable on the ep rails (deadline-exceeded: no reply to manager.ps within the 10000ms budget (SPEC 13.5))"
+    },
+    {
+      "order": 7,
+      "command": "cotal send msg team.rowan <sanitized-recovery-assignment> --space hack",
+      "exit_code": 0,
+      "sanitized_result": "the broker accepted one message addressed only to #team.rowan; downstream delivery or consumption is not proven"
+    }
+  ],
+  "team_message": {
+    "channel": "team.rowan",
+    "sent_at": "2026-08-27T21:31:19Z",
+    "broker_acceptance_observed": true,
+    "recipient_delivery_verified": false,
+    "candidate": "b0eed886",
+    "assignments": [
+      {
+        "seat": "atlas_data",
+        "request": "report latest data receipt"
+      },
+      {
+        "seat": "globe_ui",
+        "request": "report latest UI receipt"
+      },
+      {
+        "seat": "surface_runtime",
+        "request": "report production surface receipt"
+      },
+      {
+        "seat": "proof_gate",
+        "request": "report final frozen-origin verification status"
+      }
+    ],
+    "guardrails": "read-only; no code, deploy, keys, accounts, agents, provider calls, or team/channel mutation; replies requested in the compact receipt schema"
+  },
+  "status": "partial_recovery",
+  "blockers": [
+    "A live user-mode mesh snapshot cannot be inspected without a signed-in granted login, and this recovery explicitly forbids login.",
+    "The manager did not answer the read-only ps request within its 10-second budget.",
+    "The four recorded Atlas seat names were absent from the observed presence roster, so no response or continued execution can be claimed."
+  ],
+  "next": "Preserve this receipt and any later team.rowan replies as separate sanitized evidence; do not infer delivery, Cotal/Nebius execution, or agent activity from broker acceptance alone."
+}
