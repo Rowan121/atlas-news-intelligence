@@ -250,9 +250,12 @@ describe("App live-data states", () => {
     expect(screen.queryByText(/News stories like/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Tone not assessed")).not.toBeInTheDocument();
 
+    const storyList = story.closest(".story-list") as HTMLDivElement;
+    storyList.scrollTop = 240;
     fireEvent.click(story);
 
     expect(await screen.findByRole("heading", { name: /News stories like.*Major flood response/i })).toBeInTheDocument();
+    await waitFor(() => expect(storyList.scrollTop).toBe(0));
     expect(screen.getAllByText("Tone not assessed")).toHaveLength(2);
     expect(screen.getByText("Coverage heat withheld")).toBeInTheDocument();
     expect(screen.getByText("Queensland begins recovery after flood")).toBeInTheDocument();

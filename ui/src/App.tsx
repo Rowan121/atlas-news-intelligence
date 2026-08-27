@@ -268,6 +268,7 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const comparisonHeadingRef = useRef<HTMLHeadingElement>(null);
   const overviewHeadingRef = useRef<HTMLHeadingElement>(null);
+  const storyListRef = useRef<HTMLDivElement>(null);
   const { state, retry } = useSnapshot(client, window, prominence);
   const snapshot = state.data;
 
@@ -295,6 +296,13 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
   const viewMode = focusedCluster ? "story" : "overview";
   const regions = snapshot?.regions ?? [];
   const health = snapshot?.health;
+
+  useEffect(() => {
+    // The overview and comparison views reuse this scroll container. Reset it
+    // at each mode transition so a story selected low in the overview cannot
+    // open with its first source card already clipped out of view.
+    if (storyListRef.current) storyListRef.current.scrollTop = 0;
+  }, [focusedClusterId]);
 
   // Only the coverageHeat contract can populate this layer. Publisher origin,
   // event location, and audience exposure are deliberately not fallbacks.
@@ -492,7 +500,7 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             )}
           </div>
 
-          <div className={`story-list${focusedCluster ? " is-comparison" : ""}`}>
+          <div ref={storyListRef} className={`story-list${focusedCluster ? " is-comparison" : ""}`}>
             {focusedCluster
               ? focusedCluster.sources.map((source) => <SourceVariantCard key={source.id} source={source} />)
               : clusters.map((cluster) => (
