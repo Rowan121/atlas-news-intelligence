@@ -92,7 +92,8 @@ async function check(name, route, init, validate) {
 const root = await check("root HTML + no-JS truth", "/", undefined, ({ response, text, contentType }) => {
   assert.equal(response.status, 200);
   assert.match(contentType, /^text\/html\b/);
-  assert.match(text, /<noscript>/);
+  assert.match(text, /<main id="top"/);
+  assert.match(text, /Atlas helps people inspect how the same current news story is covered/i);
   assert.match(text, /compares how the same current story is covered/i);
   assert.match(response.headers.get("link") ?? "", /rel="api-catalog"/);
   assert.equal([...text.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].length, 2);
@@ -223,7 +224,14 @@ await check("OpenAPI 3.1", "/openapi.json", undefined, ({ response, text, conten
   assert.match(contentType, /^application\/vnd\.oai\.openapi\+json/);
   const body = JSON.parse(text);
   assert.equal(body.openapi, "3.1.0");
-  assert.deepEqual(Object.keys(body.paths).sort(), ["/api/stories", "/api/stories/{cluster_id}", "/api/v1/intelligence", "/health"].sort());
+  assert.deepEqual(Object.keys(body.paths).sort(), [
+    "/api/stories",
+    "/api/stories/{cluster_id}",
+    "/api/v1/intelligence",
+    "/api/v1/stories",
+    "/api/v1/stories/{cluster_id}",
+    "/health",
+  ].sort());
   assert.ok(Object.values(body.paths).every((pathItem) => Object.keys(pathItem).every((key) => key === "get")));
 });
 

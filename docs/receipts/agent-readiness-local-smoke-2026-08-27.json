@@ -1,0 +1,49 @@
+{
+  "completed_at": "2026-08-27T21:51:56.136Z",
+  "scope": "isolated local Worker and D1; no push, deployment, remote database write, or external score claim",
+  "candidate_parent": "cb18b7e4a07c9a814b482877b11e195be25b733d",
+  "origin": "http://127.0.0.1:8790",
+  "seed": {
+    "run_id": "gdelt:20260827170000",
+    "run_status": "succeeded",
+    "database_clusters": 111,
+    "database_articles": 123,
+    "response_clusters": 100,
+    "response_regions": 42,
+    "observed_editorial_market_heat_clusters": 1
+  },
+  "verification": {
+    "http_checks_passed": 24,
+    "http_checks_failed": 0,
+    "full_release_gate": {
+      "data_tests": "85/85 passed",
+      "ui_tests": "30/30 passed",
+      "surface_tests": "73/73 passed",
+      "typechecks": "passed",
+      "data_and_ui_builds": "passed",
+      "wrangler_dry_bundle": "passed",
+      "dependency_audits": "0 known vulnerabilities"
+    },
+    "covered": [
+      "substantive raw HTML and built UI assets",
+      "D1 health and 24-hour intelligence",
+      "REST list/detail and v1 OpenAPI paths",
+      "HTML and Markdown documentation",
+      "Content-Signal robots policy and sitemap",
+      "MCP initialize, tools/list, story list, and story detail",
+      "A2A discovery and all retained adapters",
+      "controlled malformed input",
+      "recoverable Markdown 404"
+    ]
+  },
+  "full_machine_receipt": {
+    "path": "artifacts/readiness-recovery-local-smoke.json",
+    "sha256": "2728e2bcce41d9b52ac1d64416e0307b712f0f2fb785101b4cc647663b1889c1",
+    "tracked": false,
+    "reason": "generated runtime artifacts are intentionally gitignored; this tracked receipt preserves their identity"
+  },
+  "external_scores": {
+    "rescanned": false,
+    "reason": "Deployment is explicitly forbidden; local tests are not production scanner proof."
+  }
+}
