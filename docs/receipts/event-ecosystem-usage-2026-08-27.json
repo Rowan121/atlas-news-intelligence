@@ -1,7 +1,7 @@
 {
   "receipt_version": 1,
   "kind": "event_ecosystem_usage_ledger",
-  "recorded_at": "2026-08-27T22:38:52Z",
+  "recorded_at": "2026-08-27T23:12:57Z",
   "scope": "Atlas build, recovery, verification, event operations, and production hosting; evidence scope is stated per entry",
   "evidence_classes": {
     "machine_receipt": "A sanitized provider response, invocation result, or deployed-system receipt is tracked in the repository.",
@@ -11,15 +11,23 @@
   "used": [
     {
       "provider": "immersive_commons",
-      "capability": "official hackathon status and submission-contract reads",
-      "evidence_class": "coordination_provider_observation",
+      "capability": "official hackathon status reads, one approved final submission, and read-only post-lock verification",
+      "evidence_class": "machine_receipt",
       "phase": "event_operations",
       "artifacts": [
         "docs/API_ACCESS.md",
-        "COORDINATION.md"
+        "COORDINATION.md",
+        "docs/HACKATHON_SUBMISSION_2026-08-27.md",
+        "docs/receipts/hackathon-submission-2026-08-27.json"
+      ],
+      "observations": [
+        "Immersive Commons accepted the Atlas submission at 2026-08-27T22:59:39.587Z.",
+        "A later read-only ic_hack_me response reported event phase LOCKED and submission.locked true."
       ],
       "limitations": [
-        "No application, submission, submission overwrite, account creation, or other event write is claimed."
+        "Exactly one submission write is claimed; no later overwrite occurred.",
+        "No application, account creation, event message, or unrelated event write is claimed.",
+        "Agent tokens and member identifiers are omitted from public receipts."
       ]
     },
     {

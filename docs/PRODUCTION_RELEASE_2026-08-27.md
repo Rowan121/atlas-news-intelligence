@@ -34,8 +34,11 @@ Event location never fills the coverage heatmap.
 No Worker, D1 database, account, or replacement external account was created.
 The only new credential was Rowan's exactly authorized Runtype eval-management
 key in the existing account, recorded below; no additional key was created.
-AIsa, HUD, Telegram, paid calls, hackathon submission, and third-party messages
-remained out of scope.
+At the time this production candidate was frozen, AIsa, HUD, Telegram, paid
+calls, hackathon submission, and third-party messages remained out of scope.
+The later, separately approved submission is recorded in
+[`HACKATHON_SUBMISSION_2026-08-27.md`](./HACKATHON_SUBMISSION_2026-08-27.md)
+and did not change the deployed Worker or D1 state.
 
 ## Production data before and after
 
@@ -194,9 +197,10 @@ is [`docs/receipts/runtype-eval-gate-2026-08-27.json`](./receipts/runtype-eval-g
   build. That proves provider/tool use, not a shipped Atlas runtime integration;
   no Mitosis request path exists in production and no credit consumption is
   attributed to Atlas.
-- Immersive Commons supplied the official read-only event surface. No event
-  application, submission, overwrite, account creation, or other write is
-  claimed.
+- Immersive Commons supplied the official read-only event surface during this
+  frozen release workflow. A later, separately approved `ic_hack_submit` call
+  created the final Atlas entry; read-only post-lock verification confirmed it
+  without an overwrite. The sanitized receipt is linked above.
 - The full evidence-level attribution is in
   [`SPONSOR_USAGE.md`](./SPONSOR_USAGE.md) and its
   [machine-readable ledger](./receipts/event-ecosystem-usage-2026-08-27.json).

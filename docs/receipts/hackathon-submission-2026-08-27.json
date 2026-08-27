@@ -1,0 +1,48 @@
+{
+  "receipt_version": 1,
+  "kind": "hackathon_submission",
+  "provider": "immersive_commons",
+  "event_id": "anb-hack-01",
+  "read_only_verified_at": "2026-08-27T23:12:57Z",
+  "team": {
+    "team_id": "t_7ce870f710b12b49",
+    "name": "Atlas News Intelligence"
+  },
+  "submission": {
+    "title": "Atlas News Intelligence",
+    "blurb": "Atlas maps current global stories, clusters the same event across independently owned outlets, and compares how differently primary editorial markets cover it with evidence-backed heatmaps, tone, claims, contradictions, omissions, citations, and source-normalized prominence.",
+    "repo_url": "https://github.com/Rowan121/atlas-news-intelligence",
+    "demo_url": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/",
+    "agent_surface": "Public MCP: https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp ; A2A: https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/.well-known/agent-card.json ; OpenAPI: https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/openapi.json",
+    "submitted_at": "2026-08-27T22:59:39.587Z",
+    "locked": true,
+    "locked_status_updated_at": "2026-08-27T23:10:25.082Z"
+  },
+  "event": {
+    "phase": "LOCKED",
+    "phase_updated_at": "2026-08-27T23:10:18.925Z"
+  },
+  "source_calls": [
+    {
+      "tool": "ic_hack_submit",
+      "mode": "approved_write",
+      "count": 1
+    },
+    {
+      "tool": "ic_hack_get",
+      "mode": "read_only",
+      "ok": true
+    },
+    {
+      "tool": "ic_hack_me",
+      "mode": "read_only",
+      "ok": true
+    }
+  ],
+  "notes": [
+    "The initial submission response returned locked false while the event accepted writes.",
+    "The later read-only verification returned locked true after the event phase changed to LOCKED.",
+    "No submission overwrite occurred after the initial accepted write.",
+    "Agent tokens, member IDs, team-member IDs, authorization headers, and cookies are omitted."
+  ]
+}

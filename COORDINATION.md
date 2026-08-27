@@ -1,6 +1,6 @@
 # Global News Intelligence — Coordination Ledger
 
-Status: **APPROVED — bootstrap and launch in progress**
+Status: **SUBMITTED — production live; judging/results monitoring only**
 
 HITL owner: **Rowan, through the main Codex task only**
 
@@ -159,6 +159,7 @@ No open product-choice questions. Pause only if a genuinely required credential 
 | 2026-08-27 | Regional coverage means the outlet's primary editorial market; readership telemetry is out of scope and event location is never a proxy | Rowan | Explicit P0 clarification |
 | 2026-08-26 | Four hosted agents launched: `atlas_data`, `globe_ui`, `surface_runtime`, `proof_gate` | Main | Cotal Graph reports all four working on approved Nebius variants |
 | 2026-08-26 | Fixed access matrix frozen at `docs/API_ACCESS.md` | Main | Bounded audit; no critical live-news key missing |
+| 2026-08-27 | Exact Atlas submission payload approved and sent once through `ic_hack_submit` | Rowan / Main | Accepted at `2026-08-27T22:59:39.587Z`; read-only post-lock verification returned phase `LOCKED` and `submission.locked: true`; see `docs/HACKATHON_SUBMISSION_2026-08-27.md` |
 
 ## External references used for the initial hypothesis
 
