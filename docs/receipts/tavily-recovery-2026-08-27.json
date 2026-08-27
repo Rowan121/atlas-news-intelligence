@@ -1,0 +1,271 @@
+{
+  "provider": "tavily",
+  "observed_at": "2026-08-27T21:33:19.961Z",
+  "ok": true,
+  "budget_guard": {
+    "max_searches": 3,
+    "max_results_per_search": 8,
+    "max_extract_urls": 6,
+    "search_depth": "advanced",
+    "extract_depth": "basic"
+  },
+  "usage_before": {
+    "key": {
+      "usage": 2,
+      "limit": null,
+      "search_usage": 2,
+      "crawl_usage": 0,
+      "extract_usage": 0,
+      "map_usage": 0,
+      "research_usage": 0
+    },
+    "account": {
+      "current_plan": "Researcher",
+      "plan_usage": 2,
+      "plan_limit": 1000,
+      "search_usage": 2,
+      "crawl_usage": 0,
+      "extract_usage": 0,
+      "map_usage": 0,
+      "research_usage": 0,
+      "paygo_usage": 0,
+      "paygo_limit": null
+    }
+  },
+  "searches": [
+    {
+      "query": "Ratko Mladic dead at 84 Bosnia genocide August 27 2026",
+      "results": [
+        {
+          "title": "Ratko Mladic, ex-Bosnian Serb warlord who oversaw atrocities in Bosnia, has died at 84 - NPR",
+          "url": "https://www.npr.org/2026/08/27/nx-s1-5946375/ratko-mladic-dead",
+          "score": 0.7975099,
+          "published_date": "Thu, 27 Aug 2026 00:00:00 GMT",
+          "content_excerpt": "\"Turn toward Velesici, there are no Serbs there,\" Sarajevans could hear Mladic ordering his artillery to pound the Sarajevo suburb.\n\n\"Scorch their brains,\" he told his gunmen.\n\nFaced with the U.N. tribunal's genocide indictment, Mladic in 1996 began his fugitive years in Han Pijesak, a military compound in eastern Bosnia built for former Yugoslav communist leader Josip Broz Tito and designed to withstand a nuclear attack.\n\nWith his wife, Bosa, Mladic settled down to imposed domesticity, passing the time caring for bees and goats. His 23 goats reputedly bore the names of foreign dignitaries he "
+        },
+        {
+          "title": "Alleged 9/11 mastermind's long-awaited trial scheduled for 2028 - ABC News - Breaking News, Latest News and Videos",
+          "url": "https://abcnews.com/US/alleged-911-masterminds-long-awaited-trial-scheduled-2028/story?id=135987518",
+          "score": 0.15529642,
+          "published_date": "Wed, 26 Aug 2026 21:31:56 GMT",
+          "content_excerpt": "# Alleged 9/11 mastermind's long-awaited trial scheduled for 2028\n\nKhalid Sheikh Mohammed has been held since 2003.\n\nByAaron Katersky\n\nAugust 26, 2026, 5:43 PM\n\nThe self-proclaimed \"mastermind\" of the 9/11 attacks will stand trial in June 2028, a military judge ruled Wednesday, nearly 25 years after the attacks.\n\nKhalid Sheikh Mohammed was captured in 2003 and has been held at Guantanamo since 2006.\n\n\"Trial on the merits shall begin on Monday, 5 June 2028,\" Lt. Col. Michael Schrama decided.\n\n## Popular Reads\n\n## Country music legend Dolly Parton dies at 80 after 'brief battle with cancer'\n\n 1 "
+        },
+        {
+          "title": "1645 Days of russia-Ukraine War – russian Casualties In Ukraine - Defense Express",
+          "url": "https://en.defence-ua.com/news/1645_days_of_russia_ukraine_war_russian_casualties_in_ukraine-19578.html",
+          "score": 0.099654265,
+          "published_date": "Wed, 26 Aug 2026 06:27:36 GMT",
+          "content_excerpt": "## Social networks\n\n## Our publications\n\n Journals 3\n  + Defense Express 1\n    - 2020 1\n       №10, 2020\n  + Ukrainian Defense Review 1\n    - 2020 1\n       №3, 2020\n  + Ukrainian Technology 1\n    - 2020 1\n       №4, 2020\n Книги 23\n  + Книги#1, 2019 23\n  + Книги#2, 2019 23\n  + Книги#3, 2019 23\n\n Latest\n Most viewed\n\nAugust 27, 2026\n\n### 1646 Days of russia-Ukraine War – russian Casualties In Ukraine\n\nAugust 27, 2026\n\n### russia Has Up to 17 S-400 Launchers Adapted to Fire RM-48U Missiles at Ukraine\n\nAugust 27, 2026\n\n### ​Ukraine Helps NATO Prepare for russian Drone Threat During Counter-UAV Exe"
+        },
+        {
+          "title": "Kremlin says US spy chief held talks with Russian counterparts during Moscow visit - Reuters",
+          "url": "https://www.reuters.com/world/kremlin-says-us-spy-chief-held-talks-with-russian-counterparts-during-moscow-2026-08-26/",
+          "score": 0.0840483,
+          "published_date": "Wed, 26 Aug 2026 10:19:16 GMT",
+          "content_excerpt": "All quotes delayed a minimum of 15 minutes. See here for a list of exchanges and delays.\n\n   Cookies, opens new tab\n   Terms & Conditions\n   Privacy, opens new tab\n   Copyright, opens new tab\n   Digital Accessibility, opens new tab\n   Corrections\n   Data Disclosure and Sources, opens new tab\n   Site Feedback, opens new tab\n   Do Not Sell or Share My Personal Information and Limit the Use of My Sensitive Personal Information\n\n© 2026 Reuters. All rights reserved\n\nReport AdImage 19\n\nImage 20Image 21Image 22Image 23Image 24Image 25Image 26Image 27Image 28Image 29Image 30Image 36: dot image pixel ["
+        },
+        {
+          "title": "Accused 9/11 mastermind Khalid Sheikh Mohammed, 3 co-defendants set for 2028 trial - Fox News",
+          "url": "https://www.foxnews.com/us/accused-9-11-mastermind-khalid-sheikh-mohammed-3-co-defendants-set-2028-trial",
+          "score": 0.08226149,
+          "published_date": "Wed, 26 Aug 2026 21:50:23 GMT",
+          "content_excerpt": "#### Vanity Fair drops journalist Brittany Romano after viral wink during Lindsay Clancy murder trial\n #### Rutgers research dean accused of secretly recording 'upskirt' videos with cellphone, prosecutors say\n #### Montana man who killed 4 children, 4 other family members at Sunday dinner was asked to move out: relative\n #### 3 Secret Service officials under internal investigation for potential misconduct\n #### Philadelphia man in 'Chucky' mask accused of terrorizing citizens nabbed in Las Vegas after manhunt\n #### FBI wraps up cybercrime operation targeting global networks preying on American"
+        },
+        {
+          "title": "Holocaust survivor: 'We never envisaged Australia would become 1930s Europe' - Ynetnews",
+          "url": "https://www.ynetnews.com/jewish-world/article/h1wa6jtwzl",
+          "score": 0.07828243,
+          "published_date": "Wed, 26 Aug 2026 23:15:08 GMT",
+          "content_excerpt": "Bassat cited Raphael Lemkin, who coined the term “genocide” in the wake of the Holocaust, and said it refers to the systematic destruction of a population with state backing and proven intent at the highest levels, rather than to all deaths in war, however tragic.\n\n“The word genocide brings into sharp focus what it means to be one of 100,000 children who survived when one and a half million were murdered,” she said. “That knowledge has guided my life. That is what genocide means.”\n\nThe commenter agrees to the privacy policy of Ynet News and agrees not to submit comments that violate the terms "
+        },
+        {
+          "title": "Former Israeli hostage opens up about captivity in first international interview - CNN",
+          "url": "https://www.cnn.com/2026/08/26/world/video/evyatar-david-israeli-hostage-interview-vrtc-ldn-digvid",
+          "score": 0.07115768,
+          "published_date": "Wed, 26 Aug 2026 12:26:00 GMT",
+          "content_excerpt": "00:26   • Source: CNN\n\nHundreds missing as huge flash flood hits Nepal-China border\n\n00:26\n\nVideo Ad Feedback\n\nShe fled Iran, then the US deported her\n\nShe feared life in Iran and fled to the US. The Trump administration deported her to a volatile African country.\n\n01:43   • Source: CNN\n\nShe fled Iran, then the US deported her\n\n01:43\n\nVideo Ad Feedback\n\nAt least 14 infants killed in Pakistan hospital fire\n\nA fire triggered by an apparent air conditioning fault killed at least 14newborns at a state-run hospital in Pakistan's capital on Wednesday, with only one of 16 infants in the ward rescued,"
+        },
+        {
+          "title": "US military court to put 9/11 mastermind Khalid Sheikh Mohammed on trial in 2028 - The Times of Israel",
+          "url": "https://www.timesofisrael.com/liveblog-august-27-2026/amp/",
+          "score": 0.057774507,
+          "published_date": "Wed, 26 Aug 2026 23:40:14 GMT",
+          "content_excerpt": "Pancreatic cancer is among the deadliest forms in large part because it is hard to detect before it starts spreading to other organs. The American Cancer Society estimates that about 67,000 new cases will be diagnosed in the United States this year and more than 52,000 people will die from the disease. The five-year overall survival rate is 13%.\n\nShare\n   Copy link\n   Send by email\n   Facebook\n   X\n   Whatsapp\n   Telegram\n   Bluesky\n   Reddit\n\nAdd ToI as a preferred source on Google\n\n1:36 am\n\n#### One killed, 10 hurt after man drives car into crowd in France’s Caen\n\nBy AFP\n\nCAEN, France —A man"
+        }
+      ]
+    },
+    {
+      "query": "Syria Kurds relinquish autonomy rejoin country August 27 2026",
+      "results": [
+        {
+          "title": "Kurds weigh hope and caution as Syria’s SDF dissolves and joins the state military - AP News",
+          "url": "https://apnews.com/article/sdf-kurds-syria-syrian-democratic-forces-qamishli-6320f7cb7e72322e99420e7da3c21fa5",
+          "score": 0.58123237,
+          "published_date": "Wed, 26 Aug 2026 19:49:29 GMT",
+          "content_excerpt": "3 of 5\n\nA flag bearing Kurdish colors flies above a building marked “Kurdistan” as traffic moves through an intersection in Qamishli, northeastern Syria, Wednesday, Aug. 26, 2026. (AP Photo/Baderkhan Ahmad)\n\nShare\n\n Facebook\n Copy\n\n  Link copied\n Print\n Email\n X\n LinkedIn\n Bluesky\n Flipboard\n Pinterest\n Reddit\n\n4 of 5 |  \n\nResidents carry bags of leafy greens past produce stalls at a market in Qamishli, northeastern Syria, Wednesday, Aug. 26, 2026. (AP Photo/Baderkhan Ahmad)\n\n4 of 5\n\nResidents carry bags of leafy greens past produce stalls at a market in Qamishli, northeastern Syria, Wednesday"
+        },
+        {
+          "title": "America’s Anti-ISIS Ally Makes One Final Sacrifice for Syria - Newsweek",
+          "url": "https://www.newsweek.com/syria-kurds-sdf-disbands-al-sharaa-isis-12369004",
+          "score": 0.5504388,
+          "published_date": "Wed, 26 Aug 2026 11:34:00 GMT",
+          "content_excerpt": "have been abandoned by Washington in favor of al-Sharaa. Now, Syria’s Kurds are surrendering the military power that safeguarded their freedom and autonomy under an integration agreement with Syria’s new leaders. It is the ultimate leap of faith. Without America’s backing, the Kurds must trust that a new Syrian state led by a former jihadist will grant them the political, cultural and linguistic rights they spent more than a decade fighting to protect. The End of the Middle East’s Democratic Experiment When Syria’s civil war erupted in 2011, the Kurds living in the northeast seized the opportu"
+        },
+        {
+          "title": "After years of autonomy and battles: Kurdish force in Syria is disbanding, merging with army - Ynetnews",
+          "url": "https://www.ynetnews.com/article/r1vxx00spge",
+          "score": 0.5414337,
+          "published_date": "Wed, 26 Aug 2026 01:04:09 GMT",
+          "content_excerpt": "Related Topics\n\nKurds\n\nSyria\n\nSyrian Democratic Forces\n\nThe Syrian Democratic Forces, or SDF, are officially disbanding and merging into the Syrian army. SDF commander Mazloum Abdi, who led the force identified primarily with Syria’s Kurdish minority, announced Tuesday evening the dissolution of the organization, which once controlled a de facto autonomous region in the country’s northeast.\n\nAt a news conference at the presidential palace in Damascus, Abdi said the SDF had completed its integration into the Syrian army and had ceased operating as an independent force. The Kurdish-led force los"
+        },
+        {
+          "title": "Kurds weigh hope and caution as Syria’s SDF dissolves and joins the state military - Greenwich Time",
+          "url": "https://www.greenwichtime.com/news/world/article/kurds-weigh-hope-and-caution-as-syria-s-sdf-22404957.php",
+          "score": 0.434102,
+          "published_date": "Wed, 26 Aug 2026 19:49:29 GMT",
+          "content_excerpt": "Subscribe\n\nNews\n\n# Kurds weigh hope and caution as Syria’s SDF dissolves and joins the state military\n\nBy HOGIR AL ABDO, Associated Press\n\nQAMISHLI, Syria (AP) — Kurds in Syria’s northeast regarded the announcement that the Kurdish-led force that once controlled the area has been dissolved with mixed emotions, while international players with a stake in Syria welcomed the step.\n\nMazloum Abdi, commander of the Kurdish-led Syrian Democratic Forces, on Tuesday announced the official dissolution of the group which for years controlled a de facto autonomous zone that at once point encompassed about"
+        },
+        {
+          "title": "Syria's Kurdish-led SDF Dissolves as Part of Integration With Damascus - Haaretz",
+          "url": "https://www.haaretz.com/middle-east-news/syria/2026-08-26/ty-article/syrias-kurdish-led-sdf-dissolves-as-part-of-integration-with-damascus/000001a0-3de8-dba3-a3ff-3dfb4f530000",
+          "score": 0.37093207,
+          "published_date": "Wed, 26 Aug 2026 14:38:00 GMT",
+          "content_excerpt": "## Comments\n\nLoading...\n\n## In the News\n\n### In the News:\n\nLive UpdatesTzvi SuccotNetanyahuUNRWAHasan PikerWest BankOfer WinterIsrael Space PollHaQuizHaaretz Podcast\n\n### Slovenia Undercuts EU Condemnation of Israel's West Bank E1 Settlement Plan\n\n### By Smashing a Palestinian Monument, Tzvi Succot Exposed the West Bank's Reality\n\n### 'Israel Is Sending Militias to Commit War Crimes – and I Have to Protect Them'\n\n### IDF Soldiers Tried to Bar Israeli MK From West Bank Village Under Settler Siege\n\n### United Airlines to Resume San Francisco-Tel Aviv Flights in March 2027\n\n### Remembering and re"
+        }
+      ]
+    },
+    {
+      "query": "Putin will not attack NATO territory Trump insists August 27 2026",
+      "results": [
+        {
+          "title": "Trump says CIA director Ratcliffe's mystery trip to Moscow was not to warn Putin against testing 'NATO resolve' - New York Post",
+          "url": "https://nypost.com/2026/08/26/us-news/trump-says-cia-director-ratcliffes-mystery-trip-to-moscow-was-not-to-warn-putin-against-testing-nato-resolve/",
+          "score": 0.7570233,
+          "published_date": "Wed, 26 Aug 2026 14:20:55 GMT",
+          "content_excerpt": "Politics\n\n# Trump plays coy about purpose of CIA director’s mystery trip to Moscow\n\nBy\n\nSteven Nelson\n\nPublished  Aug. 26, 2026, 10:20 a.m. ET\n\nSee more of our coverage in your search results.\n\n Add The New York Post on Google\n\nWASHINGTON — President Trump insisted Wednesday that CIA Director John Ratcliffe’s surprise trip to Moscow wasn’t to warn President Vladimir Putin not to “test NATO resolve” or “strike England” after the Cabinet official’s unannounced four-hour visit on Tuesday launched rampant speculation.\n\nRadio host Glenn Beck asked Trump about theories that Ratcliffe visited Tuesday"
+        },
+        {
+          "title": "Russia Denies New Mobilization as Donbas Offensive Stalls and War Costs Mount - Kyiv Post",
+          "url": "https://www.kyivpost.com/post/83186",
+          "score": 0.6350646,
+          "published_date": "Wed, 26 Aug 2026 23:04:46 GMT",
+          "content_excerpt": "In brief: Russia insists that no new mobilization is planned, despite nationwide readiness exercises and Ukrainian warnings that Vladimir Putin could call up 300,000 troops after September’s parliamentary elections. The denials come as Russia’s paid recruitment system struggles to generate net manpower, its Donbas offensive produces diminishing territorial returns, and the country’s remaining liquid fiscal reserve falls below its accumulated 2026 budget deficit. US intelligence has separately assessed that Putin could test NATO with a limited assault, while unconfirmed reporting linked CIA Dir"
+        },
+        {
+          "title": "Russia’s Escalating Hybrid Attacks Put Europeans in a Bind - Insurance Journal",
+          "url": "https://www.insurancejournal.com/news/international/2026/08/26/882915.htm",
+          "score": 0.33021247,
+          "published_date": "Wed, 26 Aug 2026 09:45:11 GMT",
+          "content_excerpt": "Skip to content\n\nInsurance BPO and AI Demo Day ⚡ Free Virtual Event, Wed. August 26 Register now »\n\n MyNewMarkets.com\n Claims Journal\n Insurance Journal TV\n Academy of Insurance\n Carrier Management\n\n### Featured Stories\n\n ZestyAI: 44% of Rate Filings Have an Objection\n Death Toll From Indiana Floods Up to 7\n\n Articles\n Jobs\n Markets\n\n### Current Magazine\n\n Read Online\n Subscribe\n Login\n\n# Russia’s Escalating Hybrid Attacks Put Europeans in a Bind\n\nBy Aaron Eglitis and Milda Seputyte | August 26, 2026\n\nEmail This   Subscribe to Newsletter\n\n Article\n 0 Comments\n\nRussia is expanding its campaign "
+        },
+        {
+          "title": "Opinion | What the United States should learn from Nord Stream pipeline attack - The Washington Post",
+          "url": "https://www.washingtonpost.com/opinions/2026/08/26/ukrainian-nord-stream-pipeline-attack-is-lesson-us/",
+          "score": 0.26424605,
+          "published_date": "Wed, 26 Aug 2026 10:30:00 GMT",
+          "content_excerpt": "Accessibility statementSkip to main content\n\nDemocracy Dies in Darkness\n\nSubscribeSign in\n\nDemocracy Dies in Darkness\n\nOpinion\n# What the United States should learn from Nord Stream pipeline attack\n\nUkraine’s cards aren’t limited to the hand it was dealt.\n\nAugust 26, 2026 at 6:30 a.m. EDT 5 minutes ago\n\n7 min\n\n0\n\nMake us preferred on Google\n\nImage 1\n\nA flag on the construction site of the Nord Stream pipeline in Lubmin, Germany, in March 2019. (CLEMENS BILAN/EPA-EFE/REX)\n\nBy Bojan Pancevski\n\n_Bojan Pancevski is the author of “The Nord Stream Conspiracy: The Inside Story of the Explosions That "
+        },
+        {
+          "title": "Kremlin sources tell Bloomberg that Putin is preparing to escalate the war in Ukraine. A growing number of Russian officials believe that could eventually mean a tactical nuclear weapon. - Meduza",
+          "url": "https://meduza.io/en/feature/2026/08/26/kremlin-sources-tell-bloomberg-that-putin-is-preparing-to-escalate-the-war-in-ukraine-a-growing-number-of-russian-officials-believe-that-could-eventually-mean-a-tactical-nuclear-weapon",
+          "score": 0.24268135,
+          "published_date": "Wed, 26 Aug 2026 20:49:00 GMT",
+          "content_excerpt": "Russia is weighing stepped-up conventional ballistic missile strikes on Kyiv, including the city center, and on infrastructure in other Ukrainian cities.\n Russian President Vladimir Putin will not end the war under pressure from economic sanctions or Ukrainian strikes on Russian oil refineries and logistics networks.\n Moscow increasingly views Ukrainian strikes as attacks by NATO member states because alliance members supply Kyiv with weapons and intelligence.\n Every mechanism for peace talks has collapsed, leaving the two warring sides back where they started. The Kremlin believes that it has"
+        },
+        {
+          "title": "I’m president of one of America’s most reliable allies. Here’s how we stand up to Russia - Fox News",
+          "url": "https://www.foxnews.com/opinion/president-americas-reliable-allies-stand-up-russia",
+          "score": 0.19114676,
+          "published_date": "Wed, 26 Aug 2026 22:03:16 GMT",
+          "content_excerpt": "Because deterrence is not only about what NATO can do once a crisis has begun. It is about persuading an adversary, before that moment arrives, that aggression will fail and that the alliance will answer as one. That requires visible capability, resilient infrastructure and the political will to use both. It also requires allies to know they can count on one another, not only in Washington or Brussels, but on the ground, where geography and readiness decide how fast a decision becomes an action.\n\nVideo [...] NEWYou can now listen to Fox News articles!\n\nRussia is a growing threat that America a"
+        },
+        {
+          "title": "US holds off on new Iran strikes, turns to economic squeeze - Ynetnews",
+          "url": "https://www.ynetnews.com/article/bjtphajdme",
+          "score": 0.10124257,
+          "published_date": "Wed, 26 Aug 2026 02:36:16 GMT",
+          "content_excerpt": "Updates Red Mail\n\nTel Aviv-Jaffa\n\nIsrael News\n\nMideast & World News\n\nTech & Digital\n\nReal Estate\n\nFinance\n\nLifestyle\n\nHealth & Science\n\nJewish World\n\nTravel\n\nMore\n\nChannels\n\n Opinions\n Magazine\n Sports\n Food\n Weather\n Podcasts\n\nSites & Sources\n\n Ynet\n Calcalist\n yad2\n ynetespanol\n Вести\n mynet\n\nContact\n\n Contact us\n Privacy Policy\n Terms of Use\n Accessibility Statement\n\n# US holds off on new Iran strikes, turns to economic squeeze\n\n## Rubio tells allies Washington does not plan new attacks for now as Trump shifts pressure to sanctions and Hormuz; military action remains on the table if Tehran "
+        },
+        {
+          "title": "Russia Is Escalating Hybrid Attacks and Europe Has No Answer - Bloomberg.com",
+          "url": "https://www.bloomberg.com/news/articles/2026-08-26/russia-is-escalating-hybrid-attacks-and-europe-has-no-answer",
+          "score": 0.07069436,
+          "published_date": "Wed, 26 Aug 2026 08:22:32 GMT",
+          "content_excerpt": "War in Ukraine:\n\nNew Ukrainian Defense Chief\n\nRussia’s Oil-Flow Slump\n\nPatriot Air Defenses for Ukraine\n\nPutin’s Issues\n\nKremlin Land Demands\n\nA New Age of Missiles\n\nPolitics\n\n# Russia’s Escalating Hybrid Attacks Put Europeans in a Bind\n\nContact us:\n\nProvide news feedback or report an error\n\nConfidential tip?\n\nSend a tip to our reporters\n\nSite feedback:\n\nTake our Survey\n\nBy Aaron Eglitis and Milda Seputyte\n\nUpdated on\n\n## Takeaways by Bloomberg AISubscribe\n\nRussia is expanding its campaign of hybrid attacks against countries that supply weapons and money to Kyiv and has caught Europe without a"
+        }
+      ]
+    }
+  ],
+  "extract": {
+    "requested_urls": [
+      "https://www.npr.org/2026/08/27/nx-s1-5946375/ratko-mladic-dead",
+      "https://abcnews.com/US/alleged-911-masterminds-long-awaited-trial-scheduled-2028/story?id=135987518",
+      "https://en.defence-ua.com/news/1645_days_of_russia_ukraine_war_russian_casualties_in_ukraine-19578.html",
+      "https://apnews.com/article/sdf-kurds-syria-syrian-democratic-forces-qamishli-6320f7cb7e72322e99420e7da3c21fa5",
+      "https://www.newsweek.com/syria-kurds-sdf-disbands-al-sharaa-isis-12369004",
+      "https://www.ynetnews.com/article/r1vxx00spge"
+    ],
+    "results": [
+      {
+        "url": "https://www.npr.org/2026/08/27/nx-s1-5946375/ratko-mladic-dead",
+        "raw_content_chars": 11891,
+        "raw_content_sha256": "cdd90cc462fd3b096d96831f7cd2be374bb27d31ba79cea996fd547aa70ce58f",
+        "raw_content_excerpt": "Accessibility links\n\n* [Keyboard shortcuts for audio player](https://help.npr.org/contact/s/article?name=what-are-the-keyboard-shortcuts-for-using-the-npr-org-audio-player)\n\n\n\n\n**Ratko Mladic, ex-Bosnian Serb warlord, dies in prison at 84** **Ratko Mladic was one of the most notorious figures of a war that killed over 100,000 people in the 1990s. He commanded his troops to \"scorch the brains\" of the Bosnian Muslims and boasted of being a \"Serbian God.\"**\n\n### [Obituaries](https://www.npr.org/sections/obituaries/)\n\n# Ratko Mladic, ex-Bosnian Serb warlord who oversaw atrocities, has died at 84\n\nBy\n\n[The Associated Press](https://www.npr.org/people/101453150/the-associated-press)\n\n![Former Bosnian Serb military chief Ratko Mladic sits in the court room in The Hague, Netherlands, June 8, 2021,"
+      },
+      {
+        "url": "https://abcnews.com/US/alleged-911-masterminds-long-awaited-trial-scheduled-2028/story?id=135987518",
+        "raw_content_chars": 2791,
+        "raw_content_sha256": "3e7b4229e1220573da49909e7547cc5331275e12a428e9d2a10ec2b95b969c7c",
+        "raw_content_excerpt": "## Live\n\n## Video\n\n## Local News\n\n## Shows\n\n## Good Morning America\n\n## ShopGMA\n\n## Stream on\n\n![stream logo](https://assets-cdn.abcotvs.net/static/images/DisneyPlus.svg)\n\n# Alleged 9/11 mastermind's long-awaited trial scheduled for 2028\n\nKhalid Sheikh Mohammed has been held since 2003.\n\n![](https://i.abcnewsfe.com/a/d45e97da-6a4f-4aac-81f2-b14e266b4b93/Mohammed-gty-er-260826_1787779636448_hpMain_16x9.jpg?w=992)\n\nThe self-proclaimed \"mastermind\" of the 9/11 attacks will stand trial in June 2028, a military judge ruled Wednesday, nearly 25 years after the attacks.\n\nKhalid Sheikh Mohammed has been held at Guantanamo since 2003.\n\n![](https://i.abcnewsfe.com/a/d45e97da-6a4f-4aac-81f2-b14e266b4b93/Mohammed-gty-er-260826_1787779636448_hpMain_4x3.jpg)\n\n\"Trial on the merits shall begin on Monday, "
+      },
+      {
+        "url": "https://en.defence-ua.com/news/1645_days_of_russia_ukraine_war_russian_casualties_in_ukraine-19578.html",
+        "raw_content_chars": 10147,
+        "raw_content_sha256": "7ae5be43dfe28d98d8c55eb1e4b12094e3e5e3825f397171c868ea6c9f6af69e",
+        "raw_content_excerpt": "* [Journals](/journals/)\n* [Handbooks](/handbooks/)\n* [Books](/books/)\n* [Partners](/partners/)\n* [Archive 2001-2020](https://old.defence-ua.com/index.php/en/)\n\n* [About us](/pages/about-1.html)\n* [Our team](/team/)\n* [Contacts](/contacts/)\n\nми у соцмережах\n\n[**УВІЙТИ**](/login/)  ПЕРЕДПЛАТА\n\n[![Ukr](/images/Ukraine.svg)](https://defence-ua.com/)   [![#](/images/USA.svg)](https://old.defence-ua.com/index.php/en/)\n\n[![#](/images/logo.svg)](/)\n\n[![#](/images/Ukraine.svg) українська](#)  [![#](/images/USA.svg) english](https://defence-ua.com/)\n\n* [Home](/)\n* [News](/news/)\n* [Weapons & Technology](/weapon_and_tech/)\n* [Industries](/industries/)\n* [Analysis](/analysis/)\n* [Events](/events/)\n* [Video](/video/)\n\n* [About us](/pages/about-1.html)\n* [Our team](/team/)\n* [Journals](/journals/)\n* [H"
+      },
+      {
+        "url": "https://apnews.com/article/sdf-kurds-syria-syrian-democratic-forces-qamishli-6320f7cb7e72322e99420e7da3c21fa5",
+        "raw_content_chars": 114854,
+        "raw_content_sha256": "dfd62c061d07a382a48e24f53a2e609ddd9508cce583e1b3a70d4af922183b45",
+        "raw_content_excerpt": "[![AP Logo](https://assets.apnews.com/19/66/bc546486408c8595f01753a9fbeb/ap-logo-176-by-208.svg)](/)\n\n* [World](https://apnews.com/world-news) \n\n  [Iran war](https://apnews.com/hub/iran) [Russia-Ukraine war](https://apnews.com/hub/russia-ukraine) [Español](https://apnews.com/hub/noticias) [China](https://apnews.com/hub/china) [Asia Pacific](https://apnews.com/hub/asia-pacific) [Latin America](https://apnews.com/hub/latin-america) [Europe](https://apnews.com/hub/europe) [Africa](https://apnews.com/hub/africa)\n\n  TOP STORIES\n\n  + [Dolly Parton’s life and career as a country music icon, actor and philanthropist, in photos](https://apnews.com/photo-gallery/dolly-parton-s-life-career-country-music-icon-actor-philanthropist-photos-591fd026d2a640c0804a0e765853a413)\n  + [US issues security alert i"
+      },
+      {
+        "url": "https://www.newsweek.com/syria-kurds-sdf-disbands-al-sharaa-isis-12369004",
+        "raw_content_chars": 7980,
+        "raw_content_sha256": "eb02677fba04960482b50d0348095946b6e3438cd6db5e0cb8e710ad7830a094",
+        "raw_content_excerpt": "Road to 9/11\n\n# America’s Anti-ISIS Ally Makes One Final Sacrifice for Syria\n\nPublished\n\nAug 26, 2026 at 07:34 AM EDT\n\nupdated\n\nAug 26, 2026 at 07:35 AM EDT\n\n![](https://assets.newsweek.com/wp-content/uploads/2025/12/AP25314751732162.jpg?w=1600&quality=80&webp=1)\n![David Averre](https://assets.newsweek.com/wp-content/uploads/2026/07/ff8798d8-ebf9-43c1-ad66-7b97644bab88.png?w=1600&quality=80&webp=1)\n\nAfter nearly 15 years of brutal civil war, [Syria](/topic/syria) is being put back together.\n\nThe new leadership in [Damascus](/topic/damascus) under Ahmed al-Sharaa, a former commander of the Syrian branch of Al-Qaeda, has brought much of the fractured country back under central control since toppling [Bashar al-Assad](/topic/bashar-al-assad) in late 2024.\n\nOn Monday, Washington removed Syria "
+      },
+      {
+        "url": "https://www.ynetnews.com/article/r1vxx00spge",
+        "raw_content_chars": 9379,
+        "raw_content_sha256": "91253e470ebfcb2a9b55cbaf3e15ccbfb2d218d9e5be4122c5aca519a6f62c24",
+        "raw_content_excerpt": "[Updates](https://www.ynetnews.com/category/3089) [Red Mail](https://www.ynetnews.com/category/43972)\n\n[![](https://ynet-pic1.yit.co.il/static/Cnt/Images/Weather/1250.png)](https://www.ynetnews.com/weather/tel-aviv-yafo)\n\n[Tel Aviv-Jaffa](https://www.ynetnews.com/weather/tel-aviv-yafo)\n\n[![](https://ynet-pic1.yit.co.il/picserver6/wcm_upload/2025/08/28/BkLy3jaKlg/global_header_logo.png)](https://www.ynetnews.com/category/3083)\n\n[Main](https://www.ynetnews.com/category/3083)\n\n[Israel News](https://www.ynetnews.com/category/3082)\n\n[Mideast & World News](https://www.ynetnews.com/category/9733)\n\n[Tech & Digital](https://www.ynetnews.com/tech-and-digital)\n\n[Real Estate](https://www.ynetnews.com/real-estate)\n\n[Finance](https://www.ynetnews.com/business)\n\n[Lifestyle](https://www.ynetnews.com/cultu"
+      }
+    ],
+    "failed_results": []
+  },
+  "usage_after": {
+    "key": {
+      "usage": 2,
+      "limit": null,
+      "search_usage": 2,
+      "crawl_usage": 0,
+      "extract_usage": 0,
+      "map_usage": 0,
+      "research_usage": 0
+    },
+    "account": {
+      "current_plan": "Researcher",
+      "plan_usage": 2,
+      "plan_limit": 1000,
+      "search_usage": 2,
+      "crawl_usage": 0,
+      "extract_usage": 0,
+      "map_usage": 0,
+      "research_usage": 0,
+      "paygo_usage": 0,
+      "paygo_limit": null
+    }
+  }
+}

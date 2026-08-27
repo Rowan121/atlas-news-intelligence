@@ -1,0 +1,152 @@
+{
+  "capturedAt": "2026-08-27T21:41:21.479Z",
+  "endpoint": "https://ora.ai/api/mcp",
+  "protocolVersion": "2025-06-18",
+  "tool": "run_checks",
+  "arguments": {
+    "url": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/",
+    "checkIds": [
+      "content-no-js",
+      "api-error-model",
+      "response-schema-coverage",
+      "ard-catalog",
+      "robots-ai-policy-quality",
+      "agent-instruction",
+      "agent-friendly-404",
+      "json-ld",
+      "metadata-completeness",
+      "public-api-docs",
+      "sitemap-lastmod",
+      "api-versioning-policy"
+    ]
+  },
+  "response": {
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Ran checks against atlas-news-intelligence-api.atlas-news-surface.workers.dev (kind: domain), 12 results: 0 pass, 7 fail, 5 warning, 0 na, 0 error. Stateless run - the stored scan was not changed."
+        }
+      ],
+      "structuredContent": {
+        "contractVersion": "1.23.0",
+        "domain": "atlas-news-intelligence-api.atlas-news-surface.workers.dev",
+        "url": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev",
+        "urlKind": "domain",
+        "storedScanUpdated": false,
+        "results": [
+          {
+            "id": "content-no-js",
+            "name": "Content without JavaScript",
+            "status": "fail",
+            "score": 0,
+            "maxScore": 3,
+            "details": "Very little text content (53 chars) - likely JS-rendered, invisible to AI crawlers",
+            "recommendation": "Server-side render your homepage so AI crawlers see meaningful content without JavaScript. Ensure an H1 and 500+ chars of text in raw HTML."
+          },
+          {
+            "id": "api-error-model",
+            "name": "REST typed error model",
+            "status": "fail",
+            "score": 0,
+            "maxScore": 3,
+            "details": "No typed error model found in OpenAPI spec",
+            "recommendation": "Document your error responses in your OpenAPI spec: give 4xx and 5xx responses a typed error schema (or use RFC 9457 application/problem+json). A consistent error object with a machine-readable code and a human-readable message lets agents handle failures without guessing."
+          },
+          {
+            "id": "response-schema-coverage",
+            "name": "REST response schema coverage",
+            "status": "fail",
+            "score": 0,
+            "maxScore": 2,
+            "details": "Only 0% of operations define typed response schemas - agents cannot predict response shapes",
+            "recommendation": "Define typed JSON response schemas for every endpoint in your OpenAPI spec. Agents rely on these to know what fields they will get back; missing or partial schemas force trial-and-error."
+          },
+          {
+            "id": "ard-catalog",
+            "name": "ARD discovery",
+            "status": "fail",
+            "score": 0,
+            "maxScore": 1,
+            "details": "No /.well-known/ard.json (and no legacy /.well-known/ai-catalog.json)",
+            "recommendation": "Publish an Agentic Resource Discovery catalog at /.well-known/ard.json so AI clients can discover your agentic resources (MCP servers, agents, skills, APIs). See https://agenticresourcediscovery.org/"
+          },
+          {
+            "id": "robots-ai-policy-quality",
+            "name": "robots.txt AI crawler policy",
+            "status": "warning",
+            "score": 1,
+            "maxScore": 2,
+            "details": "robots.txt allows all crawlers (e.g. `User-agent: *` + `Allow: /`) - open by default but declares no AI-crawler tier differentiation",
+            "recommendation": "Add explicit AI crawler directives in robots.txt. Allow the crawlers that feed answer engines ('User-agent: GPTBot' / 'Allow: /', same for ClaudeBot, PerplexityBot, OAI-SearchBot), and restrict training-only crawlers (CCBot, ByteSpider) with 'Disallow: /'. Content Signals ('Content-Signal: search=yes, ai-train=no') earns the same credit."
+          },
+          {
+            "id": "agent-instruction",
+            "name": "Agent instruction / when-to-use",
+            "status": "fail",
+            "score": 0,
+            "maxScore": 3,
+            "details": "No agent instruction file with when-to-use guidance found",
+            "recommendation": "Tell agents when to reach for you: add a 'when to use this' section to your llms.txt (or a dedicated agent-instructions file) that names your best-fit use cases and how an agent should call you. Be specific about the jobs you are right for - generic marketing copy does not read as guidance."
+          },
+          {
+            "id": "agent-friendly-404",
+            "name": "Agent-friendly 404s",
+            "status": "warning",
+            "score": 1,
+            "maxScore": 2,
+            "details": "Nonexistent paths return a real HTTP 404. For full credit, include a short markdown body (site map links, where to look next) so agents can recover.",
+            "recommendation": "Return a real HTTP 404 (or 410) status for nonexistent paths - never a 200 with your app shell, which makes agents believe every path exists. For full credit, give the 404 response a short markdown body pointing agents at your sitemap, llms.txt, or docs index. Verify with `curl -s -o /dev/null -w \"%{http_code}\" https://yourdomain.com/some-path-that-does-not-exist` - it must print 404."
+          },
+          {
+            "id": "json-ld",
+            "name": "JSON-LD structured data",
+            "status": "fail",
+            "score": 0,
+            "maxScore": 4,
+            "details": "No JSON-LD structured data found on homepage",
+            "recommendation": "Add JSON-LD structured data to your homepage using the identity type that matches your site - SoftwareApplication for products, Organization or LocalBusiness for companies, Person for personal sites, Article for blogs - with name, description, url, and type-appropriate fields (offers, sameAs, author) so AI can parse your identity programmatically."
+          },
+          {
+            "id": "metadata-completeness",
+            "name": "Metadata completeness",
+            "status": "warning",
+            "score": 1,
+            "maxScore": 2,
+            "details": "Only 1/4 metadata signals present - missing: canonical URL, og:image, og:type",
+            "recommendation": "Add all four signals to your homepage: <link rel=\"canonical\">, <html lang=\"...\">, <meta property=\"og:image\">, and <meta property=\"og:type\">. Agents use these for entity resolution and attribution."
+          },
+          {
+            "id": "public-api-docs",
+            "name": "Public API/docs linked from homepage",
+            "status": "warning",
+            "score": 1,
+            "maxScore": 3,
+            "details": "Documentation found at /api but not linked from homepage",
+            "recommendation": "Publish API documentation at a discoverable URL (/docs, /api, /developers). Include authentication, endpoints, and example requests."
+          },
+          {
+            "id": "sitemap-lastmod",
+            "name": "Sitemap freshness (lastmod)",
+            "status": "fail",
+            "score": 0,
+            "maxScore": 1,
+            "details": "None of the 4 sampled sitemap entries carries a lastmod date. Add <lastmod> (W3C datetime) so agents can prioritize fresh content.",
+            "recommendation": "Add <lastmod> dates (W3C datetime, e.g. 2026-08-01) to your sitemap entries and update them when content actually changes. Aim for lastmod on at least half your entries with the newest within the last year. Verify with `curl https://yourdomain.com/sitemap.xml | grep lastmod`."
+          },
+          {
+            "id": "api-versioning-policy",
+            "name": "REST versioning / deprecation policy",
+            "status": "warning",
+            "score": 2,
+            "maxScore": 3,
+            "details": "API versioning found (URL versioning (servers or paths)) but no deprecation or sunset policy detected - add Sunset/Deprecation headers or a deprecation policy page",
+            "recommendation": "Declare a versioning policy agents can rely on: version your API (in the URL path or a version header) and publish how you signal deprecation (a Sunset/Deprecation header or a documented timeline). Agents avoid integrating against a surface that can change without warning."
+          }
+        ]
+      }
+    },
+    "jsonrpc": "2.0",
+    "id": "ora-retry-2"
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "captured_at": "2026-08-27T21:43:53.000Z",
+  "scope": "local-only recovery candidate; never deployed",
+  "source_batch": {
+    "provider": "GDELT",
+    "batch_id": "20260827213000",
+    "batch_timestamp": "2026-08-27T21:30:00.000Z",
+    "checksum_join_and_schema_gates": "passed",
+    "rows_read": {
+      "events": 1550,
+      "mentions": 4802,
+      "gkg": 1526,
+      "total_source_rows": 7878
+    },
+    "health": "healthy",
+    "source_count": 4,
+    "successful_source_count": 4
+  },
+  "local_candidate": {
+    "clusters": 116,
+    "article_records": 126,
+    "distinct_canonical_urls": 126,
+    "raw_multi_domain_clusters": 3,
+    "raw_five_domain_clusters": 2,
+    "verified_independent_multi_publisher_clusters": 0,
+    "clusters_with_five_verified_independent_parent_publishers_and_three_observed_editorial_markets": 0,
+    "articles_with_observed_editorial_market": 0,
+    "clusters_with_cited_claims": 2,
+    "cited_claims": 2,
+    "clusters_with_verified_contradictions": 0,
+    "clusters_with_verified_omissions": 0,
+    "tavily_articles_accepted": 2,
+    "tavily_candidates_rejected": 19
+  },
+  "target_accounting": {
+    "article_records": {
+      "target": 10000,
+      "actual": 126,
+      "met": false
+    },
+    "global_clusters": {
+      "target": 500,
+      "actual": 116,
+      "met": false
+    },
+    "verified_multi_publisher_clusters": {
+      "target": 25,
+      "actual": 0,
+      "met": false
+    },
+    "tavily_enriched_clusters": {
+      "target": 10,
+      "actual": 2,
+      "met": false
+    }
+  },
+  "truth_notes": [
+    "Distinct domains are not counted as independent publishers without parent-ownership evidence.",
+    "Two raw clusters have five distinct domains, but neither has three evidence-backed editorial markets and one contains obvious syndication, so neither qualifies.",
+    "Event location, publisher origin, editorial market, and reader exposure remain separate; no event location was substituted for coverage market.",
+    "The one-hour directive placed Ora fixes ahead of extra dataset volume, and the local batch was not expanded by weakening clustering or evidence gates."
+  ],
+  "tavily": {
+    "searches": 3,
+    "search_results": 21,
+    "extract_requests": 6,
+    "successful_extracts": 6,
+    "usage_before": {
+      "plan": "Researcher",
+      "plan_usage": 2,
+      "plan_limit": 1000,
+      "search_usage": 2,
+      "extract_usage": 0
+    },
+    "usage_after": {
+      "plan": "Researcher",
+      "plan_usage": 2,
+      "plan_limit": 1000,
+      "search_usage": 2,
+      "extract_usage": 0
+    },
+    "observed_usage_delta": 0,
+    "note": "Calls and results were real; the provider usage endpoint showed no increment, consistent with cached or non-metered free operations."
+  },
+  "artifacts": [
+    {
+      "path": "artifacts/recovery-gdelt-latest.json",
+      "sha256": "564667431767ad9d485f735e314539a6b491e59f9f97f6eaa851c3d3a5b58c79"
+    },
+    {
+      "path": "artifacts/recovery-gdelt-enriched.json",
+      "sha256": "f2cc1c6058d249b36ec90a48abfcb4a7194df67a31989c188fa540a22f2c3643"
+    },
+    {
+      "path": "artifacts/recovery-gdelt-enriched.sql",
+      "sha256": "23aa4a0f36e5a974a55bdb848963a25a9654b94376df940be42c704cd38727ce"
+    },
+    {
+      "path": "artifacts/recovery-gdelt-production.sql",
+      "sha256": "230b5c559fa13fba7bf582fb5d10b5ace692f87e312515d016e5954e72f1b8b9"
+    },
+    {
+      "path": "docs/receipts/tavily-recovery-2026-08-27.json",
+      "sha256": "d96bcfff937bca238ca8aa8295f1023e956d37148f9de111e63b7f8f76c594a2"
+    },
+    {
+      "path": "docs/receipts/cotal-pipeline-handoff-2026-08-27.json",
+      "sha256": "1d126e8ff402535f2e72fbb01f4b52294f7599f71d83e2e301546f0e0eb4258f"
+    }
+  ],
+  "deployment": {
+    "performed": false,
+    "reason": "Explicit user prohibition on push and deploy."
+  }
+}
