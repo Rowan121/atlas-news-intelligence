@@ -214,9 +214,39 @@ await check("A2A Agent Card", "/.well-known/agent-card.json", undefined, ({ resp
   assert.equal(response.status, 200);
   const body = JSON.parse(text);
   assert.equal(body.supportedInterfaces[0].url, `${base}/a2a`);
-  assert.equal(body.supportedInterfaces[0].protocolBinding, "HTTP+JSON");
+  assert.equal(body.supportedInterfaces[0].protocolBinding, "JSONRPC");
+  assert.equal(body.supportedInterfaces[0].protocolVersion, "1.0");
+  assert.equal(body.supportedInterfaces[1].url, `${base}/a2a`);
+  assert.equal(body.supportedInterfaces[1].protocolBinding, "HTTP+JSON");
+  assert.equal(body.supportedInterfaces[1].protocolVersion, "1.0");
   assert.equal(body.capabilities.streaming, false);
   assert.equal(body.capabilities.pushNotifications, false);
+});
+
+await check("A2A JSON-RPC SendMessage", "/a2a", {
+  method: "POST",
+  headers: { ...jsonHeaders, "A2A-Version": "1.0" },
+  body: JSON.stringify({
+    jsonrpc: "2.0",
+    id: "smoke-a2a-jsonrpc",
+    method: "SendMessage",
+    params: {
+      message: {
+        messageId: "smoke-a2a-jsonrpc-message",
+        role: "ROLE_USER",
+        parts: [{ text: JSON.stringify({ operation: "pipeline_health" }), mediaType: "application/json" }],
+      },
+    },
+  }),
+}, ({ response, text, contentType }) => {
+  assert.equal(response.status, 200);
+  assert.match(contentType, /^application\/json\b/);
+  assert.equal(response.headers.get("a2a-version"), "1.0");
+  const body = JSON.parse(text);
+  assert.equal(body.jsonrpc, "2.0");
+  assert.equal(body.id, "smoke-a2a-jsonrpc");
+  assert.equal(body.result.message.role, "ROLE_AGENT");
+  assert.equal(body.result.message.parts[0].data.operation, "pipeline_health");
 });
 
 await check("A2A message:send query", "/a2a/message:send", {

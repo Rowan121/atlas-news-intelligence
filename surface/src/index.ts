@@ -1,5 +1,5 @@
 import type { ProminenceMetric, StoryQuery } from "./contracts";
-import { handleA2aSend } from "./a2a";
+import { handleA2aJsonRpc, handleA2aSend } from "./a2a";
 import {
   a2aAgentCard,
   apiCatalog,
@@ -184,9 +184,21 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           return response;
         }
 
-        if (url.pathname === "/.well-known/agent-card.json" || url.pathname === "/a2a") {
+        if (url.pathname === "/.well-known/agent-card.json") {
           readMethod(request);
           const response = withoutBodyForHead(request, a2aAgentCard(url.origin));
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
+        if (url.pathname === "/a2a") {
+          if (request.method === "GET" || request.method === "HEAD") {
+            const response = withoutBodyForHead(request, a2aAgentCard(url.origin));
+            corsHeadersFor(response.headers, corsHeaders);
+            return response;
+          }
+          if (request.method !== "POST") throw methodProblem();
+          const response = await handleA2aJsonRpc(request, store, now, staleAfterSeconds, requestId);
           corsHeadersFor(response.headers, corsHeaders);
           return response;
         }

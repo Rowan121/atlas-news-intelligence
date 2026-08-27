@@ -213,7 +213,10 @@ describe("Atlas Worker routes", () => {
     });
     const a2a = await get("/.well-known/agent-card.json");
     expect(await a2a.json()).toMatchObject({
-      supportedInterfaces: [{ url: "https://atlas.example/a2a", protocolBinding: "HTTP+JSON", protocolVersion: "1.0" }],
+      supportedInterfaces: [
+        { url: "https://atlas.example/a2a", protocolBinding: "JSONRPC", protocolVersion: "1.0" },
+        { url: "https://atlas.example/a2a", protocolBinding: "HTTP+JSON", protocolVersion: "1.0" },
+      ],
       capabilities: { streaming: false, pushNotifications: false },
     });
   });
@@ -867,6 +870,54 @@ describe("A2A surface", () => {
     );
   }
 
+  async function sendRpc(
+    body: unknown,
+    contentType = "application/json",
+    version = "1.0",
+  ): Promise<Response> {
+    return worker.fetch!(
+      new Request("https://atlas.example/a2a", {
+        method: "POST",
+        headers: { "Content-Type": contentType, "A2A-Version": version },
+        body: typeof body === "string" ? body : JSON.stringify(body),
+      }),
+      env,
+      {} as ExecutionContext,
+    );
+  }
+
+  function rpcMessage(part: Record<string, unknown>): Record<string, unknown> {
+    return {
+      jsonrpc: "2.0",
+      id: "runtype-check",
+      method: "SendMessage",
+      params: {
+        message: {
+          messageId: "runtype-message",
+          contextId: "runtype-context",
+          role: "ROLE_USER",
+          parts: [part],
+        },
+      },
+    };
+  }
+
+  it("preserves Agent Card discovery on GET /a2a", async () => {
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/a2a"),
+      env,
+      {} as ExecutionContext,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      supportedInterfaces: [
+        { url: "https://atlas.example/a2a", protocolBinding: "JSONRPC", protocolVersion: "1.0" },
+        { url: "https://atlas.example/a2a", protocolBinding: "HTTP+JSON", protocolVersion: "1.0" },
+      ],
+    });
+  });
+
   it("returns A2A client errors for null envelopes, messages, and parts", async () => {
     const bodies = [
       "null",
@@ -885,6 +936,88 @@ describe("A2A surface", () => {
         status: 400,
       });
     }
+  });
+
+  it("accepts A2A v1 JSON-RPC SendMessage at the Agent Card interface URL", async () => {
+    const response = await sendRpc(rpcMessage({
+      data: { operation: "pipeline_health" },
+      mediaType: "application/json; charset=utf-8",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.headers.get("a2a-version")).toBe("1.0");
+    expect(await response.json()).toMatchObject({
+      jsonrpc: "2.0",
+      id: "runtype-check",
+      result: {
+        message: {
+          messageId: "request-a2a:response",
+          contextId: "runtype-context",
+          role: "ROLE_AGENT",
+          parts: [{ data: { operation: "pipeline_health", health: { status: "ok" } } }],
+        },
+      },
+    });
+  });
+
+  it("accepts the Runtype chat payload only as strict JSON text and dispatches the same read-only schema", async () => {
+    const response = await sendRpc(rpcMessage({
+      text: JSON.stringify({ operation: "query_stories", region: "test-eu", metric: "raw", limit: 7 }),
+      mediaType: "application/json",
+    }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      jsonrpc: "2.0",
+      result: { message: { parts: [{ data: { operation: "query_stories", count: 1 } }] } },
+    });
+    expect(store.queries).toEqual([{ region: "TEST-EU", metric: "raw", limit: 7 }]);
+  });
+
+  it("returns typed JSON-RPC errors for malformed requests, unknown methods, and non-JSON chat text", async () => {
+    const malformed = await sendRpc("{");
+    expect(await malformed.json()).toMatchObject({
+      jsonrpc: "2.0",
+      id: null,
+      error: { code: -32700, message: "Invalid JSON payload" },
+    });
+
+    const invalid = await sendRpc(null);
+    expect(await invalid.json()).toMatchObject({ error: { code: -32600 } });
+
+    const unknownMethod = await sendRpc({ jsonrpc: "2.0", id: 2, method: "DeleteEverything", params: {} });
+    expect(await unknownMethod.json()).toMatchObject({ id: 2, error: { code: -32601, message: "Method not found" } });
+
+    const unknownOperation = await sendRpc(rpcMessage({ data: { operation: "spend_money" } }));
+    expect(await unknownOperation.json()).toMatchObject({ error: { code: -32602, message: "Invalid parameters" } });
+
+    const freeForm = await sendRpc(rpcMessage({ text: "please check pipeline health", mediaType: "text/plain" }));
+    const freeFormBody = await freeForm.json();
+    expect(freeFormBody).toMatchObject({ error: { code: -32602, message: "Invalid parameters" } });
+    expect(JSON.stringify(freeFormBody).includes("stack")).toBe(false);
+    expect(store.queries).toEqual([]);
+  });
+
+  it("enforces JSON-RPC and part media types with A2A error codes", async () => {
+    const wrongTransport = await sendRpc(
+      rpcMessage({ data: { operation: "pipeline_health" } }),
+      "application/a2a+json",
+    );
+    expect(await wrongTransport.json()).toMatchObject({ error: { code: -32005, message: "Content type not supported" } });
+
+    const wrongPart = await sendRpc(rpcMessage({
+      data: { operation: "pipeline_health" },
+      mediaType: "image/png",
+    }));
+    expect(await wrongPart.json()).toMatchObject({ error: { code: -32005, message: "Content type not supported" } });
+
+    const wrongVersion = await sendRpc(
+      rpcMessage({ data: { operation: "pipeline_health" } }),
+      "application/json",
+      "0.3",
+    );
+    expect(await wrongVersion.json()).toMatchObject({ error: { code: -32009, message: "Protocol version not supported" } });
   });
 
   it("returns current story summaries through a real read-only skill", async () => {

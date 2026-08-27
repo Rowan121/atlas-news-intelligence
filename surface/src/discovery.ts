@@ -124,8 +124,9 @@ The public read API requires no authentication. Atlas does not publish mutation,
 ## A2A
 
 - [Agent Card](${origin}/.well-known/agent-card.json)
-- HTTP+JSON base: \`${origin}/a2a\`
-- Send a structured read request to \`${origin}/a2a/message:send\` as a \`data\` part.
+- JSON-RPC 2.0 endpoint: \`${origin}/a2a\` using the A2A v1 \`SendMessage\` method.
+- HTTP+JSON compatibility: \`${origin}/a2a/message:send\`.
+- Send exactly one read operation as a structured \`data\` part or a \`text\` part containing strict JSON.
 - Supported operations: \`query_stories\`, \`explain_story\`, and \`pipeline_health\`.
 
 ## Truth and security boundaries
@@ -172,7 +173,7 @@ function documentationHtml(origin: string): string {
     <h2>MCP</h2>
     <p>POST JSON-RPC requests to <code>/mcp</code>. Tools are read-only and share the same truth store as the browser and REST API.</p>
     <h2>A2A</h2>
-    <p>POST an A2A HTTP+JSON <code>SendMessageRequest</code> to <code>/a2a/message:send</code>. The message must contain a structured <code>data</code> part naming one supported read operation.</p>
+    <p>POST an A2A v1 JSON-RPC <code>SendMessage</code> request to <code>/a2a</code>, or use the HTTP+JSON compatibility route <code>/a2a/message:send</code>. The message must contain one structured data part or a text part containing strict JSON for a supported read operation.</p>
     <h2>Authentication and effects</h2>
     <p>No authentication is required for these public reads. Atlas exposes no public mutation, account, payment, or credential-management operation.</p>
   </main>
@@ -300,7 +301,10 @@ export function a2aAgentCard(origin: string): Response {
   return json({
     name: "Atlas News Intelligence",
     description: "Read-only agent access to current story clusters, source evidence, event locations, regional prominence, and pipeline health.",
-    supportedInterfaces: [{ url: `${origin}/a2a`, protocolBinding: "HTTP+JSON", protocolVersion: "1.0" }],
+    supportedInterfaces: [
+      { url: `${origin}/a2a`, protocolBinding: "JSONRPC", protocolVersion: "1.0" },
+      { url: `${origin}/a2a`, protocolBinding: "HTTP+JSON", protocolVersion: "1.0" },
+    ],
     provider: { organization: "Atlas News Intelligence", url: origin },
     version: "0.1.0",
     documentationUrl: `${origin}/docs`,
