@@ -40,6 +40,13 @@ const WINDOW_OPTIONS: Array<{ value: TimeWindow; label: string }> = [
 ];
 
 const DEFAULT_CLIENT = createDefaultClient();
+const COMPACT_LAYOUT_QUERY = "(max-width: 900px)";
+
+function compactLayoutMatches() {
+  return typeof globalThis.window !== "undefined"
+    && typeof globalThis.window.matchMedia === "function"
+    && globalThis.window.matchMedia(COMPACT_LAYOUT_QUERY).matches;
+}
 
 function formatRelativeTime(timestamp: string | null) {
   if (!timestamp) return "No successful sync";
@@ -278,9 +285,11 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
   const [focusedClusterId, setFocusedClusterId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const [isCompactLayout, setIsCompactLayout] = useState(compactLayoutMatches);
   const comparisonHeadingRef = useRef<HTMLHeadingElement>(null);
   const overviewHeadingRef = useRef<HTMLHeadingElement>(null);
   const storyListRef = useRef<HTMLDivElement>(null);
+  const mobilePanelTriggerRef = useRef<HTMLButtonElement>(null);
   const { state, retry } = useSnapshot(client, window, prominence);
   const snapshot = state.data;
 
@@ -311,6 +320,16 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
   const viewMode = focusedCluster ? "story" : "overview";
   const regions = snapshot?.regions ?? [];
   const health = snapshot?.health;
+  const mobilePanelHidden = isCompactLayout && !mobilePanelOpen;
+
+  useEffect(() => {
+    if (typeof globalThis.window === "undefined" || typeof globalThis.window.matchMedia !== "function") return;
+    const media = globalThis.window.matchMedia(COMPACT_LAYOUT_QUERY);
+    const onChange = (event: MediaQueryListEvent) => setIsCompactLayout(event.matches);
+    setIsCompactLayout(media.matches);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
 
   useEffect(() => {
     // The overview and comparison views reuse this scroll container. Reset it
@@ -353,6 +372,22 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
     requestAnimationFrame(() => overviewHeadingRef.current?.focus());
   };
 
+  const closeMobilePanel = () => {
+    setMobilePanelOpen(false);
+    requestAnimationFrame(() => mobilePanelTriggerRef.current?.focus());
+  };
+
+  const toggleMobilePanel = () => {
+    if (mobilePanelOpen) {
+      closeMobilePanel();
+      return;
+    }
+    setMobilePanelOpen(true);
+    requestAnimationFrame(() => (
+      focusedCluster ? comparisonHeadingRef.current : overviewHeadingRef.current
+    )?.focus());
+  };
+
   return (
     <div className={`app-shell mode-${viewMode}`}>
       <header className="topbar">
@@ -374,7 +409,15 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
           <button className="icon-button" type="button" onClick={retry} aria-label="Refresh live intelligence">
             <RefreshCw className={state.status === "loading" ? "is-spinning" : ""} size={18} />
           </button>
-          <button className="mobile-menu-button" type="button" onClick={() => setMobilePanelOpen((open) => !open)} aria-label="Toggle story panel">
+          <button
+            ref={mobilePanelTriggerRef}
+            className="mobile-menu-button"
+            type="button"
+            onClick={toggleMobilePanel}
+            aria-label="Toggle story panel"
+            aria-controls="story-feed"
+            aria-expanded={mobilePanelOpen}
+          >
             <Menu size={19} /> {viewMode === "story" ? "Coverage" : "Stories"}
           </button>
         </div>
@@ -413,7 +456,7 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
         </div>
       </section>
 
-      <main id="top" className="workspace">
+      <main id="top" className="workspace" tabIndex={-1}>
         <section className="map-stage" aria-label={viewMode === "story" ? "Selected story coverage map" : "Geographic news map"}>
           <GlobeMap
             clusters={viewMode === "story" && focusedCluster ? [focusedCluster] : clusters}
@@ -477,7 +520,13 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
           )}
         </section>
 
-        <aside id="story-feed" className={`story-panel${mobilePanelOpen ? " is-open" : ""}`} aria-label={viewMode === "story" ? "Same-story coverage" : "Stories by event place"}>
+        <aside
+          id="story-feed"
+          className={`story-panel${mobilePanelOpen ? " is-open" : ""}`}
+          aria-label={viewMode === "story" ? "Same-story coverage" : "Stories by event place"}
+          aria-hidden={mobilePanelHidden || undefined}
+          inert={mobilePanelHidden}
+        >
           <div className="story-panel-head">
             <div>
               <span className="eyebrow">{viewMode === "story" ? "Cross-regional comparison" : "Stories by event place"}</span>
@@ -492,7 +541,7 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             ) : (
               <span className="story-count">{clusters.length}</span>
             )}
-            <button className="mobile-close" type="button" onClick={() => setMobilePanelOpen(false)} aria-label="Close story panel"><X size={18} /></button>
+            <button className="mobile-close" type="button" onClick={closeMobilePanel} aria-label="Close story panel"><X size={18} /></button>
           </div>
 
           {!focusedCluster && (

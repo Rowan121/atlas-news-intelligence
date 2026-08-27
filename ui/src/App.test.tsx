@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import type { IntelligenceSnapshot, NewsIntelligenceClient } from "./types";
 
@@ -8,6 +8,10 @@ vi.mock("./GlobeMap", () => ({
     <div data-testid="globe-map">{coverageHeatPoints.length} coverage heat points</div>
   ),
 }));
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const unknownAssessment = (reason: string) => ({
   status: "unknown" as const,
@@ -316,5 +320,37 @@ describe("App live-data states", () => {
     expect(screen.getByText("negative · 88% confidence")).toBeInTheDocument();
     expect(screen.getByText("positive · 88% confidence")).toBeInTheDocument();
     expect(screen.queryByText("Coverage heat withheld")).not.toBeInTheDocument();
+  });
+
+  it("keeps the closed mobile panel inert and restores focus to its trigger", async () => {
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
+      matches: true,
+      media: "(max-width: 900px)",
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    const client: NewsIntelligenceClient = {
+      getSnapshot: vi.fn().mockResolvedValue(emptySnapshot),
+    };
+    const { container } = render(<App client={client} />);
+
+    await screen.findByText("No eligible clusters in this window.");
+    const trigger = screen.getByRole("button", { name: "Toggle story panel" });
+    const panel = container.querySelector("#story-feed") as HTMLElement;
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+    expect(panel).toHaveAttribute("inert");
+
+    fireEvent.click(trigger);
+    expect(panel).not.toHaveAttribute("aria-hidden");
+    expect(panel).not.toHaveAttribute("inert");
+
+    fireEvent.click(screen.getByRole("button", { name: "Close story panel" }));
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(panel).toHaveAttribute("aria-hidden", "true");
+    expect(panel).toHaveAttribute("inert");
   });
 });
