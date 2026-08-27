@@ -4,9 +4,9 @@ Atlas is an analyst-grade public explorer for current global news. It maps real 
 
 ## Release status
 
-**Built and locally verifiable; not yet deployed.** There is no production URL, production D1 database, or active Runtype surface yet. `surface/wrangler.jsonc` deliberately contains an all-zero D1 ID, so an accidental deploy cannot silently target a guessed database. The external writes still require Rowan's approval using the exact drafts in [`surface/EXTERNAL_PAYLOAD_DRAFTS.md`](surface/EXTERNAL_PAYLOAD_DRAFTS.md).
+**P0 refresh verified locally; production update pending the independent predeploy gate.** The existing origin is `https://atlas-news-intelligence-api.atlas-news-surface.workers.dev`, backed by the existing `atlas-news-intelligence-prod` D1 database. It still serves the superseded candidate until the approved atomic D1 refresh and Worker update complete. Runtype is not yet active. Exact approved payloads, resource IDs, hashes, ordering, and remaining gates are recorded in [`surface/EXTERNAL_PAYLOAD_DRAFTS.md`](surface/EXTERNAL_PAYLOAD_DRAFTS.md).
 
-The live GDELT loader produces a validated JSON snapshot, and the deterministic `seed:d1` bridge converts it into batch-scoped D1 SQL. Applying that SQL to any remote database remains an explicit, approval-gated deployment step. Tests use explicitly test-only fixtures; product code never substitutes them when live data is absent.
+The live GDELT loader produces a validated JSON snapshot, and the deterministic `seed:d1` bridge converts it into batch-scoped D1 SQL. The production composer hash-checks that seed and adds only the explicitly approved retirement of the superseded run. Remote execution remains blocked until Agent D passes the exact frozen tree. Tests use explicitly test-only fixtures; product code never substitutes them when live data is absent.
 
 ## Architecture
 
@@ -24,7 +24,7 @@ The deployment shape is one Cloudflare Worker plus one static-asset bundle. Clou
 GDELT (+ optional Tavily enrichment)
         │
         ▼
-evidence-preserving pipeline ──► validated snapshot / future D1 load
+evidence-preserving pipeline ──► validated snapshot / verified D1 refresh
                                             │
                                             ▼
                        Cloudflare Worker: REST + MCP + A2A + health

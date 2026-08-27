@@ -17,7 +17,7 @@ This matrix is frozen for the build. Agents must use the working set and must no
 | Runtype | Working existing account access | $10 was last observed, not the advertised $50 | Required API/MCP/A2A surface and evals; publishing remains approval-gated |
 | Mitosis | Working key | 500 account credits were last observed; event publishes no builder-credit offer | Optional provenance/memory if it materially improves the product |
 | AIsa | Excluded from this build | $1 trial was last observed, not the advertised $100 | Do not use |
-| Cloudflare | Existing account, Wrangler currently unauthenticated | Needs existing-account OAuth, not another API key | Workers/D1 deployment when the candidate is ready |
+| Cloudflare | Working saved existing-account OAuth; Wrangler 4.127.0 read-only D1 access verified | Existing production Worker and D1 only; never mint another key | Approved atomic D1 refresh and Worker update after Agent D predeploy PASS |
 | Hacker Bob | No API key by design | One later security scan | Final authorized scan only |
 | HUD | Excluded from this build | Overall-winner training credits, not build money | Do not use |
 
