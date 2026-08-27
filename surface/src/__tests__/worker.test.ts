@@ -902,6 +902,21 @@ describe("A2A surface", () => {
     };
   }
 
+  function legacyRpcMessage(part: Record<string, unknown>): Record<string, unknown> {
+    return {
+      jsonrpc: "2.0",
+      id: "runtype-legacy-check",
+      method: "message/send",
+      params: {
+        message: {
+          messageId: "runtype-legacy-message",
+          role: "user",
+          parts: [part],
+        },
+      },
+    };
+  }
+
   it("preserves Agent Card discovery on GET /a2a", async () => {
     const response = await worker.fetch!(
       new Request("https://atlas.example/a2a"),
@@ -975,26 +990,52 @@ describe("A2A surface", () => {
     expect(store.queries).toEqual([{ region: "TEST-EU", metric: "raw", limit: 7 }]);
   });
 
-  it("accepts the official v0.3 message/send method name as a narrow alias", async () => {
-    const request = rpcMessage({
+  it("adapts the exact official v0.3 message/send wire shape", async () => {
+    const response = await sendRpc(legacyRpcMessage({
+      kind: "text",
       text: JSON.stringify({ operation: "pipeline_health" }),
-      mediaType: "application/json",
-    });
-    request.method = "message/send";
-
-    const response = await sendRpc(request);
+    }));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       jsonrpc: "2.0",
-      id: "runtype-check",
+      id: "runtype-legacy-check",
       result: {
-        message: {
-          role: "ROLE_AGENT",
-          parts: [{ data: { operation: "pipeline_health", health: { status: "ok" } } }],
-        },
+        kind: "message",
+        messageId: "request-a2a:response",
+        role: "agent",
+        parts: [{ kind: "data", data: { operation: "pipeline_health", health: { status: "ok" } } }],
       },
     });
+
+    const dataPart = await sendRpc(legacyRpcMessage({
+      kind: "data",
+      data: { operation: "pipeline_health" },
+    }));
+    expect(dataPart.status).toBe(200);
+  });
+
+  it("isolates legacy roles and parts from v1 and rejects free-form text on both methods", async () => {
+    const v1WithLegacyRole = rpcMessage({ data: { operation: "pipeline_health" } });
+    const v1Params = v1WithLegacyRole.params as { message: Record<string, unknown> };
+    v1Params.message.role = "user";
+    expect(await (await sendRpc(v1WithLegacyRole)).json()).toMatchObject({ error: { code: -32602 } });
+
+    const legacyWithV1Role = legacyRpcMessage({ kind: "data", data: { operation: "pipeline_health" } });
+    const legacyParams = legacyWithV1Role.params as { message: Record<string, unknown> };
+    legacyParams.message.role = "ROLE_USER";
+    expect(await (await sendRpc(legacyWithV1Role)).json()).toMatchObject({ error: { code: -32602 } });
+
+    const mismatchedPart = await sendRpc(legacyRpcMessage({
+      kind: "text",
+      data: { operation: "pipeline_health" },
+    }));
+    expect(await mismatchedPart.json()).toMatchObject({ error: { code: -32602 } });
+
+    const legacyFreeForm = await sendRpc(legacyRpcMessage({ kind: "text", text: "please check pipeline health" }));
+    const legacyFreeFormBody = await legacyFreeForm.json();
+    expect(legacyFreeFormBody).toMatchObject({ error: { code: -32602, message: "Invalid parameters" } });
+    expect(JSON.stringify(legacyFreeFormBody).includes("stack")).toBe(false);
   });
 
   it("returns typed JSON-RPC errors for malformed requests, unknown methods, and non-JSON chat text", async () => {

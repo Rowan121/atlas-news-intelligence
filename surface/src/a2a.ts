@@ -9,6 +9,12 @@ interface A2AMessage {
   parts: Array<{ data?: unknown; text?: unknown; mediaType?: unknown; [key: string]: unknown }>;
 }
 
+interface LegacyA2AMessage {
+  messageId: string;
+  role: "user";
+  parts: Array<{ kind?: unknown; data?: unknown; text?: unknown; [key: string]: unknown }>;
+}
+
 interface SendMessageRequest {
   message?: unknown;
 }
@@ -118,6 +124,29 @@ function parseMessage(raw: unknown): A2AMessage {
   return raw as unknown as A2AMessage;
 }
 
+function parseLegacyMessage(raw: unknown): LegacyA2AMessage {
+  if (
+    !isRecord(raw)
+    || typeof raw.messageId !== "string"
+    || raw.messageId === ""
+    || raw.role !== "user"
+    || !Array.isArray(raw.parts)
+  ) {
+    throw new Error("messageId, user role, and a parts array are required for message/send");
+  }
+  if (!raw.parts.every(isRecord)) throw new Error("Every legacy message part must be an object");
+  return raw as unknown as LegacyA2AMessage;
+}
+
+function parseStrictJsonText(value: unknown): unknown {
+  if (typeof value !== "string") throw new Error("A text operation part must contain a string");
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw new Error("A text operation part must contain strict JSON for a read-only operation");
+  }
+}
+
 function operationFromMessage(message: A2AMessage): A2AOperation {
   const candidates: unknown[] = [];
   for (const part of message.parts) {
@@ -139,17 +168,30 @@ function operationFromMessage(message: A2AMessage): A2AOperation {
     if (mediaType !== undefined && mediaType !== "application/json" && mediaType !== "text/plain") {
       throw new A2AContentTypeError("Text operation parts support only application/json or text/plain");
     }
-    if (typeof part.text !== "string") throw new Error("A text operation part must contain a string");
-    try {
-      candidates.push(JSON.parse(part.text));
-    } catch {
-      throw new Error("A text operation part must contain strict JSON for a read-only operation");
-    }
+    candidates.push(parseStrictJsonText(part.text));
   }
   if (candidates.length !== 1) {
     throw new Error("Exactly one structured data or strict-JSON text operation part is required");
   }
   return parseOperation(candidates[0]);
+}
+
+function operationFromLegacyMessage(message: LegacyA2AMessage): A2AOperation {
+  if (message.parts.length !== 1) {
+    throw new Error("Exactly one legacy text or data operation part is required");
+  }
+  const part = message.parts[0]!;
+  const hasData = Object.hasOwn(part, "data");
+  const hasText = Object.hasOwn(part, "text");
+  if (part.kind === "data") {
+    if (!hasData || hasText) throw new Error("A legacy data part must contain data and no text");
+    return parseOperation(part.data);
+  }
+  if (part.kind === "text") {
+    if (!hasText || hasData) throw new Error("A legacy text part must contain text and no data");
+    return parseOperation(parseStrictJsonText(part.text));
+  }
+  throw new Error("A legacy operation part kind must be text or data");
 }
 
 async function executeOperation(
@@ -183,6 +225,15 @@ function responseMessage(value: unknown, requestId: string, contextId?: string):
     contextId: contextId ?? `${requestId}:context`,
     role: "ROLE_AGENT",
     parts: [{ data: value, mediaType: "application/json" }],
+  };
+}
+
+function legacyResponseMessage(value: unknown, requestId: string): Record<string, unknown> {
+  return {
+    kind: "message",
+    messageId: `${requestId}:response`,
+    role: "agent",
+    parts: [{ kind: "data", data: value }],
   };
 }
 
@@ -262,11 +313,17 @@ export async function handleA2aJsonRpc(
   }
   if (!isRecord(body.params)) return jsonRpcError(body.id, -32602, "Invalid parameters", "params must be an object");
 
-  let message: A2AMessage;
+  const legacyMethod = body.method === "message/send";
+  let contextId: string | undefined;
   let operation: A2AOperation;
   try {
-    message = parseMessage(body.params.message);
-    operation = operationFromMessage(message);
+    if (legacyMethod) {
+      operation = operationFromLegacyMessage(parseLegacyMessage(body.params.message));
+    } else {
+      const message = parseMessage(body.params.message);
+      contextId = message.contextId;
+      operation = operationFromMessage(message);
+    }
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Invalid SendMessage parameters";
     return jsonRpcError(
@@ -282,7 +339,9 @@ export async function handleA2aJsonRpc(
     return jsonRpcResponse({
       jsonrpc: "2.0",
       id: body.id,
-      result: { message: responseMessage(value, requestId, message.contextId) },
+      result: legacyMethod
+        ? legacyResponseMessage(value, requestId)
+        : { message: responseMessage(value, requestId, contextId) },
     });
   } catch (error) {
     if (error instanceof StoryNotFoundError) {
