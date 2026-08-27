@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "captured_at": "2026-08-27T09:13:55Z",
+  "phase": "early_applicability",
+  "evaluation_criteria": {
+    "path": "/Users/rowancooper/Desktop/Deep research Folder/ORA THING.md",
+    "line_count": 959,
+    "sha256": "fdc461c0b6060047163b3b91d280f1c449fe932aaab2936a0ba4b6cbc6e48f62",
+    "use": "evaluation criteria only; not authorization for external activity"
+  },
+  "repository": {
+    "source": "/tmp/atlas-news-final",
+    "commit": "35cbae393511dc594f3247ba7a6abea88f019f55",
+    "inspection_mode": "detached isolated worktree",
+    "product_files_modified": false
+  },
+  "product_profile": {
+    "name": "Atlas News Intelligence",
+    "classification": "public interactive Cloudflare hybrid UI/API application",
+    "stack": [
+      "Cloudflare Worker",
+      "Cloudflare D1",
+      "Vite React SPA",
+      "MapLibre"
+    ],
+    "default_locale": "en",
+    "commerce": false
+  },
+  "verified_local_capabilities": [
+    "browser UI implemented against the real API contract",
+    "read-only REST endpoints for health, story lists, intelligence snapshots, and cluster detail",
+    "read-only MCP JSON-RPC endpoint with three data-backed tools",
+    "explicit pipeline health, freshness, provenance, uncertainty, and typed error envelopes"
+  ],
+  "not_yet_genuine_or_active": [
+    "A2A endpoint and agent card",
+    "authentication or authorization",
+    "active Runtype publication",
+    "production Cloudflare origin and production D1 binding",
+    "OpenAPI/API Catalog and MCP discovery metadata",
+    "ordinary no-JavaScript homepage content"
+  ],
+  "deployment_state": {
+    "production_origin": null,
+    "production_d1": null,
+    "runtype_active": false,
+    "wrangler_database_id_is_zero_sentinel": true
+  },
+  "constraints": [
+    "no external scans",
+    "no external writes",
+    "no key discovery",
+    "no AIsa or HUD",
+    "no product implementation changes"
+  ],
+  "blocking_unknowns": [
+    "final public origin and canonical hostname",
+    "owner-approved bot and Content Signals policy",
+    "whether the public surface is deliberately unauthenticated or will gain a real auth scheme",
+    "approval and OAuth attachment for Cloudflare and Runtype publication"
+  ],
+  "critical_truth_mismatches": [
+    "Runtype draft advertises api_key authentication for MCP and A2A, but the Worker implements no authentication",
+    "Runtype draft advertises A2A, but no A2A route or agent card exists",
+    "Runtype draft says REST response_shape is wrapped, while /api/v1/intelligence returns an unwrapped snapshot",
+    "Runtype dominant-story description says event-region filtering, while the advertised /api/v1/intelligence path has only window and prominence parameters"
+  ]
+}
