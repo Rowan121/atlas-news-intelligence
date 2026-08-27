@@ -1,0 +1,100 @@
+{
+  "name": "Atlas News Intelligence",
+  "slug": "atlas-news-intelligence",
+  "description": "Evidence-backed geographic news intelligence over live records, with explicit uncertainty and source comparison.",
+  "mode": "read_only",
+  "source_of_truth": {
+    "type": "external_api",
+    "base_url_env": "ATLAS_API_BASE_URL",
+    "health_path": "/health",
+    "secrets": []
+  },
+  "capabilities": [
+    {
+      "name": "Query Dominant Stories",
+      "slug": "query-dominant-stories",
+      "method": "GET",
+      "path": "/api/v1/intelligence?window={window}&prominence={prominence}",
+      "description": "Query current story clusters by event region, time window, and raw or normalized prominence."
+    },
+    {
+      "name": "Explain Story Cluster",
+      "slug": "explain-story-cluster",
+      "method": "GET",
+      "path": "/api/stories/{cluster_id}",
+      "description": "Return cluster membership, source articles, event-location evidence, claims, and regional prominence."
+    },
+    {
+      "name": "Compare Regional Coverage",
+      "slug": "compare-regional-coverage",
+      "method": "GET",
+      "path": "/api/v1/intelligence?window={window}&prominence={prominence}",
+      "description": "Compare raw and source-volume-normalized prominence without conflating publisher origin and event location."
+    },
+    {
+      "name": "Inspect Pipeline Health",
+      "slug": "inspect-pipeline-health",
+      "method": "GET",
+      "path": "/health",
+      "description": "Inspect source watermark, freshness, failure state, and retryability before using results."
+    }
+  ],
+  "surfaces": [
+    { "type": "rest_api", "status": "draft", "capabilities": "all", "response_shape": "wrapped" },
+    { "type": "mcp", "status": "draft", "capabilities": "all", "authentication": "api_key" },
+    { "type": "a2a", "status": "draft", "capabilities": "all", "authentication": "api_key" }
+  ],
+  "eval_suites": [
+    {
+      "name": "geolocation-fidelity",
+      "severity": "gate",
+      "target": "Explain Story Cluster",
+      "criteria": [
+        "Event locations have coordinates, type, confidence, and source evidence.",
+        "Publisher origin is never presented as the event location.",
+        "Low-confidence or absent locations remain explicit and do not become map assertions."
+      ]
+    },
+    {
+      "name": "citation-integrity",
+      "severity": "gate",
+      "target": "Explain Story Cluster",
+      "criteria": [
+        "Every factual article and claim reference resolves to a source URL.",
+        "Evidence quotes are attributable to their article and remain short.",
+        "The capability never invents a URL, publisher, timestamp, or quotation."
+      ]
+    },
+    {
+      "name": "cluster-coherence",
+      "severity": "gate",
+      "target": "Explain Story Cluster",
+      "criteria": [
+        "Membership confidence and matching evidence are present for every article.",
+        "Articles grouped together refer to the same underlying event, not only a similar topic.",
+        "Conflicting coverage stays within the event cluster while distinct events remain separate."
+      ]
+    },
+    {
+      "name": "abstention-and-failure",
+      "severity": "gate",
+      "target": "Query Dominant Stories",
+      "criteria": [
+        "Empty data returns an empty result, never fabricated news.",
+        "Stale or failed ingestion is visible through health and freshness fields.",
+        "Unknown clusters and invalid filters return typed failure envelopes."
+      ]
+    },
+    {
+      "name": "cost-and-latency",
+      "severity": "soft",
+      "target": "Query Dominant Stories",
+      "budgets": {
+        "p95_latency_ms": 500,
+        "model_calls_per_read": 0,
+        "external_api_calls_per_read": 0,
+        "max_result_count": 100
+      }
+    }
+  ]
+}
