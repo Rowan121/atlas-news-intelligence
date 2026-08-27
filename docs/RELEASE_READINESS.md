@@ -1,6 +1,6 @@
 # Release and agent-readiness audit
 
-The current P0 candidate was checked locally on 2026-08-27 through the full built UI + Worker + isolated local D1 stack. The existing Cloudflare production resource still serves an older candidate until the refreshed seed and frozen Worker pass Agent D's independent predeploy gate. No paid call or quota-consuming scanner run was performed for this P0 iteration. The reproducible route-level evidence is in [the local smoke receipt](./LOCAL_RELEASE_SMOKE_2026-08-27.md).
+The P0 candidate is deployed on the existing Cloudflare Worker and D1 resources. The final build uses real GDELT records, a visible MapLibre globe, evidence-backed primary editorial-market heat, and genuine REST/MCP/A2A surfaces. The full local release gate and a 19-check production smoke passed after the last live-only asset security fix. The one approved Hacker Bob scan was consumed once and its two response observations were remediated. The complete production receipt is [here](./PRODUCTION_RELEASE_2026-08-27.md); Agent D's independent final ORA/IsItAgentReady verification is deliberately last.
 
 ## Truthful profile
 
@@ -23,7 +23,7 @@ After this candidate:
 - Documentation and the root resource support `Accept: text/markdown`; HTML and Markdown assert the same auth, capability, and data-truth facts, including correct q-value fallback and explicit 406 responses.
 - RFC 9727 GET/HEAD behavior is represented by an `application/linkset+json` API Catalog and `Link: rel="api-catalog"` discovery.
 - MCP retains the stable `2025-06-18` initialize flow and adds current stateless `server/discover`, plus a public server card.
-- A real read-only A2A HTTP+JSON interface now accepts structured `query_stories`, `explain_story`, and `pipeline_health` requests and returns source-of-truth results. Its Agent Card advertises only those operations and no auth, streaming, push, or writes.
+- A real read-only A2A v1 JSON-RPC interface and HTTP+JSON binding accept structured `query_stories`, `explain_story`, and `pipeline_health` requests and return source-of-truth results. A strict method-scoped v0.3 adapter serves the existing Runtype client without weakening v1 or accepting free-form text. The Agent Card advertises only real operations and no auth, streaming, push, or writes.
 - `CORS_ORIGIN=self` allows same-origin browser/API use without guessing the Worker hostname and rejects foreign origins unless an explicit origin is later approved.
 - The latest D1 pipeline-run query now exposes an optional sanitized Cotal receipt when one exists. The final proof correctly returns `cotal_receipt: null`: its source JSON contained no Cotal receipt, so this candidate makes no Cotal/Nebius or other sponsor-usage claim. Optional future sponsor receipts validate provider, capability, timestamp, status, external request ID, evidence URLs, and mathematically consistent before/after/delta usage.
 - Selective Worker-first routing prevents the SPA fallback from turning missing conventional or machine paths into misleading HTML 200 responses.
@@ -32,39 +32,36 @@ After this candidate:
 - Every source exposes one `editorialMarket` assessment with confidence, method, and cited evidence when observed. Distinct outlet domains remain visible even when several editions share a parent publisher/network.
 - Audience/readership telemetry and legacy plural coverage fields are absent. Event location and publisher origin never fill the same-story heatmap.
 - Malformed percent-encoding is a controlled non-retryable 400 and unknown Worker routes return a controlled 404 instead of leaking a stack or becoming a misleading SPA response.
+- Production HTTPS responses, including hashed assets, carry HSTS plus CSP/XFO frame denial. HTTP redirects omit HSTS, and asset response metadata is preserved.
 
 ## Applicable readiness matrix
 
-| Area | Local candidate | Production evidence still required |
+| Area | Final state | Evidence / remaining limit |
 |---|---|---|
-| Homepage identity/no-JS | Implemented, built, and served through the Worker; local HTTP check passed | Deployed HTTPS and keyboard/browser verification |
-| Conventional `/docs`, `/api`, `/integrations` | Implemented and unit tested; `/docs` local HTTP check passed | Deployed HTTPS probes |
-| `/pricing` | Intentionally absent; Worker-first path returns a real 404 | HTTPS probe |
-| robots and sitemap | Implemented, unit tested, and locally HTTP-smoked | Deployed parser + canonical URL probes |
-| Markdown negotiation and explicit fallback | HTML, Markdown, and explicit 406 are unit tested and locally HTTP-smoked | Deployed HTTPS content-equivalence probe |
-| `llms.txt` | Implemented from canonical release facts | Link/fact consistency probe |
-| API Catalog + OpenAPI | Implemented for public reads only; OpenAPI paths and GET-only operations locally verified | Deployed RFC validator and sampled operation probes |
-| Authentication/OAuth metadata | N/A: public reads, no public OAuth server | Confirm no deployment layer adds auth |
-| MCP discovery and invocation | Implemented; initialize and 3 read-only tools locally invoked | Deployed initialize/discover/list/call receipt |
-| A2A discovery and invocation | Implemented; card and read-only query SendMessage locally invoked | Deployed card + SendMessage receipt |
-| Agent Skills, WebMCP, ARD, DNS-AID | N/A unless a later real capability requires them | Re-evaluate against live scanner catalog |
-| Commerce protocols | N/A: Atlas sells nothing | Keep N/A |
-| Bot training/inference policy | No owner policy supplied; robots permits public reads only as a crawl instruction | Owner decision if Content Signals or crawler-specific policy is desired |
-| Localization | English only | N/A for locale parity; verify `<html lang="en">` |
-| Canonical origin/redirects | Blocked until deploy | HTTP→HTTPS and alias/redirect probes |
-| External Ora/IsItAgentReady | Deferred to frozen deployed candidate | One milestone scan each, with check-set/version snapshot |
-| Hacker Bob | Reserved | One final scan after freeze |
+| Homepage identity/no-JS | PASS | Live HTTPS, semantic browser snapshot, and visible final screenshot |
+| Initial and focused globe modes | PASS | Initial event globe; focused 11-market heat; Back restores initial mode |
+| Conventional `/docs`, `/api`, `/integrations` | PASS | Deployed HTTPS probes and negotiated HTML/Markdown/406 |
+| `/pricing` | N/A | Atlas sells nothing; controlled 404 is truthful |
+| robots, sitemap, `llms.txt` | PASS | Live origin and fact/link checks |
+| API Catalog + OpenAPI | PASS | Deployed API Catalog and GET-only OpenAPI 3.1 paths |
+| Authentication/OAuth metadata | N/A | Public reads; no public OAuth server or deployment-layer auth |
+| MCP discovery and invocation | PASS | Live initialize and three read-only tool declarations |
+| A2A discovery and invocation | PASS | Live v1 JSON-RPC, HTTP+JSON, strict v0.3 Runtype compatibility, and final Runtype `execution_complete` |
+| Static asset security | PASS | JS/CSS run through Worker and preserve representation metadata while receiving CSP/XFO/HSTS |
+| Agent Skills, WebMCP, ARD, DNS-AID | N/A | No real product capability requires fabricated metadata |
+| Commerce protocols | N/A | Atlas sells nothing |
+| Bot training/inference policy | Open owner choice | Robots permits crawl; no unsupported owner Content Signals policy was invented |
+| Localization | English only | `<html lang="en">`; locale parity N/A |
+| Canonical origin/redirects | PASS | HTTP 308 to HTTPS; HSTS only on production HTTPS |
+| Runtype product/capability | PARTIAL | Genuine final A2A execution; surfaces remain draft because required named eval creation needs a prohibited new API credential |
+| External ORA/IsItAgentReady | FINAL AGENT D GATE | Existing Agent D owns the complete attached-document checklist and final frozen-origin verdict |
+| Hacker Bob | CONSUMED / REMEDIATED | One scan only; HSTS/clickjacking observations fixed; no second scan permitted |
 
-## Remaining deployment gates
+## Remaining gate
 
-1. Agent D must independently pass the frozen P0 candidate before any refreshed D1 write or Worker deployment.
-2. The verified generated seed is `artifacts/p0-editorial-market-final.sql` (SHA-256 `4cde8920229744e4de0ffeb584069836b92a22234700af116a3681755c8c102b`), derived deterministically from source JSON SHA-256 `fff27207417aba310ada64a0653d944e391224b15973be7102fafda40a19c94c` and the tracked checksum manifest. The only valid production write is the reproducibly composed `artifacts/p0-editorial-market-production.sql` (SHA-256 `27bab7330daf7ae944af731be61c89aa6076bf647a68b73ef5493f759d14802c`). It loads that seed and atomically retires only `gdelt:20260827091500`, because mixing the old and new independently normalized runs would corrupt rankings and retain obsolete stories.
-3. Production still needs the refreshed remote row-count/health receipt and the P0 Worker deploy/version receipt, followed by live HTTPS REST/MCP/A2A/browser checks.
-4. Runtype still needs truthful product/surface/eval activation and before/after usage receipts. A local definition alone is not sponsor usage evidence.
-5. No live Tavily, Tenki, Runtype, Mitosis, or Cotal/Nebius usage should be claimed unless a sanitized receipt exists. Configuration or account balance alone is not evidence of use.
-6. External Ora, IsItAgentReady, and Hacker Bob remain final-frozen-origin checks; Hacker Bob is reserved for one final security scan.
+Only the same existing Agent D's final independent ORA/IsItAgentReady pass remains. The atomic D1 refresh, Worker deploy, live browser/REST/MCP/A2A/security verification, final Runtype execution, and one Hacker Bob scan are complete. Any implementation change after Agent D's verdict invalidates that verdict and requires a new independent pass.
 
-None of these blockers justifies creating an account, hunting for a key, attaching a personal provider key, or enabling AIsa/HUD.
+Runtype activation remains intentionally blocked rather than silently waived: the five named eval suites cannot be created from the available signed-in UI, and the SDK/API path requires minting a credential. Tavily, Tenki, Mitosis, and Cotal/Nebius are not claimed as used without sanitized final-run receipts. None of these limits justifies creating an account, hunting for a key, attaching a personal provider key, or enabling AIsa/HUD.
 
 ## Current evidence profile
 
@@ -97,7 +94,7 @@ If a provider does not expose usage, `usage` is `null`; never invent a numeric d
 
 ```text
 npm --prefix surface run check
-61 tests passed; Surface typecheck passed
+70 tests passed; Surface typecheck passed
 
 npm run typecheck
 passed
@@ -113,20 +110,20 @@ npm --prefix ui audit
 npm --prefix surface audit
 0 vulnerabilities in each audit
 
-ATLAS_BASE_URL=http://127.0.0.1:8791 \
+ATLAS_BASE_URL=https://atlas-news-intelligence-api.atlas-news-surface.workers.dev \
 ATLAS_EXPECTED_RUN_ID=gdelt:20260827170000 \
 ATLAS_EXPECTED_RUN_STATUS=succeeded \
 ATLAS_EXPECTED_DB_CLUSTERS=111 ATLAS_EXPECTED_RESPONSE_CLUSTERS=100 \
 ATLAS_EXPECTED_ARTICLES=123 ATLAS_EXPECTED_REGIONS=42 \
 ATLAS_EXPECTED_OBSERVED_HEAT_CLUSTERS=1 \
 node scripts/smoke-local.mjs
-17/17 HTTP checks passed against the built UI + Worker + isolated local D1
+18/18 scripted HTTPS checks passed; the separate HTTP→HTTPS probe passed, for 19/19 production checks
 
 npm run verify:release
 all install, typecheck, test, build, and Wrangler dry-run gates passed
 ```
 
-The P0 product/code candidate is `55f9627d6c7c5baf1d165be8e0ffb3dec7de0bb0`; the later ledger/freeze commit does not change product logic. The valid P0 source, generated-seed, and production-refresh hashes are recorded above. The source contains no fabricated sponsor receipt; sponsor claims require separate sanitized integration evidence.
+The final deployed runtime build is `32a3e6630291f485a67aade8efa0ba5e0b56657f`; Cloudflare deployment version `34ea69cb-aa81-41bd-aab1-5b07d6222df0` serves it. The valid P0 source, generated-seed, and production-refresh hashes remain recorded in the approved payload ledger. The source contains no fabricated sponsor receipt; sponsor claims require separate sanitized integration evidence.
 
 Full `npm run verify:release` remains the merge/deploy preflight because it also builds the changing UI and performs the Wrangler bundle dry-run.
 

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "origin": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev",
+  "cloudflare": {
+    "accountId": "70311d13372e29742a6ae45f6788bcc9",
+    "worker": "atlas-news-intelligence-api",
+    "database": "atlas-news-intelligence-prod",
+    "databaseId": "a4b64588-32ff-4e18-950e-f603e3c7d3d2",
+    "deploymentVersionId": "34ea69cb-aa81-41bd-aab1-5b07d6222df0",
+    "buildVersion": "32a3e6630291f485a67aade8efa0ba5e0b56657f"
+  },
+  "completedAt": "2026-08-27T19:59:01.979Z",
+  "expectedData": {
+    "runId": "gdelt:20260827170000",
+    "runStatus": "succeeded",
+    "databaseClusters": 111,
+    "databaseArticles": 123,
+    "responseClusters": 100,
+    "responseRegions": 42,
+    "observedHeatClusters": 1
+  },
+  "securityPolicy": {
+    "contentSecurityPolicy": "frame-ancestors 'none'",
+    "xFrameOptions": "DENY",
+    "strictTransportSecurity": "max-age=31536000; includeSubDomains",
+    "appliesToEveryRecordedHttpsResponse": true
+  },
+  "checks": [
+    { "name": "root HTML + no-JS truth", "method": "GET", "route": "/", "status": 200, "bytes": 1810, "sha256": "ceec0225ba1c2a80baf8d0c671160296298c7f05823f80788acdffe40ed954b0", "outcome": "pass" },
+    { "name": "static asset index-tzW11bZK.js", "method": "GET", "route": "/assets/index-tzW11bZK.js", "status": 200, "bytes": 1371837, "sha256": "fded7c02262150672a61471f8fcc1f31cbe62011a5fa1cc5aa3b1db3124c59c0", "outcome": "pass" },
+    { "name": "static asset index-DXU3S9Il.css", "method": "GET", "route": "/assets/index-DXU3S9Il.css", "status": 200, "bytes": 105872, "sha256": "6266713fc302878c9a41cb8407d5af9074cbae7cc8a9d279994c2a46c9c5e5d0", "outcome": "pass" },
+    { "name": "D1 health", "method": "GET", "route": "/health", "status": 200, "outcome": "pass" },
+    { "name": "24h normalized intelligence", "method": "GET", "route": "/api/v1/intelligence?window=24h&prominence=normalized", "status": 200, "bytes": 355444, "sha256": "c1156720b3cf60c35d9cd0e37d0671156692a966c8d7c3380bf3ff8faa520222", "outcome": "pass" },
+    { "name": "docs HTML", "method": "GET", "route": "/docs", "status": 200, "outcome": "pass" },
+    { "name": "docs Markdown", "method": "GET", "route": "/docs", "status": 200, "outcome": "pass" },
+    { "name": "docs 406", "method": "GET", "route": "/docs", "status": 406, "outcome": "pass" },
+    { "name": "robots", "method": "GET", "route": "/robots.txt", "status": 200, "outcome": "pass" },
+    { "name": "sitemap", "method": "GET", "route": "/sitemap.xml", "status": 200, "outcome": "pass" },
+    { "name": "OpenAPI 3.1", "method": "GET", "route": "/openapi.json", "status": 200, "outcome": "pass" },
+    { "name": "MCP initialize", "method": "POST", "route": "/mcp", "status": 200, "outcome": "pass" },
+    { "name": "MCP tools/list", "method": "POST", "route": "/mcp", "status": 200, "outcome": "pass" },
+    { "name": "A2A Agent Card", "method": "GET", "route": "/.well-known/agent-card.json", "status": 200, "outcome": "pass" },
+    { "name": "A2A JSON-RPC SendMessage", "method": "POST", "route": "/a2a", "status": 200, "outcome": "pass" },
+    { "name": "A2A message:send query", "method": "POST", "route": "/a2a/message:send", "status": 200, "outcome": "pass" },
+    { "name": "malformed percent cluster route", "method": "GET", "route": "/api/stories/%E0%A4%A", "status": 400, "outcome": "pass" },
+    { "name": "missing route", "method": "GET", "route": "/definitely-missing", "status": 404, "outcome": "pass" },
+    { "name": "HTTP to HTTPS redirect", "method": "HEAD", "route": "http://atlas-news-intelligence-api.atlas-news-surface.workers.dev/", "status": 308, "location": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/", "hstsAbsentOnHttp": true, "outcome": "pass" }
+  ],
+  "summary": {
+    "passed": 19,
+    "failed": 0
+  }
+}

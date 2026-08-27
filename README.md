@@ -4,9 +4,9 @@ Atlas is an analyst-grade public explorer for current global news. It maps real 
 
 ## Release status
 
-**P0 refresh verified locally; production update pending the independent predeploy gate.** The existing origin is `https://atlas-news-intelligence-api.atlas-news-surface.workers.dev`, backed by the existing `atlas-news-intelligence-prod` D1 database. It still serves the superseded candidate until the approved atomic D1 refresh and Worker update complete. Runtype is not yet active. Exact approved payloads, resource IDs, hashes, ordering, and remaining gates are recorded in [`surface/EXTERNAL_PAYLOAD_DRAFTS.md`](surface/EXTERNAL_PAYLOAD_DRAFTS.md).
+**Deployed production candidate; final independent Agent D verification is the last gate.** The live origin is <https://atlas-news-intelligence-api.atlas-news-surface.workers.dev>, backed by the existing `atlas-news-intelligence-prod` D1 database. The approved atomic refresh and Worker deployment are complete. Runtype's existing A2A capability genuinely executes against production, while all three Runtype surfaces remain draft because the required named eval suites cannot be created through the available signed-in UI without minting a prohibited API credential. Exact deployment, D1, browser, Runtype, Cotal, and Hacker Bob receipts are in [`docs/PRODUCTION_RELEASE_2026-08-27.md`](docs/PRODUCTION_RELEASE_2026-08-27.md).
 
-The live GDELT loader produces a validated JSON snapshot, and the deterministic `seed:d1` bridge converts it into batch-scoped D1 SQL. The production composer hash-checks that seed and adds only the explicitly approved retirement of the superseded run. Remote execution remains blocked until Agent D passes the exact frozen tree. Tests use explicitly test-only fixtures; product code never substitutes them when live data is absent.
+The live GDELT loader produces a validated JSON snapshot, and the deterministic `seed:d1` bridge converts it into batch-scoped D1 SQL. The production composer hash-checks that seed and adds only the explicitly approved retirement of the superseded run. Tests use explicitly test-only fixtures; product code never substitutes them when live data is absent.
 
 ## Architecture
 
@@ -18,7 +18,7 @@ The live GDELT loader produces a validated JSON snapshot, and the deterministic 
 | API and agent surface | `surface/` | Cloudflare Worker with REST, MCP, read-only A2A, health, D1 access, Cotal/sponsor receipts, machine discovery, schema, and the draft Runtype product definition. |
 | Release shell | root `package.json`, `.github/workflows/ci.yml` | Reproducible install/check/test/build gate across all three packages. |
 
-The deployment shape is one Cloudflare Worker plus one static-asset bundle. Cloudflare serves `ui/dist` and performs the SPA fallback; requests under `/api/*`, plus `/health` and `/mcp`, run the Worker first. This keeps browser routes and hashed assets on the static path while ensuring API-like navigations never fall through to `index.html`.
+The deployment shape is one Cloudflare Worker plus one static-asset bundle. Cloudflare's asset binding serves `ui/dist`; the Worker runs first for the root, hashed `/assets/*`, API, health, discovery, MCP, and A2A paths. Passing built assets through the Worker preserves their original body/status/type/cache/ETag while applying one production security-header policy. Machine paths and controlled misses never fall through to `index.html`.
 
 ```text
 GDELT (+ optional Tavily enrichment)
@@ -136,9 +136,9 @@ The deployed Worker exposes genuine public capabilities through conventional, no
 - `/llms.txt`, `/robots.txt`, and `/sitemap.xml`
 - `/.well-known/api-catalog` plus `/openapi.json`
 - `/.well-known/mcp/server-card.json` plus the read-only `/mcp` endpoint
-- `/.well-known/agent-card.json` plus the read-only `/a2a/message:send` endpoint
+- `/.well-known/agent-card.json` plus canonical A2A v1 JSON-RPC at `/a2a`, its HTTP+JSON `/a2a/message:send` binding, and a strict method-scoped v0.3 compatibility adapter for the existing Runtype client
 
-These surfaces are locally tested but are not claimed live until Cloudflare deployment and independent invocation evidence exist. The release-lane applicability audit and exact remaining blockers are in [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md).
+These surfaces are deployed and have independent live invocation receipts. The release-lane applicability audit and exact remaining blocker are in [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md).
 
 ## Product defaults
 

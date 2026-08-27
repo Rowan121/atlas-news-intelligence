@@ -1,6 +1,6 @@
 # Fixed API access matrix
 
-Checked: 2026-08-26 PDT
+Checked: 2026-08-27 PDT
 
 This matrix is frozen for the build. Agents must use the working set and must not spend time hunting for new keys. If an essential credential is genuinely missing, stop the build and route the exact blocker to Rowan.
 
@@ -11,14 +11,14 @@ This matrix is frozen for the build. Agents must use the working set and must no
 | GDELT | No key required | Public global news APIs | Broad multilingual discovery and geo signals |
 | MapLibre GL JS | No key required | Open-source browser globe | Primary globe renderer |
 | Tavily | Working API key | Live `/usage` reports Researcher plan with 1,000 credits; advertised event add-on is not reflected | Fresh news search/extraction; target budget 800, reserve 200 |
-| Cotal | Working mesh and hosted-agent account | No builder credits by design; $300 judged prize | Foundational coordination/provenance plane |
+| Cotal | `hack` mesh reachable; this machine lacks user-auth material for a live snapshot | No builder credits by design; $300 judged prize | Coordination/provenance only when a sanitized receipt is available |
 | Tenki | Working key; hosted sandboxes active | $110 was last observed, while event copy advertises $100 | Hosted Cotal sandboxes; direct use only if necessary |
 | Nebius | No direct key | Working indirectly through Cotal platform-issued Token Factory access | Models for hosted agents; never seek a direct key |
-| Runtype | Working existing account access | $10 was last observed, not the advertised $50 | Required API/MCP/A2A surface and evals; publishing remains approval-gated |
+| Runtype | Working existing signed-in account; Atlas product/capability/surfaces created | $5 promo balance and estimated bill $0 observed; debug execution counters remain outside product runs | Final A2A capability succeeds; surfaces stay draft because named eval creation requires a prohibited new API credential |
 | Mitosis | Working key | 500 account credits were last observed; event publishes no builder-credit offer | Optional provenance/memory if it materially improves the product |
 | AIsa | Excluded from this build | $1 trial was last observed, not the advertised $100 | Do not use |
-| Cloudflare | Working saved existing-account OAuth; Wrangler 4.127.0 read-only D1 access verified | Existing production Worker and D1 only; never mint another key | Approved atomic D1 refresh and Worker update after Agent D predeploy PASS |
-| Hacker Bob | No API key by design | One later security scan | Final authorized scan only |
+| Cloudflare | Working saved existing-account OAuth with Wrangler 4.127.0 | Existing production Worker and D1 only; no replacement resource or key | Approved atomic D1 refresh and final Worker deployment complete |
+| Hacker Bob | No API key by design | One authorized scan consumed | HSTS/clickjacking observations remediated; do not rerun |
 | HUD | Excluded from this build | Overall-winner training credits, not build money | Do not use |
 
 ## Non-negotiable access rules
