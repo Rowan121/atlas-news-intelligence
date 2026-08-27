@@ -293,44 +293,60 @@ export function isHttpUrl(value: string): boolean {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function validateConfidence(
-  value: number,
+  value: unknown,
   path: string,
   issues: ValidationIssue[],
 ): void {
-  if (!Number.isFinite(value) || value < 0 || value > 1) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
     issues.push({ code: "invalid_confidence", path, message: "Must be between 0 and 1." });
   }
 }
 
 function validateEvidence(
-  evidence: EvidenceSpan,
+  evidence: unknown,
   path: string,
   articleIds: Set<string>,
   issues: ValidationIssue[],
 ): void {
-  if (!articleIds.has(evidence.articleId)) {
+  if (!isRecord(evidence)) {
+    issues.push({ code: "invalid_evidence", path, message: "Evidence must be an object." });
+    return;
+  }
+  if (typeof evidence.articleId !== "string" || !articleIds.has(evidence.articleId)) {
     issues.push({
       code: "unknown_evidence_article",
       path: `${path}.articleId`,
       message: "Evidence must reference an article in the cluster.",
     });
   }
-  if (!isHttpUrl(evidence.url)) {
+  if (typeof evidence.url !== "string" || !isHttpUrl(evidence.url)) {
     issues.push({ code: "invalid_url", path: `${path}.url`, message: "Must be HTTP(S)." });
   }
-  if (evidence.quote.trim().length === 0) {
+  if (!isNonEmptyString(evidence.quote)) {
     issues.push({ code: "empty_quote", path: `${path}.quote`, message: "Evidence quote is required." });
   }
 }
 
 function validateEditorialMarketEvidence(
-  evidence: EditorialMarketEvidence,
+  evidence: unknown,
   path: string,
   articleIds: Set<string>,
   issues: ValidationIssue[],
 ): void {
-  if (![
+  if (!isRecord(evidence)) {
+    issues.push({ code: "invalid_editorial_market_evidence", path, message: "Evidence must be an object." });
+    return;
+  }
+  if (typeof evidence.kind !== "string" || ![
     "outlet_market_documentation",
     "outlet_language",
     "publisher_location",
@@ -341,13 +357,15 @@ function validateEditorialMarketEvidence(
       message: "Editorial-market evidence must describe the outlet market, outlet language, or publisher location.",
     });
   }
-  if (!isHttpUrl(evidence.url)) {
+  if (typeof evidence.url !== "string" || !isHttpUrl(evidence.url)) {
     issues.push({ code: "invalid_url", path: `${path}.url`, message: "Must be HTTP(S)." });
   }
-  if (evidence.quote.trim().length === 0) {
+  if (!isNonEmptyString(evidence.quote)) {
     issues.push({ code: "empty_quote", path: `${path}.quote`, message: "Evidence quote is required." });
   }
-  if (evidence.articleId !== undefined && !articleIds.has(evidence.articleId)) {
+  if (evidence.articleId !== undefined && (
+    typeof evidence.articleId !== "string" || !articleIds.has(evidence.articleId)
+  )) {
     issues.push({
       code: "unknown_evidence_article",
       path: `${path}.articleId`,
@@ -357,26 +375,36 @@ function validateEditorialMarketEvidence(
 }
 
 function validateRegion(
-  region: MarketRegion,
+  region: unknown,
   path: string,
   issues: ValidationIssue[],
 ): void {
-  if (region.regionCode.trim().length === 0) {
+  if (!isRecord(region)) {
+    issues.push({ code: "invalid_region", path, message: "Region must be an object." });
+    return;
+  }
+  if (!isNonEmptyString(region.regionCode)) {
     issues.push({ code: "missing_region_code", path: `${path}.regionCode`, message: "Region code is required." });
   }
-  if (region.label.trim().length === 0) {
+  if (!isNonEmptyString(region.label)) {
     issues.push({ code: "missing_region_label", path: `${path}.label`, message: "Region label is required." });
   }
   if (region.coordinates !== undefined) {
+    if (!isRecord(region.coordinates)) {
+      issues.push({ code: "invalid_coordinates", path: `${path}.coordinates`, message: "Coordinates must be an object." });
+      return;
+    }
     if (
-      !Number.isFinite(region.coordinates.latitude)
+      typeof region.coordinates.latitude !== "number"
+      || !Number.isFinite(region.coordinates.latitude)
       || region.coordinates.latitude < -90
       || region.coordinates.latitude > 90
     ) {
       issues.push({ code: "invalid_latitude", path: `${path}.coordinates.latitude`, message: "Out of range." });
     }
     if (
-      !Number.isFinite(region.coordinates.longitude)
+      typeof region.coordinates.longitude !== "number"
+      || !Number.isFinite(region.coordinates.longitude)
       || region.coordinates.longitude < -180
       || region.coordinates.longitude > 180
     ) {
@@ -385,35 +413,148 @@ function validateRegion(
   }
 }
 
-function validateAssessment<T, Method extends string>(
-  assessment: UnknownAssessment | ObservedAssessment<T, Method> | undefined,
+function validateAssessment(
+  assessment: unknown,
   path: string,
   articleIds: Set<string>,
   issues: ValidationIssue[],
-  validateValue: (value: T) => void,
+  validateValue: (value: unknown) => void,
   requireEvidence: boolean,
+  allowedMethods: readonly string[],
 ): void {
   if (assessment === undefined) {
     issues.push({ code: "missing_assessment", path, message: "SAME-STORY assessment is required." });
     return;
   }
+  if (!isRecord(assessment)) {
+    issues.push({ code: "invalid_assessment", path, message: "SAME-STORY assessment must be an object." });
+    return;
+  }
+  if (assessment.status !== "unknown" && assessment.status !== "observed") {
+    issues.push({ code: "invalid_assessment_status", path: `${path}.status`, message: "Assessment status must be observed or unknown." });
+    return;
+  }
   if (assessment.status === "unknown") {
-    if (assessment.reason.trim().length === 0) {
+    if (assessment.value !== null) {
+      issues.push({ code: "invalid_unknown_value", path: `${path}.value`, message: "Unknown assessments require a null value." });
+    }
+    if (assessment.confidence !== null) {
+      issues.push({ code: "invalid_unknown_confidence", path: `${path}.confidence`, message: "Unknown assessments require null confidence." });
+    }
+    if (assessment.method !== "unavailable") {
+      issues.push({ code: "invalid_unknown_method", path: `${path}.method`, message: "Unknown assessments require method unavailable." });
+    }
+    if (!isNonEmptyString(assessment.reason)) {
       issues.push({ code: "missing_unknown_reason", path: `${path}.reason`, message: "Unknown assessments require a reason." });
     }
-    if (assessment.evidence.length > 0) {
+    if (!Array.isArray(assessment.evidence) || assessment.evidence.length > 0) {
       issues.push({ code: "unexpected_unknown_evidence", path: `${path}.evidence`, message: "Unknown assessments cannot carry evidence." });
     }
     return;
   }
   validateConfidence(assessment.confidence, `${path}.confidence`, issues);
+  if (!allowedMethods.includes(String(assessment.method))) {
+    issues.push({ code: "invalid_assessment_method", path: `${path}.method`, message: "Observed assessment method is unsupported." });
+  }
+  if (assessment.reason !== null) {
+    issues.push({ code: "invalid_observed_reason", path: `${path}.reason`, message: "Observed assessments require a null reason." });
+  }
   validateValue(assessment.value);
+  if (!Array.isArray(assessment.evidence)) {
+    issues.push({ code: "invalid_assessment_evidence", path: `${path}.evidence`, message: "Assessment evidence must be an array." });
+    return;
+  }
   if (requireEvidence && assessment.evidence.length === 0) {
     issues.push({ code: "missing_assessment_evidence", path: `${path}.evidence`, message: "Observed assessments require evidence." });
   }
   assessment.evidence.forEach((evidence, index) => {
     validateEvidence(evidence, `${path}.evidence[${index}]`, articleIds, issues);
   });
+}
+
+function validateEditorialMarketAssessment(
+  assessment: unknown,
+  path: string,
+  articleIds: Set<string>,
+  issues: ValidationIssue[],
+): void {
+  if (assessment === undefined) {
+    issues.push({ code: "missing_assessment", path, message: "Primary editorial-market assessment is required." });
+    return;
+  }
+  if (!isRecord(assessment)) {
+    issues.push({ code: "invalid_assessment", path, message: "Editorial-market assessment must be an object." });
+    return;
+  }
+  if (assessment.status !== "unknown" && assessment.status !== "observed") {
+    issues.push({ code: "invalid_assessment_status", path: `${path}.status`, message: "Editorial-market status must be observed or unknown." });
+    return;
+  }
+  if (assessment.status === "unknown") {
+    if (assessment.value !== null) {
+      issues.push({ code: "invalid_unknown_value", path: `${path}.value`, message: "Unknown assessments require a null value." });
+    }
+    if (assessment.confidence !== null) {
+      issues.push({ code: "invalid_unknown_confidence", path: `${path}.confidence`, message: "Unknown assessments require null confidence." });
+    }
+    if (assessment.method !== "unavailable") {
+      issues.push({ code: "invalid_unknown_method", path: `${path}.method`, message: "Unknown assessments require method unavailable." });
+    }
+    if (!Array.isArray(assessment.evidence) || assessment.evidence.length > 0) {
+      issues.push({ code: "unexpected_unknown_evidence", path: `${path}.evidence`, message: "Unknown assessments cannot carry evidence." });
+    }
+    if (!isNonEmptyString(assessment.reason)) {
+      issues.push({ code: "missing_unknown_reason", path: `${path}.reason`, message: "Unknown assessments require a reason." });
+    }
+    return;
+  }
+
+  validateConfidence(assessment.confidence, `${path}.confidence`, issues);
+  validateRegion(assessment.value, `${path}.value`, issues);
+  const methods: readonly EditorialMarketMethod[] = [
+    "documented_outlet_market",
+    "language_and_publisher_location",
+    "manual_confirmed",
+  ];
+  if (!methods.includes(assessment.method as EditorialMarketMethod)) {
+    issues.push({ code: "invalid_assessment_method", path: `${path}.method`, message: "Observed editorial-market method is unsupported." });
+  }
+  if (assessment.reason !== null) {
+    issues.push({ code: "invalid_observed_reason", path: `${path}.reason`, message: "Observed assessments require a null reason." });
+  }
+  if (!Array.isArray(assessment.evidence)) {
+    issues.push({ code: "invalid_assessment_evidence", path: `${path}.evidence`, message: "Editorial-market evidence must be an array." });
+    return;
+  }
+  if (assessment.evidence.length === 0) {
+    issues.push({ code: "missing_assessment_evidence", path: `${path}.evidence`, message: "Observed editorial markets require evidence." });
+  }
+  assessment.evidence.forEach((evidence, evidenceIndex) => {
+    validateEditorialMarketEvidence(evidence, `${path}.evidence[${evidenceIndex}]`, articleIds, issues);
+  });
+  const evidenceKinds = new Set(assessment.evidence.flatMap((evidence) => (
+    isRecord(evidence) && typeof evidence.kind === "string" ? [evidence.kind] : []
+  )));
+  if (
+    (assessment.method === "documented_outlet_market" || assessment.method === "manual_confirmed")
+    && !evidenceKinds.has("outlet_market_documentation")
+  ) {
+    issues.push({
+      code: "editorial_market_method_evidence_mismatch",
+      path: `${path}.method`,
+      message: "Documented or manually confirmed outlet markets require direct outlet-market documentation.",
+    });
+  }
+  if (
+    assessment.method === "language_and_publisher_location"
+    && (!evidenceKinds.has("outlet_language") || !evidenceKinds.has("publisher_location"))
+  ) {
+    issues.push({
+      code: "editorial_market_method_evidence_mismatch",
+      path: `${path}.method`,
+      message: "This inference requires both outlet-language and publisher-location evidence.",
+    });
+  }
 }
 
 export function validateStoryCluster(cluster: StoryCluster): ValidationIssue[] {
@@ -477,9 +618,13 @@ export function validateStoryCluster(cluster: StoryCluster): ValidationIssue[] {
 
   cluster.articles.forEach((article, index) => {
     const path = `articles[${index}].sameStory`;
-    const sameStory = (article as Article & { sameStory?: SameStorySourceContext }).sameStory;
+    const sameStory = (article as unknown as { sameStory?: unknown }).sameStory;
     if (sameStory === undefined) {
       issues.push({ code: "missing_same_story_context", path, message: "SAME-STORY comparison context is required." });
+      return;
+    }
+    if (!isRecord(sameStory)) {
+      issues.push({ code: "invalid_same_story_context", path, message: "SAME-STORY comparison context must be an object." });
       return;
     }
     validateAssessment(
@@ -489,80 +634,26 @@ export function validateStoryCluster(cluster: StoryCluster): ValidationIssue[] {
       issues,
       (region) => validateRegion(region, `${path}.publisherOrigin.value`, issues),
       false,
+      ["provider_metadata", "publisher_registry"],
     );
-    const editorialMarket = sameStory.editorialMarket;
-    if (editorialMarket === undefined) {
-      issues.push({
-        code: "missing_assessment",
-        path: `${path}.editorialMarket`,
-        message: "Primary editorial-market assessment is required.",
-      });
-    } else if (editorialMarket.status === "unknown") {
-      if (editorialMarket.reason.trim().length === 0) {
-        issues.push({
-          code: "missing_unknown_reason",
-          path: `${path}.editorialMarket.reason`,
-          message: "Unknown assessments require a reason.",
-        });
-      }
-      if (editorialMarket.evidence.length > 0) {
-        issues.push({
-          code: "unexpected_unknown_evidence",
-          path: `${path}.editorialMarket.evidence`,
-          message: "Unknown assessments cannot carry evidence.",
-        });
-      }
-    } else {
-      validateConfidence(editorialMarket.confidence, `${path}.editorialMarket.confidence`, issues);
-      validateRegion(editorialMarket.value, `${path}.editorialMarket.value`, issues);
-      if (editorialMarket.evidence.length === 0) {
-        issues.push({
-          code: "missing_assessment_evidence",
-          path: `${path}.editorialMarket.evidence`,
-          message: "Observed editorial markets require evidence.",
-        });
-      }
-      editorialMarket.evidence.forEach((evidence, evidenceIndex) => {
-        validateEditorialMarketEvidence(
-          evidence,
-          `${path}.editorialMarket.evidence[${evidenceIndex}]`,
-          articleIds,
-          issues,
-        );
-      });
-      const evidenceKinds = new Set(editorialMarket.evidence.map((evidence) => evidence.kind));
-      if (
-        editorialMarket.method === "documented_outlet_market"
-        && !evidenceKinds.has("outlet_market_documentation")
-      ) {
-        issues.push({
-          code: "editorial_market_method_evidence_mismatch",
-          path: `${path}.editorialMarket.method`,
-          message: "Documented outlet markets require direct outlet-market documentation.",
-        });
-      }
-      if (
-        editorialMarket.method === "language_and_publisher_location"
-        && (!evidenceKinds.has("outlet_language") || !evidenceKinds.has("publisher_location"))
-      ) {
-        issues.push({
-          code: "editorial_market_method_evidence_mismatch",
-          path: `${path}.editorialMarket.method`,
-          message: "This inference requires both outlet-language and publisher-location evidence.",
-        });
-      }
-    }
+    validateEditorialMarketAssessment(
+      sameStory.editorialMarket,
+      `${path}.editorialMarket`,
+      articleIds,
+      issues,
+    );
     validateAssessment(
       sameStory.framing,
       `${path}.framing`,
       articleIds,
       issues,
       (value) => {
-        if (!["supports", "disputes", "straight_report", "mixed", "unclear"].includes(value)) {
+        if (typeof value !== "string" || !["supports", "disputes", "straight_report", "mixed", "unclear"].includes(value)) {
           issues.push({ code: "invalid_framing", path: `${path}.framing.value`, message: "Unsupported framing value." });
         }
       },
       true,
+      ["claim_stance_comparison", "model_analysis", "manual_confirmed"],
     );
     validateAssessment(
       sameStory.tone,
@@ -570,11 +661,12 @@ export function validateStoryCluster(cluster: StoryCluster): ValidationIssue[] {
       articleIds,
       issues,
       (value) => {
-        if (!["positive", "negative", "neutral", "mixed", "unclear"].includes(value)) {
+        if (typeof value !== "string" || !["positive", "negative", "neutral", "mixed", "unclear"].includes(value)) {
           issues.push({ code: "invalid_tone", path: `${path}.tone.value`, message: "Unsupported tone value." });
         }
       },
       true,
+      ["model_analysis", "manual_confirmed"],
     );
   });
 

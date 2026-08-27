@@ -51,7 +51,7 @@ export const DEFAULT_GDELT_JOIN_GATES: GdeltJoinGates = {
 export const DEFAULT_GDELT_FALLBACK_BATCHES = 4;
 export const HARD_GDELT_FALLBACK_BATCHES = 8;
 
-type PartialLimits = Partial<{
+export type PartialLimits = Partial<{
   lastUpdateBytes: number;
   compressedBytes: Partial<Record<GdeltFileKind, number>>;
   decompressedBytes: Partial<Record<GdeltFileKind, number>>;
@@ -64,6 +64,12 @@ export interface LoadLatestGdeltOptions {
   manifestUrl?: string;
   masterFileListUrl?: string;
   fallbackBatches?: number;
+  limits?: PartialLimits;
+  fetchPolicy?: FetchPolicy;
+  clock?: Clock;
+}
+
+export interface LoadGdeltManifestOptions {
   limits?: PartialLimits;
   fetchPolicy?: FetchPolicy;
   clock?: Clock;
@@ -242,6 +248,39 @@ async function loadManifestSnapshot(
   }
   diagnostics.push(`emitted ${snapshot.statistics.clustersEmitted} clusters / ${snapshot.statistics.articlesEmitted} articles`);
   return snapshot;
+}
+
+export async function loadGdeltSnapshotFromManifest(
+  manifest: GdeltManifest,
+  options: LoadGdeltManifestOptions = {},
+): Promise<GdeltLoadResult> {
+  const generatedAt = (options.clock ?? systemClock).now().toISOString();
+  const diagnostics = [`selected checksum manifest batch ${manifest.batchId}`];
+  let currentLimits: GdeltStreamLimits;
+  try {
+    currentLimits = limits(options.limits);
+  } catch (error) {
+    return failure(
+      generatedAt,
+      new GdeltStreamError("manifest", "manifest_invalid", error instanceof Error ? error.message : "Invalid limits.", false),
+      diagnostics,
+    );
+  }
+  try {
+    const snapshot = await loadManifestSnapshot(
+      manifest,
+      generatedAt,
+      currentLimits,
+      options.fetchPolicy ?? {},
+      diagnostics,
+    );
+    return { ok: true, snapshot, diagnostics };
+  } catch (error) {
+    const normalized = error instanceof GdeltStreamError
+      ? error
+      : new GdeltStreamError("join", "parse_invalid", "Unexpected GDELT snapshot construction failure.", false);
+    return failure(generatedAt, normalized, diagnostics);
+  }
 }
 
 function markFallback(

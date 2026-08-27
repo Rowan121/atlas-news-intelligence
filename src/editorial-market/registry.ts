@@ -25,7 +25,6 @@ function documentedUsStation(input: DocumentedUsStationInput): [string, OutletEd
     publisherOrigin: {
       countryName: "United States",
       countryCode: "US",
-      coordinates: { latitude: input.latitude, longitude: input.longitude },
       confidence: 0.96,
       evidenceSource: "publisher_registry",
     },

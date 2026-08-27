@@ -1,6 +1,13 @@
-import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { loadLatestGdeltSnapshot } from "../src/ingestion/gdelt-stream/loader.js";
+import {
+  loadGdeltSnapshotFromManifest,
+  loadLatestGdeltSnapshot,
+} from "../src/ingestion/gdelt-stream/loader.js";
+import {
+  DEFAULT_MASTER_FILE_LIST_URL,
+  parseLastUpdate,
+} from "../src/ingestion/gdelt-stream/manifest.js";
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(name);
@@ -17,10 +24,20 @@ function positiveInteger(value: string | undefined, name: string): number | unde
 const outputPath = resolve(argument("--output") ?? "artifacts/gdelt-latest.json");
 const timeoutMs = positiveInteger(argument("--timeout-ms"), "--timeout-ms") ?? 25_000;
 const maxClusters = positiveInteger(argument("--max-clusters"), "--max-clusters");
-const result = await loadLatestGdeltSnapshot({
+const manifestFile = argument("--manifest-file");
+const loadOptions = {
   fetchPolicy: { timeoutMs, attempts: 2, initialBackoffMs: 750 },
   ...(maxClusters === undefined ? {} : { limits: { maxClusters } }),
-});
+};
+const result = manifestFile === undefined
+  ? await loadLatestGdeltSnapshot(loadOptions)
+  : await loadGdeltSnapshotFromManifest(
+      parseLastUpdate(
+        await readFile(resolve(manifestFile), "utf8"),
+        DEFAULT_MASTER_FILE_LIST_URL,
+      ),
+      loadOptions,
+    );
 
 await mkdir(dirname(outputPath), { recursive: true });
 const temporaryPath = `${outputPath}.${process.pid}.tmp`;

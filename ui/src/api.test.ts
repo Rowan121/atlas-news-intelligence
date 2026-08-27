@@ -262,6 +262,32 @@ describe("HttpNewsIntelligenceClient", () => {
     expect(intelligenceSnapshotSchema.safeParse(mismatchedMethodPayload).success).toBe(false);
   });
 
+  it("rejects manual confirmation backed only by publisher location", () => {
+    const unsupportedManualPayload = {
+      ...fixture,
+      clusters: [{
+        ...fixture.clusters[0],
+        sources: [{
+          ...fixture.clusters[0].sources[0],
+          editorialMarket: {
+            status: "observed" as const,
+            value: { regionCode: "EM", label: "Primary test market" },
+            confidence: 0.9,
+            method: "manual_confirmed" as const,
+            evidence: [{
+              kind: "publisher_location" as const,
+              url: "https://fixture.example/contact",
+              quote: "Publisher office in the test market.",
+            }],
+            reason: null,
+          },
+        }],
+      }],
+    };
+
+    expect(intelligenceSnapshotSchema.safeParse(unsupportedManualPayload).success).toBe(false);
+  });
+
   it("accepts heat derived from the same observed source editorial market", () => {
     const evidence = [{
       kind: "outlet_market_documentation" as const,

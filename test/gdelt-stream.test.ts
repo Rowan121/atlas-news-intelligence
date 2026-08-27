@@ -2,7 +2,10 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { strToU8, zipSync } from "fflate";
 import { fetchCappedBytes, GdeltStreamError, unzipSingleCsv, verifyManifestBytes } from "../src/ingestion/gdelt-stream/download.js";
-import { loadLatestGdeltSnapshot } from "../src/ingestion/gdelt-stream/loader.js";
+import {
+  loadGdeltSnapshotFromManifest,
+  loadLatestGdeltSnapshot,
+} from "../src/ingestion/gdelt-stream/loader.js";
 import { parseLastUpdate, parseMasterFileTail } from "../src/ingestion/gdelt-stream/manifest.js";
 import { parseEventsTsv, parseGkgTsv, parseMentionsTsv } from "../src/ingestion/gdelt-stream/parsers.js";
 import {
@@ -563,6 +566,32 @@ describe("GDELT 2.x stream loader", () => {
     expect(result.snapshot.statistics).toMatchObject({ clustersEmitted: 1, articlesEmitted: 1 });
     expect(result.snapshot.validationIssues).toEqual([]);
     expect(result.snapshot.source.attribution).toContain("GDELT Project");
+  });
+
+  it("replays an explicit checksum manifest without consulting the moving latest pointer", async () => {
+    const fixture = streamFixture();
+    const manifest = parseLastUpdate(fixture.manifest, "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt");
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const bytes = fixture.files[String(input)];
+      return bytes === undefined
+        ? new Response("missing", { status: 404 })
+        : new Response(bytes as unknown as BodyInit, {
+            status: 200,
+            headers: { "content-length": String(bytes.byteLength) },
+          });
+    });
+
+    const result = await loadGdeltSnapshotFromManifest(manifest, {
+      fetchPolicy: { fetch: fetchMock, attempts: 1 },
+      clock: { now: () => new Date(NOW) },
+      limits: tinyLimits(),
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.snapshot.batchId).toBe(BATCH);
+    expect(result.diagnostics[0]).toBe(`selected checksum manifest batch ${BATCH}`);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("falls back to the newest checksum-verified prior batch when an advertised GKG is missing", async () => {

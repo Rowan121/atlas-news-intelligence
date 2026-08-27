@@ -41,6 +41,11 @@ describe("editorial-market registry", () => {
     expect(nashville.editorialMarket.value.regionCode).not.toBe(
       philadelphia.editorialMarket.value.regionCode,
     );
+    expect(nashville.publisherOrigin.coordinates).toBeUndefined();
+    expect(nashville.editorialMarket.value.coordinates).toEqual({
+      latitude: 36.1627,
+      longitude: -86.7816,
+    });
   });
 
   it("keeps publisher location distinct from primary editorial market", () => {

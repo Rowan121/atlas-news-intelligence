@@ -174,7 +174,10 @@ function parseEditorialMarket(value: unknown): EditorialMarketAssessment {
   }
   const evidenceKinds = new Set(value.evidence.map((evidence) => evidence.kind));
   if (
-    (value.method === "documented_outlet_market" && !evidenceKinds.has("outlet_market_documentation"))
+    (
+      (value.method === "documented_outlet_market" || value.method === "manual_confirmed")
+      && !evidenceKinds.has("outlet_market_documentation")
+    )
     || (
       value.method === "language_and_publisher_location"
       && (!evidenceKinds.has("outlet_language") || !evidenceKinds.has("publisher_location"))

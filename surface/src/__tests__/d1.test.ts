@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
 import { D1TruthStore, parseSameStoryContext } from "../storage/d1";
 import { expect } from "./expect";
 
@@ -166,5 +167,25 @@ describe("D1 SAME-STORY context normalization", () => {
       method: "documented_outlet_market",
       evidence: [{ kind: "outlet_market_documentation", articleId: "article-1" }],
     });
+  });
+
+  it("rejects manual confirmation backed only by publisher location", () => {
+    assert.throws(() => parseSameStoryContext(JSON.stringify({
+      publisherOrigin: unknown("No origin."),
+      editorialMarket: {
+        status: "observed",
+        value: { regionCode: "US-NY", label: "New York" },
+        confidence: 0.9,
+        method: "manual_confirmed",
+        evidence: [{
+          kind: "publisher_location",
+          url: "https://publisher.example/contact",
+          quote: "Publisher office in New York",
+        }],
+        reason: null,
+      },
+      framing: unknown("No framing."),
+      tone: unknown("No tone."),
+    })), /evidence inconsistent with its method/);
   });
 });

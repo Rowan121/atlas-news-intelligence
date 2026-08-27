@@ -12,7 +12,7 @@ function evidenceSupportsEditorialMarketMethod(
   evidence: Array<{ kind: EditorialMarketEvidenceKind }>,
 ) {
   const kinds = new Set(evidence.map((item) => item.kind));
-  if (method === "documented_outlet_market") {
+  if (method === "documented_outlet_market" || method === "manual_confirmed") {
     return kinds.has("outlet_market_documentation");
   }
   if (method === "language_and_publisher_location") {

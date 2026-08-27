@@ -1,0 +1,3 @@
+75668 c1e49bb3990f264bae1b86a353472682 https://data.gdeltproject.org/gdeltv2/20260827170000.export.CSV.zip
+125847 24ea72e83875c1acaadf59adc6b9bb2b https://data.gdeltproject.org/gdeltv2/20260827170000.mentions.CSV.zip
+7023516 d3ebf4aa89c8c8e41dd8b9a33cf4a1e9 https://data.gdeltproject.org/gdeltv2/20260827170000.gkg.csv.zip

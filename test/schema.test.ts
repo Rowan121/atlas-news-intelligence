@@ -97,6 +97,54 @@ describe("story-cluster schema", () => {
     );
   });
 
+  it("rejects malformed editorial-market discriminants and unknown shapes", () => {
+    const invalidStatus = structuredClone(makeValidCluster());
+    (invalidStatus.articles[0]!.sameStory as unknown as { editorialMarket: unknown }).editorialMarket = {
+      status: "guessed",
+      value: { regionCode: "JP", label: "Japan" },
+      confidence: 0.7,
+      method: "invented",
+      evidence: [],
+      reason: null,
+    };
+    expect(validateStoryCluster(invalidStatus).map((issue) => issue.code)).toContain("invalid_assessment_status");
+
+    const malformedUnknown = structuredClone(makeValidCluster());
+    (malformedUnknown.articles[0]!.sameStory as unknown as { editorialMarket: unknown }).editorialMarket = {
+      status: "unknown",
+      value: { regionCode: "JP", label: "Japan" },
+      confidence: 0.7,
+      method: "manual_confirmed",
+      evidence: [],
+      reason: "Not actually unknown",
+    };
+    const codes = validateStoryCluster(malformedUnknown).map((issue) => issue.code);
+    expect(codes).toEqual(expect.arrayContaining([
+      "invalid_unknown_value",
+      "invalid_unknown_confidence",
+      "invalid_unknown_method",
+    ]));
+  });
+
+  it("requires direct outlet-market documentation for manual confirmation", () => {
+    const cluster = structuredClone(makeValidCluster());
+    cluster.articles[0]!.sameStory.editorialMarket = {
+      status: "observed",
+      value: { regionCode: "JP", label: "Japan" },
+      confidence: 0.9,
+      method: "manual_confirmed",
+      evidence: [{
+        kind: "publisher_location",
+        url: "https://publisher.example/contact",
+        quote: "Publisher office in Tokyo",
+      }],
+      reason: null,
+    };
+    expect(validateStoryCluster(cluster).map((issue) => issue.code)).toContain(
+      "editorial_market_method_evidence_mismatch",
+    );
+  });
+
   it("requires an explicit event-location prominence basis", () => {
     const cluster = structuredClone(makeValidCluster());
     (cluster.prominence[0]! as { basis: string }).basis = "audience";
