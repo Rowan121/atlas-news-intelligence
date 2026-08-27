@@ -27,5 +27,9 @@ This matrix is frozen for the build. Agents must use the working set and must no
 - Do not request or mint any additional key beyond the one explicitly authorized `Atlas Eval Gate 2026-08-27` credential.
 - Never attach a personal model/provider key to Cotal or Runtype.
 - Use no-key public sources first, then fixed hackathon credits.
-- Runtype and Cloudflare may use only their existing-account OAuth flows.
-- If either OAuth flow fails at the required publish step, stop the entire build and notify Rowan rather than creating an account or finding another key.
+- Cloudflare may use only its existing-account OAuth flow. Runtype may use its
+  existing signed-in account plus the one explicitly authorized eval-management
+  key; that key is limited to the five named suites and is not provider BYOK.
+- If the Cloudflare OAuth flow or authorized Runtype eval credential fails at a
+  required step, stop that affected step and notify Rowan rather than creating
+  an account or finding another key.

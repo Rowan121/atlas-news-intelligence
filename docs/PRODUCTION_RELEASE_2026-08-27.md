@@ -31,9 +31,11 @@ Event location never fills the coverage heatmap.
 | GDELT run | `gdelt:20260827170000` |
 | Release smoke completion | `2026-08-27T20:35:37.782Z` |
 
-No Worker, D1 database, account, API key, or replacement external account was
-created. AIsa, HUD, Telegram, paid calls, hackathon submission, and third-party
-messages remained out of scope.
+No Worker, D1 database, account, or replacement external account was created.
+The only new credential was Rowan's exactly authorized Runtype eval-management
+key in the existing account, recorded below; no additional key was created.
+AIsa, HUD, Telegram, paid calls, hackathon submission, and third-party messages
+remained out of scope.
 
 ## Production data before and after
 

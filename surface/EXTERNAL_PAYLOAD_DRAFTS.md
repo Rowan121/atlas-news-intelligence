@@ -2,7 +2,11 @@
 
 Rowan approved payloads 1–7 in the main task on 2026-08-27. This ledger distinguishes completed historical actions from the exact remaining P0 operations. Approval does not waive the recorded safety gates, product-truth checks, or one-run limits.
 
-Use Rowan's existing accounts and saved sessions only. Do not create an account, mint or replace a key, attach BYOK, enable AIsa/HUD, spend money, or broaden a payload. Never print tokens, cookies, or authorization headers.
+Use Rowan's existing accounts and saved sessions only. The sole credential
+exception is the exactly authorized Runtype eval-management key creation and
+same-key rotation recorded under Payload 6; do not create or replace any other
+key, attach BYOK, enable AIsa/HUD, spend money, or broaden a payload. Never
+print tokens, cookies, or authorization headers.
 
 ## Frozen release identity
 
