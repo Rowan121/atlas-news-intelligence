@@ -6,10 +6,10 @@
     "worker": "atlas-news-intelligence-api",
     "database": "atlas-news-intelligence-prod",
     "databaseId": "a4b64588-32ff-4e18-950e-f603e3c7d3d2",
-    "deploymentVersionId": "34ea69cb-aa81-41bd-aab1-5b07d6222df0",
-    "buildVersion": "32a3e6630291f485a67aade8efa0ba5e0b56657f"
+    "deploymentVersionId": "af5a6aee-18e6-4467-b4e4-b9fb93c87e58",
+    "buildVersion": "074da0c4683686d17d5b7b4ea31541384a31d2d6"
   },
-  "completedAt": "2026-08-27T19:59:01.979Z",
+  "completedAt": "2026-08-27T20:35:37.782Z",
   "expectedData": {
     "runId": "gdelt:20260827170000",
     "runStatus": "succeeded",
@@ -26,28 +26,283 @@
     "appliesToEveryRecordedHttpsResponse": true
   },
   "checks": [
-    { "name": "root HTML + no-JS truth", "method": "GET", "route": "/", "status": 200, "bytes": 1810, "sha256": "ceec0225ba1c2a80baf8d0c671160296298c7f05823f80788acdffe40ed954b0", "outcome": "pass" },
-    { "name": "static asset index-tzW11bZK.js", "method": "GET", "route": "/assets/index-tzW11bZK.js", "status": 200, "bytes": 1371837, "sha256": "fded7c02262150672a61471f8fcc1f31cbe62011a5fa1cc5aa3b1db3124c59c0", "outcome": "pass" },
-    { "name": "static asset index-DXU3S9Il.css", "method": "GET", "route": "/assets/index-DXU3S9Il.css", "status": 200, "bytes": 105872, "sha256": "6266713fc302878c9a41cb8407d5af9074cbae7cc8a9d279994c2a46c9c5e5d0", "outcome": "pass" },
-    { "name": "D1 health", "method": "GET", "route": "/health", "status": 200, "outcome": "pass" },
-    { "name": "24h normalized intelligence", "method": "GET", "route": "/api/v1/intelligence?window=24h&prominence=normalized", "status": 200, "bytes": 355444, "sha256": "c1156720b3cf60c35d9cd0e37d0671156692a966c8d7c3380bf3ff8faa520222", "outcome": "pass" },
-    { "name": "docs HTML", "method": "GET", "route": "/docs", "status": 200, "outcome": "pass" },
-    { "name": "docs Markdown", "method": "GET", "route": "/docs", "status": 200, "outcome": "pass" },
-    { "name": "docs 406", "method": "GET", "route": "/docs", "status": 406, "outcome": "pass" },
-    { "name": "robots", "method": "GET", "route": "/robots.txt", "status": 200, "outcome": "pass" },
-    { "name": "sitemap", "method": "GET", "route": "/sitemap.xml", "status": 200, "outcome": "pass" },
-    { "name": "OpenAPI 3.1", "method": "GET", "route": "/openapi.json", "status": 200, "outcome": "pass" },
-    { "name": "MCP initialize", "method": "POST", "route": "/mcp", "status": 200, "outcome": "pass" },
-    { "name": "MCP tools/list", "method": "POST", "route": "/mcp", "status": 200, "outcome": "pass" },
-    { "name": "A2A Agent Card", "method": "GET", "route": "/.well-known/agent-card.json", "status": 200, "outcome": "pass" },
-    { "name": "A2A JSON-RPC SendMessage", "method": "POST", "route": "/a2a", "status": 200, "outcome": "pass" },
-    { "name": "A2A message:send query", "method": "POST", "route": "/a2a/message:send", "status": 200, "outcome": "pass" },
-    { "name": "malformed percent cluster route", "method": "GET", "route": "/api/stories/%E0%A4%A", "status": 400, "outcome": "pass" },
-    { "name": "missing route", "method": "GET", "route": "/definitely-missing", "status": 404, "outcome": "pass" },
-    { "name": "HTTP to HTTPS redirect", "method": "HEAD", "route": "http://atlas-news-intelligence-api.atlas-news-surface.workers.dev/", "status": 308, "location": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/", "hstsAbsentOnHttp": true, "outcome": "pass" }
+    {
+      "name": "root HTML + no-JS truth",
+      "method": "GET",
+      "route": "/",
+      "status": 200,
+      "contentType": "text/html",
+      "bytes": 1810,
+      "sha256": "ceec0225ba1c2a80baf8d0c671160296298c7f05823f80788acdffe40ed954b0",
+      "startedAt": "2026-08-27T20:35:34.608Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "static asset index-tzW11bZK.js",
+      "method": "GET",
+      "route": "/assets/index-tzW11bZK.js",
+      "status": 200,
+      "contentType": "text/javascript",
+      "bytes": 1371837,
+      "sha256": "fded7c02262150672a61471f8fcc1f31cbe62011a5fa1cc5aa3b1db3124c59c0",
+      "startedAt": "2026-08-27T20:35:34.709Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "static asset index-DXU3S9Il.css",
+      "method": "GET",
+      "route": "/assets/index-DXU3S9Il.css",
+      "status": 200,
+      "contentType": "text/css",
+      "bytes": 105872,
+      "sha256": "6266713fc302878c9a41cb8407d5af9074cbae7cc8a9d279994c2a46c9c5e5d0",
+      "startedAt": "2026-08-27T20:35:34.818Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "D1 health",
+      "method": "GET",
+      "route": "/health",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 890,
+      "sha256": "816c16f9dc338c42ba0e6007e541ac5b07847527797f946891d3a57dd51780ea",
+      "startedAt": "2026-08-27T20:35:34.851Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "24h normalized intelligence",
+      "method": "GET",
+      "route": "/api/v1/intelligence?window=24h&prominence=normalized",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 355444,
+      "sha256": "a7e02bbc3b89f0e9f45b8e3593f1acc9d932013bac3aa1823f2a8822c78914dc",
+      "startedAt": "2026-08-27T20:35:35.245Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "REST story list outlet semantics",
+      "method": "GET",
+      "route": "/api/stories?metric=normalized&limit=2",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 3414,
+      "sha256": "97b91b1ebd059d5af1cccb41fe7d997c52d49144b12523348de217a6cc7c7e74",
+      "startedAt": "2026-08-27T20:35:36.856Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "REST story detail outlet semantics",
+      "method": "GET",
+      "route": "/api/stories/gdelt%3A20260827170000%3Agdelt_event_1320232106",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 4619,
+      "sha256": "8ab5c58e765b6785a60283a03de2e789514caffdf6b08bda41e4ac159a0908f5",
+      "startedAt": "2026-08-27T20:35:36.927Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "docs HTML",
+      "method": "GET",
+      "route": "/docs",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 2519,
+      "sha256": "8c460d982fc207676c416032d74f2f090cf81c89c4cfd1adbfdab08de747ef38",
+      "startedAt": "2026-08-27T20:35:37.014Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "docs Markdown",
+      "method": "GET",
+      "route": "/docs",
+      "status": 200,
+      "contentType": "text/markdown; charset=utf-8",
+      "bytes": 3053,
+      "sha256": "5d3a53bf20e98ad6e24675deb3366f24412bf715f9379a970b4e33f2a2762286",
+      "startedAt": "2026-08-27T20:35:37.033Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "docs 406",
+      "method": "GET",
+      "route": "/docs",
+      "status": 406,
+      "contentType": "application/problem+json; charset=utf-8",
+      "bytes": 134,
+      "sha256": "8ded8805c6120ae0ad4db572956a37837438101b8e40ca9e44a19cb19a71c331",
+      "startedAt": "2026-08-27T20:35:37.055Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "robots",
+      "method": "GET",
+      "route": "/robots.txt",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "bytes": 111,
+      "sha256": "f06938be7e504a21b64be9526768fb4f82550a30815c784d63b80c7b47b64914",
+      "startedAt": "2026-08-27T20:35:37.075Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "sitemap",
+      "method": "GET",
+      "route": "/sitemap.xml",
+      "status": 200,
+      "contentType": "application/xml; charset=utf-8",
+      "bytes": 497,
+      "sha256": "26cdacb82f51fdad8d1134677320fe4d46c3f61de55598409f8e41fa42669812",
+      "startedAt": "2026-08-27T20:35:37.128Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "OpenAPI 3.1",
+      "method": "GET",
+      "route": "/openapi.json",
+      "status": 200,
+      "contentType": "application/vnd.oai.openapi+json;version=3.1; charset=utf-8",
+      "bytes": 2015,
+      "sha256": "3af551f40738cd4c85fa1cbafa3d73bf198bdd429de9d0b04b7d4f72025e2d10",
+      "startedAt": "2026-08-27T20:35:37.147Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "MCP initialize",
+      "method": "POST",
+      "route": "/mcp",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 287,
+      "sha256": "55090bbf1ab6c72a1be7f84d31fd2b5604e60a05315c1072642c10c38a2cf2bf",
+      "startedAt": "2026-08-27T20:35:37.167Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "MCP tools/list",
+      "method": "POST",
+      "route": "/mcp",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 1467,
+      "sha256": "b91f4feb88a54c282a8fee98c80baf04fed7d9e1279606dc1fd742824b829bfc",
+      "startedAt": "2026-08-27T20:35:37.188Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "MCP story query outlet semantics",
+      "method": "POST",
+      "route": "/mcp",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 7020,
+      "sha256": "babd5ad21f930772969a334f94d64f387681055bb784e11bfff309ab503d6993",
+      "startedAt": "2026-08-27T20:35:37.217Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "MCP story detail outlet semantics",
+      "method": "POST",
+      "route": "/mcp",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 9654,
+      "sha256": "df627f054b33a5f0ea21224787914ffb9cabacc3193d3d9d16e06c2ba8389c4b",
+      "startedAt": "2026-08-27T20:35:37.291Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "A2A Agent Card",
+      "method": "GET",
+      "route": "/.well-known/agent-card.json",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 2008,
+      "sha256": "3ec5655a19008cce9060daa28bcb446b9e31e0ee0e0ba513ede12e6f8713f033",
+      "startedAt": "2026-08-27T20:35:37.363Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "A2A JSON-RPC SendMessage",
+      "method": "POST",
+      "route": "/a2a",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 1064,
+      "sha256": "0b420ec38c7e11aec0420bbb4cee51e9d2f9ef518ad9ea14b0004a77a434176c",
+      "startedAt": "2026-08-27T20:35:37.383Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "A2A JSON-RPC story query outlet semantics",
+      "method": "POST",
+      "route": "/a2a",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 3573,
+      "sha256": "01b4f8ed81312d175b1b8904cc2236918424cf0c35366fe891e50cffa40a6f62",
+      "startedAt": "2026-08-27T20:35:37.434Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "A2A message:send query",
+      "method": "POST",
+      "route": "/a2a/message:send",
+      "status": 200,
+      "contentType": "application/a2a+json; charset=utf-8",
+      "bytes": 3523,
+      "sha256": "590e2197525ec05f1158320bc5a9bcb4edd99f3acbbe250e3b4875632feb8f25",
+      "startedAt": "2026-08-27T20:35:37.507Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "A2A v0.3 story query outlet semantics",
+      "method": "POST",
+      "route": "/a2a",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 3501,
+      "sha256": "bab93205d498cdef329c6a71a576426c4fb7ed6ed3f406f08508c4046e9748a2",
+      "startedAt": "2026-08-27T20:35:37.589Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "malformed percent cluster route",
+      "method": "GET",
+      "route": "/api/stories/%E0%A4%A",
+      "status": 400,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 223,
+      "sha256": "7afb8326d032841aa9ddf0a9b96a2ab21628bfc52bf6855c39e54e0115b2f798",
+      "startedAt": "2026-08-27T20:35:37.679Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "missing route",
+      "method": "GET",
+      "route": "/definitely-missing",
+      "status": 404,
+      "contentType": "application/json; charset=utf-8",
+      "bytes": 190,
+      "sha256": "eac09b8c1d784047795f4f5e4cb5c87c9daf0b1a25dc5ec9d93ec925f67a441c",
+      "startedAt": "2026-08-27T20:35:37.701Z",
+      "outcome": "pass"
+    },
+    {
+      "name": "HTTP to HTTPS redirect",
+      "method": "HEAD",
+      "route": "http://atlas-news-intelligence-api.atlas-news-surface.workers.dev/",
+      "status": 308,
+      "location": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/",
+      "hstsAbsentOnHttp": true,
+      "startedAt": "2026-08-27T20:35:37.727Z",
+      "outcome": "pass"
+    }
   ],
   "summary": {
-    "passed": 19,
+    "passed": 25,
     "failed": 0
   }
 }

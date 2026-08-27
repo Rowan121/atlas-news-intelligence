@@ -26,10 +26,10 @@ Event location never fills the coverage heatmap.
 | Existing Cloudflare account | `70311d13372e29742a6ae45f6788bcc9` |
 | Existing D1 database | `atlas-news-intelligence-prod` |
 | D1 database ID | `a4b64588-32ff-4e18-950e-f603e3c7d3d2` |
-| Final deployment version | `34ea69cb-aa81-41bd-aab1-5b07d6222df0` |
-| Runtime build version | `32a3e6630291f485a67aade8efa0ba5e0b56657f` |
+| Final deployment version | `af5a6aee-18e6-4467-b4e4-b9fb93c87e58` |
+| Runtime build version | `074da0c4683686d17d5b7b4ea31541384a31d2d6` |
 | GDELT run | `gdelt:20260827170000` |
-| Release smoke completion | `2026-08-27T19:59:01.979Z` |
+| Release smoke completion | `2026-08-27T20:35:37.782Z` |
 
 No Worker, D1 database, account, API key, or replacement external account was
 created. AIsa, HUD, Telegram, paid calls, hackathon submission, and third-party
@@ -70,21 +70,25 @@ shows this rather than hiding it or substituting product stubs.
 
 ## Verification
 
-The final release gate passed after the last production-only asset-header fix:
+The final release gate passed after the production asset-header fix and the
+outlet-count truth remediation:
 
 - data package: 85/85 tests, typecheck, and build;
 - UI: 29/29 tests and production build;
 - Surface: 70/70 tests, typecheck, and Wrangler dry bundle;
 - all three dependency audits: zero known vulnerabilities;
-- final production smoke: 19/19 checks including the independent HTTP redirect
-  probe.
+- final production smoke: 25/25 checks, including REST list/detail, MCP
+  query/detail, A2A v1 JSON-RPC, A2A HTTP+JSON, the strict v0.3 adapter, and the
+  independent HTTP redirect probe. Every story-bearing machine payload exposes
+  `unique_outlet_count` and omits the misleading legacy
+  `unique_publisher_count` name.
 
 The machine-readable smoke receipt is
 [`receipts/production-smoke-2026-08-27.json`](./receipts/production-smoke-2026-08-27.json).
 It covers HTML/no-JS truth, both hashed UI assets, D1 health, 24-hour
-intelligence, HTML/Markdown/406 docs, robots, sitemap, OpenAPI, MCP initialize
-and tool listing, A2A discovery and both live bindings, malformed input, a
-controlled missing route, and HTTP→HTTPS.
+intelligence, REST story reads, HTML/Markdown/406 docs, robots, sitemap,
+OpenAPI, MCP discovery and story reads, A2A discovery and all deployed adapters,
+malformed input, a controlled missing route, and HTTP→HTTPS.
 
 Browser verification on the final deployment confirmed:
 

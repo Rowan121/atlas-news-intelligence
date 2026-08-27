@@ -117,13 +117,13 @@ ATLAS_EXPECTED_DB_CLUSTERS=111 ATLAS_EXPECTED_RESPONSE_CLUSTERS=100 \
 ATLAS_EXPECTED_ARTICLES=123 ATLAS_EXPECTED_REGIONS=42 \
 ATLAS_EXPECTED_OBSERVED_HEAT_CLUSTERS=1 \
 node scripts/smoke-local.mjs
-18/18 scripted HTTPS checks passed; the separate HTTP→HTTPS probe passed, for 19/19 production checks
+24/24 scripted HTTPS checks passed; the HTTP→HTTPS probe passed, for 25/25 production checks
 
 npm run verify:release
 all install, typecheck, test, build, and Wrangler dry-run gates passed
 ```
 
-The final deployed runtime build is `32a3e6630291f485a67aade8efa0ba5e0b56657f`; Cloudflare deployment version `34ea69cb-aa81-41bd-aab1-5b07d6222df0` serves it. The valid P0 source, generated-seed, and production-refresh hashes remain recorded in the approved payload ledger. The source contains no fabricated sponsor receipt; sponsor claims require separate sanitized integration evidence.
+The final deployed runtime build is `074da0c4683686d17d5b7b4ea31541384a31d2d6`; Cloudflare deployment version `af5a6aee-18e6-4467-b4e4-b9fb93c87e58` serves it. The valid P0 source, generated-seed, and production-refresh hashes remain recorded in the approved payload ledger. The source contains no fabricated sponsor receipt; sponsor claims require separate sanitized integration evidence.
 
 Full `npm run verify:release` remains the merge/deploy preflight because it also builds the changing UI and performs the Wrangler bundle dry-run.
 

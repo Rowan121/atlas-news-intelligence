@@ -8,8 +8,8 @@ Use Rowan's existing accounts and saved sessions only. Do not create an account,
 
 | Item | Exact value |
 |---|---|
-| Deployed runtime build | `32a3e6630291f485a67aade8efa0ba5e0b56657f` |
-| Final Cloudflare deployment version | `34ea69cb-aa81-41bd-aab1-5b07d6222df0` |
+| Deployed runtime build | `074da0c4683686d17d5b7b4ea31541384a31d2d6` |
+| Final Cloudflare deployment version | `af5a6aee-18e6-4467-b4e4-b9fb93c87e58` |
 | Frozen final-verification tree | The documentation/receipt commit immediately preceding Agent D; its exact SHA is supplied in the final handoff |
 | Existing Cloudflare account | `70311d13372e29742a6ae45f6788bcc9` |
 | Existing D1 database | `atlas-news-intelligence-prod` |
@@ -35,7 +35,7 @@ Before either remaining Cloudflare write:
 npm run verify:release
 ```
 
-The final gate passed with root 85/85, UI 29/29 plus build, Surface 70/70 plus typecheck, zero audit vulnerabilities, and a Wrangler dry bundle carrying `BUILD_VERSION=32a3e6630291f485a67aade8efa0ba5e0b56657f`. The same existing Agent D receives the completed deployed tree last for the independent ORA/IsItAgentReady verdict.
+The final gate passed with root 85/85, UI 29/29 plus build, Surface 70/70 plus typecheck, zero audit vulnerabilities, and a Wrangler dry bundle carrying `BUILD_VERSION=074da0c4683686d17d5b7b4ea31541384a31d2d6`. The same existing Agent D receives the completed deployed tree last for the independent ORA/IsItAgentReady verdict.
 
 ## Payload 1 — Cloudflare identity and D1 creation
 
@@ -103,7 +103,7 @@ in `docs/PRODUCTION_RELEASE_2026-08-27.md`.
 
 ## Payload 4 — update the existing Worker and static explorer
 
-**Status: completed; final deployment version `34ea69cb-aa81-41bd-aab1-5b07d6222df0`.**
+**Status: completed; final deployment version `af5a6aee-18e6-4467-b4e4-b9fb93c87e58`.**
 
 ```json
 {
@@ -114,7 +114,7 @@ in `docs/PRODUCTION_RELEASE_2026-08-27.md`.
   "existing_resource_only": true,
   "entrypoint": "surface/src/index.ts",
   "frozen_tree": "FINAL_AGENT_D_HANDOFF_SHA_RECORDED_IN_FINAL_REPORT",
-  "product_commit": "32a3e6630291f485a67aade8efa0ba5e0b56657f",
+  "product_commit": "074da0c4683686d17d5b7b4ea31541384a31d2d6",
   "compatibility_date": "2026-08-27",
   "bindings": {
     "DB": {
@@ -128,7 +128,7 @@ in `docs/PRODUCTION_RELEASE_2026-08-27.md`.
     "not_found_handling": "none"
   },
   "vars": {
-    "BUILD_VERSION": "32a3e6630291f485a67aade8efa0ba5e0b56657f",
+    "BUILD_VERSION": "074da0c4683686d17d5b7b4ea31541384a31d2d6",
     "ENVIRONMENT": "production",
     "CORS_ORIGIN": "self",
     "STALE_AFTER_SECONDS": "1800"
@@ -139,7 +139,7 @@ in `docs/PRODUCTION_RELEASE_2026-08-27.md`.
 
 Run from `surface/`. This updates the existing Worker; it must not create a differently named Worker or Cloudflare account resource. Preserve the returned deployment/version ID and origin. Then verify HTTPS browser/UI, REST, MCP, A2A, discovery/OpenAPI, self-only CORS, controlled errors, and HTTP→HTTPS redirect behavior. The live same-story response must expose `coverageHeat.basis=editorial_market`, `outletCount`, and `uniqueOutletCount`; it must contain one observed 11-market comparison and no public legacy coverage/audience or publisher-count keys.
 
-Final receipt: the live origin passed 19/19 production checks and browser checks
+Final receipt: the live origin passed 25/25 production checks and browser checks
 for the initial globe, focused 11-market comparison, and Back transition. The
 one-run security findings caused two follow-up deployments; the final runtime
 also routes `/assets/*` through the Worker so JS/CSS receive CSP, XFO, and HSTS
@@ -224,8 +224,8 @@ payload exactly; draft is the correct final status.
   "action": "security.scan",
   "target": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev",
   "scan_runtime": "a59d171a2a2eee755242602d2fda3945e5d85500",
-  "remediated_runtime": "32a3e6630291f485a67aade8efa0ba5e0b56657f",
-  "final_deployment_version": "34ea69cb-aa81-41bd-aab1-5b07d6222df0",
+  "remediated_runtime": "074da0c4683686d17d5b7b4ea31541384a31d2d6",
+  "final_deployment_version": "af5a6aee-18e6-4467-b4e4-b9fb93c87e58",
   "scope": "public unauthenticated web, REST, MCP, A2A, and discovery files",
   "max_runs": 1,
   "mutation": false
