@@ -140,19 +140,42 @@ describe("GDELT 2.x stream loader", () => {
 
   it("extracts only prior coherent quarter-hour batches from a bounded master-list tail", () => {
     const prior = streamFixtureAt("20260827054500");
-    const older = streamFixtureAt("20260827053000");
+    const incomplete = streamFixtureAt("20260827053000");
+    const older = streamFixtureAt("20260827051500");
+    const stale = streamFixtureAt("20260827050000");
+    const misaligned = streamFixtureAt("20260827054000");
     const latest = streamFixtureAt(BATCH);
+    const incompleteRows = incomplete.manifest.split("\n").slice(0, 2).join("\n");
     const candidates = parseMasterFileTail(
-      ["truncated range-boundary row", older.manifest, prior.manifest, latest.manifest].join("\n"),
+      [
+        "truncated range-boundary row",
+        stale.manifest,
+        misaligned.manifest,
+        incompleteRows,
+        older.manifest,
+        prior.manifest,
+        latest.manifest,
+      ].join("\n"),
       BATCH,
-      2,
+      3,
+      "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt",
     );
 
     expect(candidates.map((candidate) => candidate.batchId)).toEqual([
       "20260827054500",
-      "20260827053000",
+      "20260827051500",
     ]);
-    expect(candidates[0]!.files.gkg.md5).toBe(parseLastUpdate(prior.manifest).files.gkg.md5);
+    expect(candidates[0]).toMatchObject({
+      manifestUrl: "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt",
+      batchTimestamp: "2026-08-27T05:45:00.000Z",
+      files: {
+        gkg: {
+          batchId: "20260827054500",
+          compressedBytes: parseLastUpdate(prior.manifest).files.gkg.compressedBytes,
+          md5: parseLastUpdate(prior.manifest).files.gkg.md5,
+        },
+      },
+    });
   });
 
   it("rejects malformed complete rows inside the master-list tail", () => {
@@ -304,6 +327,9 @@ describe("GDELT 2.x stream loader", () => {
     const entry = fixtureManifest().files.events;
     const bytes = streamFixture().files[entry.url]!;
     expect(() => verifyManifestBytes(entry, bytes)).not.toThrow();
+    expect(() => verifyManifestBytes({ ...entry, compressedBytes: bytes.byteLength + 1 }, bytes)).toThrow(
+      /byte count/,
+    );
     const changed = bytes.slice();
     changed[10] = changed[10]! ^ 1;
     expect(() => verifyManifestBytes(entry, changed)).toThrow(/MD5/);
@@ -434,6 +460,74 @@ describe("GDELT 2.x stream loader", () => {
 
     expect(result).toMatchObject({ ok: false, error: { stage: "gkg", kind: "http", retryable: true } });
     expect(fetchMock.mock.calls.map(([input]) => String(input))).not.toContain(masterFileListUrl);
+  });
+
+  it("preserves a master-list HTTP failure after an advertised file 404", async () => {
+    const latest = streamFixtureAt(BATCH);
+    const manifestUrl = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt";
+    const masterFileListUrl = "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt";
+    const latestGkg = parseLastUpdate(latest.manifest).files.gkg.url;
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === manifestUrl) return new Response(latest.manifest, { status: 200 });
+      if (url === latestGkg) return new Response(null, { status: 404 });
+      if (url === masterFileListUrl) return new Response("busy", { status: 503 });
+      throw new Error(`unexpected request ${url}`);
+    });
+
+    const result = await loadLatestGdeltSnapshot({
+      manifestUrl,
+      masterFileListUrl,
+      fetchPolicy: { fetch: fetchMock, attempts: 1 },
+      clock: { now: () => new Date(NOW) },
+      limits: tinyLimits(),
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        stage: "manifest",
+        kind: "http",
+        message: "GDELT manifest download returned HTTP 503.",
+        retryable: true,
+      },
+    });
+    expect(result.diagnostics.join(" ")).toContain("fallback manifest unavailable: http/manifest");
+  });
+
+  it("preserves a malformed master-tail parse failure after an advertised file 404", async () => {
+    const latest = streamFixtureAt(BATCH);
+    const manifestUrl = "https://data.gdeltproject.org/gdeltv2/lastupdate.txt";
+    const masterFileListUrl = "https://data.gdeltproject.org/gdeltv2/masterfilelist.txt";
+    const latestGkg = parseLastUpdate(latest.manifest).files.gkg.url;
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      const url = String(input);
+      if (url === manifestUrl) return new Response(latest.manifest, { status: 200 });
+      if (url === latestGkg) return new Response(null, { status: 404 });
+      if (url === masterFileListUrl) {
+        return new Response("truncated range-boundary row\n1 bad row", { status: 206 });
+      }
+      throw new Error(`unexpected request ${url}`);
+    });
+
+    const result = await loadLatestGdeltSnapshot({
+      manifestUrl,
+      masterFileListUrl,
+      fetchPolicy: { fetch: fetchMock, attempts: 1 },
+      clock: { now: () => new Date(NOW) },
+      limits: tinyLimits(),
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        stage: "manifest",
+        kind: "manifest_invalid",
+        retryable: false,
+      },
+    });
+    if (!result.ok) expect(result.error.message).toContain("bytes, MD5, and a URL");
+    expect(result.diagnostics.join(" ")).toContain("fallback manifest unavailable: manifest_invalid/manifest");
   });
 
   it("stops on a fallback checksum mismatch instead of silently walking farther back", async () => {

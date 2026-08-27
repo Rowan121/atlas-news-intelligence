@@ -324,12 +324,21 @@ export async function loadLatestGdeltSnapshot(
           masterFileListUrl,
         );
       } catch (fallbackManifestError) {
+        const normalizedFallbackManifestError =
+          fallbackManifestError instanceof GdeltStreamError
+            ? fallbackManifestError
+            : new GdeltStreamError(
+                "manifest",
+                "manifest_invalid",
+                fallbackManifestError instanceof Error
+                  ? `GDELT fallback master list was invalid: ${fallbackManifestError.message}`
+                  : "GDELT fallback master list was invalid.",
+                false,
+              );
         diagnostics.push(
-          `fallback manifest unavailable: ${fallbackManifestError instanceof GdeltStreamError
-            ? `${fallbackManifestError.kind}/${fallbackManifestError.stage}`
-            : "invalid master tail"}`,
+          `fallback manifest unavailable: ${normalizedFallbackManifestError.kind}/${normalizedFallbackManifestError.stage}`,
         );
-        throw latestError;
+        throw normalizedFallbackManifestError;
       }
 
       for (const candidate of candidates) {
