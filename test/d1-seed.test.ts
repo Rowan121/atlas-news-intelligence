@@ -146,10 +146,16 @@ describe("GDELT snapshot to D1 seed", () => {
     ));
 
     const article = db.prepare("SELECT same_story_json FROM articles").get() as { same_story_json: string };
-    expect(JSON.parse(article.same_story_json)).toMatchObject({
-      coverageMarkets: { status: "unknown", value: null },
-      audienceExposure: { status: "unknown", value: null },
+    const sameStory = JSON.parse(article.same_story_json) as Record<string, unknown>;
+    expect(sameStory).toMatchObject({
+      editorialMarket: {
+        status: "unknown",
+        value: null,
+        reason: expect.stringContaining("not reinterpreted"),
+      },
     });
+    expect(sameStory).not.toHaveProperty("coverageMarkets");
+    expect(sameStory).not.toHaveProperty("audienceExposure");
     expect(db.prepare(`SELECT regional_outlet_count, article_share, source_normalized_share,
       basis, formula_version FROM regional_prominence`).get()).toEqual({
       regional_outlet_count: 3,
