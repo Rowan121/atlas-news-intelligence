@@ -1,0 +1,630 @@
+{
+  "domain": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp",
+  "url": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp",
+  "urlKind": "mcp",
+  "finalUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp",
+  "score": 67,
+  "maxScore": 100,
+  "grade": "C",
+  "ctaMessage": "You've started but agents are leaving you on the table.",
+  "ctaTier": "mid",
+  "layers": [
+    {
+      "id": "discovery",
+      "name": "Discovery",
+      "description": "Can agents find and recommend you?",
+      "checks": [
+        {
+          "id": "ard-catalog",
+          "name": "ARD discovery",
+          "description": "One catalog that tells agents everything you offer them: MCP servers, APIs, agents, and skills. Without it, every agent has to hunt for your capabilities page by page. We look for an Agentic Resource Discovery catalog at /.well-known/ard.json (the ARD v0.91 canonical path), falling back to the predecessor /.well-known/ai-catalog.json, which the spec keeps as an equivalent source. Weighted at 1 point while ecosystem adoption is early (2026-08 audit; was 3).",
+          "status": "fail",
+          "score": 0,
+          "maxScore": 1,
+          "details": "No /.well-known/ard.json (and no legacy /.well-known/ai-catalog.json)",
+          "recommendation": "Publish an Agentic Resource Discovery catalog at /.well-known/ard.json so AI clients can discover your agentic resources (MCP servers, agents, skills, APIs). See https://agenticresourcediscovery.org/",
+          "bonus": false,
+          "specUrl": "https://agenticresourcediscovery.org/",
+          "maturity": "verified",
+          "tier": "required",
+          "estScoreGain": 16.7
+        },
+        {
+          "id": "ai-catalog-published",
+          "name": "AI Catalog discovery",
+          "description": "The AI Catalog Standard (ai-catalog.io, Agent-Card WG) specifies its own discovery path, /.well-known/ai-catalog.json, separately from ARD's ard.json. Serving a valid catalog there keeps you discoverable by consumers that follow that spec. Bonus: earns credit when present, never costs points.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 1,
+          "details": "No /.well-known/ai-catalog.json - the AI Catalog Standard's discovery path. Bonus only; a catalog at /.well-known/ard.json is scored by the ARD discovery check.",
+          "recommendation": "Serve a valid catalog at /.well-known/ai-catalog.json - the AI Catalog Standard's own discovery path - so consumers following that spec (see https://ai-catalog.io/) also find you. The same document you serve at /.well-known/ard.json works unchanged.",
+          "bonus": true,
+          "specUrl": "https://ai-catalog.io/",
+          "maturity": "verified",
+          "tier": "recommended"
+        },
+        {
+          "id": "ard-entries-valid",
+          "name": "ARD entry validity",
+          "description": "Each entry in your catalog is complete enough for an agent to actually use it: an identifier, a display name, a media type, and a working target. Validated against the AI Catalog Standard's entry model on whichever path serves your catalog (ard.json preferred, else the legacy ai-catalog.json). Only applies when the catalog exists; partial adoption earns credit and never costs points.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 2,
+          "details": "No catalog at /.well-known/ard.json or /.well-known/ai-catalog.json - entry validity applies only to published catalogs",
+          "recommendation": "Make every catalog entry fully valid: a domain-anchored urn:air identifier, a displayName, a media type, and exactly one of url or data. Applies to the catalog at /.well-known/ard.json or the legacy /.well-known/ai-catalog.json.",
+          "bonus": true,
+          "specUrl": "https://ai-catalog.io/",
+          "maturity": "verified",
+          "tier": "recommended"
+        },
+        {
+          "id": "ard-trust-manifest",
+          "name": "ARD trust manifest",
+          "description": "Trust signals inside your catalog (verified identity, compliance attestations, signatures) that let cautious agents pick you over an unverified alternative. The trust model comes from the AI Catalog Standard and is validated on whichever path serves your catalog. Only applies when the catalog exists; never costs points.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 2,
+          "details": "No catalog at /.well-known/ard.json or /.well-known/ai-catalog.json - trust metadata applies only to published catalogs",
+          "recommendation": "Add a trustManifest (verifiable identity, compliance attestations, or signature) to your catalog entries (ard.json, or the legacy ai-catalog.json) so clients can verify your resources with progressive trust.",
+          "bonus": true,
+          "specUrl": "https://ai-catalog.io/",
+          "maturity": "verified",
+          "tier": "recommended"
+        },
+        {
+          "id": "mcp-registry-listed",
+          "name": "Listed in MCP registries",
+          "description": "Agents find MCP servers through registries the way people find apps through app stores. We check the major ones (Smithery, mcp.so) for an entry verified against your domain.",
+          "status": "fail",
+          "score": 0,
+          "maxScore": 1,
+          "details": "No bi-directionally verified MCP registry entry found. To pass, either publish the server under your own domain/npm scope, get a verified Smithery listing with non-zero usage, or link the registry entry from your homepage or docs.",
+          "recommendation": "Register your MCP server on Smithery (smithery.ai) or mcp.so so agent platforms can discover your tools. Link the registry entry from your homepage or docs for bi-directional verification.",
+          "bonus": false,
+          "maturity": "verified",
+          "tier": "recommended",
+          "estScoreGain": 16.7
+        },
+        {
+          "id": "skills-sh-listed",
+          "name": "Listed on skills.sh",
+          "description": "Official skills published on skills.sh, the public directory where agents and developers browse for ready-made capabilities.",
+          "status": "fail",
+          "score": 0,
+          "maxScore": 1,
+          "details": "No official skills self-published on skills.sh (100 community skills with potential relation to this domain found, but only self-published official skills count)",
+          "recommendation": "Publish agent skills on skills.sh so AI agents can discover your product's capabilities. Create a SKILL.md in your GitHub repo and register it with 'npx skills add'. See skills.sh/docs.",
+          "bonus": false,
+          "maturity": "emerging",
+          "tier": "emerging"
+        },
+        {
+          "id": "registry-branding",
+          "name": "Registry branding",
+          "description": "Your MCP registry entry has a display name, icon, and description. Agents choosing between servers see this first; a bare entry looks abandoned.",
+          "status": "fail",
+          "score": 0,
+          "maxScore": 2,
+          "details": "No registry branding (name, icon, description) found",
+          "recommendation": "Give your MCP server-card (at /.well-known/mcp/server-card.json) a display name, an icon or logo, and a description - all three together are what reads as a complete, branded listing agents can present.",
+          "bonus": false,
+          "maturity": "emerging",
+          "tier": "emerging"
+        },
+        {
+          "id": "chatgpt-app-listed",
+          "name": "ChatGPT app listed",
+          "description": "Listed in the ChatGPT app directory, where hundreds of millions of users can pull your product into a conversation by name. Upside-only: the directory is curated and gated, so absence never costs points.",
+          "status": "fail",
+          "score": 0,
+          "maxScore": 2,
+          "details": "Not found in ChatGPT app directory",
+          "recommendation": "Submit your app to the ChatGPT apps / connectors directory (the apps-in-ChatGPT surface) so ChatGPT users can discover and use your product.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "estScoreGain": 16.7
+        }
+      ],
+      "score": 0,
+      "maxScore": 2
+    },
+    {
+      "id": "accessibility",
+      "name": "Access",
+      "description": "Can agents access your data and understand you?",
+      "checks": [
+        {
+          "id": "skills-sh-quality",
+          "name": "Skills.sh skill quality",
+          "description": "Not just listed on skills.sh, but worth installing: multiple skills, descriptive names, and real adoption.",
+          "status": "fail",
+          "score": 0,
+          "maxScore": 2,
+          "details": "No official skills on skills.sh to evaluate",
+          "recommendation": "Expand your skills.sh presence with multiple skill repos covering different use cases. Add descriptive skill names, clear SKILL.md files, and organize by capability area.",
+          "bonus": false,
+          "maturity": "emerging",
+          "tier": "emerging"
+        }
+      ],
+      "score": 0,
+      "maxScore": 0
+    },
+    {
+      "id": "usability",
+      "name": "Usability",
+      "description": "Can agents use you?",
+      "checks": [
+        {
+          "id": "mcp-tool-descriptions",
+          "name": "MCP tool descriptions",
+          "description": "An agent picks tools by reading their descriptions: vague ones get skipped, clear ones get called. We grade every tool on your MCP server, with different bars for product and docs servers.",
+          "status": "pass",
+          "score": 3,
+          "maxScore": 3,
+          "details": "All 3 tools on product MCP have detailed descriptions (>= 20 chars)",
+          "recommendation": "Add detailed descriptions (>= 20 chars) to every MCP tool. Agents use these to decide which tool to call - vague descriptions lead to wrong tool selection.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-param-schemas",
+          "name": "MCP parameter schemas",
+          "description": "Typed parameter schemas on your MCP tools, so agents know what to send without trial and error. Product servers need required-field lists; docs servers need at least a query.",
+          "status": "warning",
+          "score": 1,
+          "maxScore": 2,
+          "details": "2/3 tools on product MCP have parameter schemas",
+          "recommendation": "Define inputSchema with typed properties and required arrays for each tool. Agents need schema info to construct valid tool calls without guessing.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp",
+          "estScoreGain": 0
+        },
+        {
+          "id": "mcp-server-identity",
+          "name": "MCP server identity",
+          "description": "Your MCP server introduces itself in the handshake: name, version, and usage instructions. An anonymous server makes every agent guess what it connected to.",
+          "status": "pass",
+          "score": 1,
+          "maxScore": 1,
+          "details": "product MCP identifies as \"atlas-news-intelligence\" v0.1.0 with instructions",
+          "recommendation": "Set server name, version, and instructions in your MCP server's initialize response. Instructions help agents understand your server's purpose and constraints.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-tool-listing",
+          "name": "MCP tool listing",
+          "description": "Your MCP server actually returns tools when asked. We call tools/list and grade the surface: product servers earn on breadth, docs servers on focus.",
+          "status": "pass",
+          "score": 3,
+          "maxScore": 3,
+          "details": "product MCP exposes 3 tools - substantial tool surface",
+          "recommendation": "Expose 3+ tools via your MCP server's tools/list endpoint. Cover your core API surface - agents need tools for read, write, and search operations.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-tool-naming",
+          "name": "MCP tool naming",
+          "description": "Predictable tool names (create_invoice, search_docs) that agents parse at a glance. Inconsistent naming makes every call a small research project.",
+          "status": "fail",
+          "score": 0,
+          "maxScore": 2,
+          "details": "Mixed naming conventions across tools",
+          "recommendation": "Use consistent naming conventions (snake_case or camelCase) for all MCP tools. Names should be descriptive (>= 4 chars) and not generic (avoid 'run', 'get', 'do').",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp",
+          "estScoreGain": 0
+        },
+        {
+          "id": "mcp-auth-mechanism",
+          "name": "MCP auth mechanism",
+          "description": "The right lock on the right door: docs servers should be public, product servers should require OAuth. We check your MCP auth matches what the server does.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 2,
+          "details": "product MCP has authentication disabled - auth checks not applicable",
+          "recommendation": "Protect your MCP server with OAuth 2.0 authentication. Publish authorization server metadata at /.well-known/oauth-authorization-server for automatic agent auth flows.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-oauth-metadata",
+          "name": "MCP OAuth metadata",
+          "description": "Standard OAuth metadata (RFC 8414) that lets agents discover your sign-in flow automatically, instead of a developer wiring it by hand.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 2,
+          "details": "product MCP has authentication disabled - OAuth metadata not applicable",
+          "recommendation": "Publish RFC 8414 authorization server metadata with issuer, authorization_endpoint, and token_endpoint so agents can authenticate without hardcoded URLs.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-pkce-s256",
+          "name": "MCP PKCE S256 support",
+          "description": "PKCE with S256, the OAuth hardening that stops intercepted codes from being replayed. Table stakes for agent auth done right.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 2,
+          "details": "product MCP has authentication disabled - PKCE not applicable",
+          "recommendation": "Support PKCE with S256 code challenge method in your OAuth server. Add 'S256' to code_challenge_methods_supported in your authorization server metadata.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-server",
+          "name": "MCP server / manifest",
+          "description": "MCP is how agents plug directly into your product, the way apps plug into an app store. We check for a Model Context Protocol server or manifest.",
+          "status": "pass",
+          "score": 6,
+          "maxScore": 6,
+          "details": "MCP server connected via Streamable HTTP - atlas-news-intelligence v0.1.0 (protocol 2025-06-18)",
+          "recommendation": "Build an MCP (Model Context Protocol) server exposing your API as tools. Use Streamable HTTP transport for full score. This lets Claude, ChatGPT, and other AI agents call your product natively.",
+          "bonus": false,
+          "maturity": "verified",
+          "tier": "required"
+        },
+        {
+          "id": "mcp-error-handling",
+          "name": "MCP error handling",
+          "description": "When an agent sends your MCP server a bad request, the answer should be a structured error it can correct from, not a silent failure.",
+          "status": "warning",
+          "score": 1,
+          "maxScore": 2,
+          "details": "product MCP returns error for invalid tool call but missing structured code or message",
+          "recommendation": "Return structured JSON-RPC errors (with code and message) when agents call invalid tools or pass bad arguments. Don't crash or return empty responses.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp",
+          "estScoreGain": 0
+        },
+        {
+          "id": "mcp-transport-modern",
+          "name": "MCP modern transport",
+          "description": "Your MCP server speaks the current transport (Streamable HTTP), not just the legacy one. New agent clients increasingly expect it.",
+          "status": "pass",
+          "score": 1,
+          "maxScore": 1,
+          "details": "product MCP uses modern Streamable HTTP transport",
+          "recommendation": "Upgrade your MCP server from legacy SSE to Streamable HTTP transport. Streamable HTTP is the current standard and supports bidirectional communication.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-tool-annotations",
+          "name": "MCP tool annotations",
+          "description": "Labels that tell agents which tools are safe to call freely and which change or destroy things (readOnlyHint, destructiveHint). Essential when your MCP server can mutate real data.",
+          "status": "pass",
+          "score": 2,
+          "maxScore": 2,
+          "details": "product MCP: 3/3 tools have behavioral annotations (readOnlyHint/destructiveHint)",
+          "recommendation": "Add behavioral annotations (readOnlyHint, destructiveHint) to your MCP tools. Agents use these to avoid destructive actions without user confirmation.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-server-card",
+          "name": "MCP server-card.json",
+          "description": "A server card at /.well-known/mcp/server-card.json that describes your MCP server (name, transport, tools) before an agent even connects.",
+          "status": "warning",
+          "score": 1,
+          "maxScore": 2,
+          "details": "MCP server card found at https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/.well-known/mcp/server-card.json but missing fields: name",
+          "recommendation": "Publish a server card at /.well-known/mcp/server-card.json describing your MCP server. Required fields: name, description, version, serverUrl, tools[]. This lets agents preview your server before opening a transport connection.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp",
+          "estScoreGain": 0
+        },
+        {
+          "id": "mcp-multi-surface-coverage",
+          "name": "Product + docs MCP coverage",
+          "description": "Two MCP servers, cleanly split: one for taking actions in your product, one for answering questions from your docs. The mature pattern for brands that have both.",
+          "status": "fail",
+          "score": 0,
+          "maxScore": 2,
+          "details": "You run an MCP server for your product, but not one for your documentation. This bonus needs two MCP servers: one for your product so agents can take actions, and a separate one for your documentation so agents can answer questions from your docs.",
+          "recommendation": "Beyond your product MCP server, expose a documentation MCP surface so agents can pull your docs and reference material over the same protocol they use to act. Covering both the 'do' and the 'learn' surfaces over MCP earns this.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended",
+          "estScoreGain": 0
+        },
+        {
+          "id": "mcp-resource-listing",
+          "name": "MCP resources exposed",
+          "description": "If your MCP server claims to offer resources, resources/list should return some. Advertising a capability and delivering nothing erodes agent trust.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 3,
+          "details": "Server does not advertise resources capability in initialize handshake",
+          "recommendation": "If your MCP server advertises the resources capability in its initialize handshake, make sure resources/list returns at least one resource. If you don't intend to expose resources, omit the capability - the check returns na with no penalty for tool-only servers. Quality of the resources you do return is scored separately by mcp-resource-quality.",
+          "bonus": false,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        },
+        {
+          "id": "mcp-app-registry",
+          "name": "MCP Apps support",
+          "description": "MCP Apps let you ship real interactive UI inside ChatGPT and Claude, not just text answers. We check whether your server exposes any. N/A for pure API and data services.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 4,
+          "details": "No in-agent UI surface - MCP Apps render interactive UI inside an agent host (ChatGPT, Claude). A data / API service does not need one, so this is not applicable.",
+          "recommendation": "Add MCP Apps support to your MCP server using @modelcontextprotocol/ext-apps. Expose ui:// resources and add _meta.ui.resourceUri to tools so agents can render interactive UIs directly in conversation.",
+          "bonus": false,
+          "maturity": "verified",
+          "tier": "recommended"
+        },
+        {
+          "id": "mcp-apps-ui-quality",
+          "name": "MCP Apps UI quality",
+          "description": "Your in-agent UI holds up to scrutiny: correct MIME type, valid HTML, dark mode support, and no hardcoded secrets in the markup.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 4,
+          "details": "No MCP Apps detected",
+          "recommendation": "Ensure your MCP Apps resources use MIME type text/html;profile=mcp-app, include <!DOCTYPE html>, and add <meta name=\"color-scheme\" content=\"light dark\"> for dark mode. Never hardcode secrets in resource HTML.",
+          "bonus": true,
+          "maturity": "verified",
+          "tier": "recommended"
+        },
+        {
+          "id": "mcp-view-domain",
+          "name": "MCP App view reachable",
+          "description": "The view your MCP App points at loads publicly and serves HTML with no auth wall. A broken or gated view is worse than none: it fails in front of the user.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 4,
+          "details": "No MCP App detected",
+          "recommendation": "Make sure your MCP App view is reachable and public. For inline ui:// resources: return HTML with <!DOCTYPE html> and no login form. For external HTTP origins (referenced via <base href> or <meta refresh>): return 200 OK + text/html without requiring auth (no 401/403, no password input in the body).",
+          "bonus": false,
+          "maturity": "verified",
+          "tier": "recommended"
+        },
+        {
+          "id": "mcp-view-csp",
+          "name": "MCP App view CSP",
+          "description": "Your view's Content-Security-Policy has to satisfy the ChatGPT and Claude sandboxes, or your UI silently fails to render there. We check the directives they require.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 4,
+          "details": "No MCP App detected",
+          "recommendation": "Add a Content-Security-Policy (via HTTP header or <meta http-equiv>) that scopes 4 directive categories: connect-src includes your MCP server origin; frame-ancestors includes both https://chatgpt.com and https://claude.ai; form-action (or connect-src) scopes redirect targets; img-src / script-src / style-src list specific origins (not *). Permissive default-src * receives partial credit but loses points compared to a properly-scoped policy.",
+          "bonus": false,
+          "maturity": "verified",
+          "tier": "recommended"
+        },
+        {
+          "id": "mcp-resource-quality",
+          "name": "MCP resource quality",
+          "description": "The MCP resources you declare should actually read: valid type, non-empty content. We grade the share that works.",
+          "status": "na",
+          "score": 0,
+          "maxScore": 3,
+          "details": "Server does not advertise resources capability in initialize handshake",
+          "recommendation": "Ensure every resource returned by resources/list reads cleanly via resources/read: declare a valid mimeType, return non-empty content, and make sure any URIs in the content resolve. Broken or empty resources break agent UX silently.",
+          "bonus": false,
+          "maturity": "verified",
+          "tier": "recommended",
+          "mcpKind": "product",
+          "mcpUrl": "https://atlas-news-intelligence-api.atlas-news-surface.workers.dev/mcp"
+        }
+      ],
+      "score": 19,
+      "maxScore": 19
+    }
+  ],
+  "scannedAt": "2026-08-27T21:25:49.667+00:00",
+  "durationMs": 4044,
+  "analysisStatus": "complete",
+  "pendingChecks": [],
+  "essentials": {
+    "score": 22,
+    "label": "Agents are likely to struggle",
+    "required": {
+      "earned": 0,
+      "available": 80,
+      "passing": 0,
+      "total": 0
+    },
+    "recommended": {
+      "earned": 20,
+      "available": 20,
+      "passing": 1,
+      "total": 1
+    },
+    "bonusPoints": 1.6,
+    "bonusSignals": 8,
+    "eligibleChecks": 1,
+    "activeSurfaces": [
+      {
+        "id": "mcp",
+        "label": "MCP",
+        "score": 100,
+        "passing": 1,
+        "total": 1
+      }
+    ],
+    "accessSignals": [],
+    "checks": {
+      "ard-catalog": {
+        "tier": "emerging",
+        "bonus": true,
+        "fraction": 0,
+        "occurrences": 1,
+        "essentialsGain": 0.25
+      },
+      "mcp-registry-listed": {
+        "tier": "recommended",
+        "bonus": true,
+        "fraction": 0,
+        "occurrences": 1,
+        "essentialsGain": 0.25
+      },
+      "skills-sh-listed": {
+        "tier": "emerging",
+        "bonus": true,
+        "fraction": 0,
+        "occurrences": 1,
+        "essentialsGain": 0.25
+      },
+      "registry-branding": {
+        "tier": "emerging",
+        "bonus": true,
+        "fraction": 0,
+        "occurrences": 1,
+        "essentialsGain": 0.25
+      },
+      "chatgpt-app-listed": {
+        "tier": "recommended",
+        "bonus": true,
+        "fraction": 0,
+        "occurrences": 1,
+        "essentialsGain": 0.25
+      },
+      "skills-sh-quality": {
+        "tier": "emerging",
+        "bonus": true,
+        "fraction": 0,
+        "occurrences": 1,
+        "essentialsGain": 0.25
+      },
+      "mcp-tool-descriptions": {
+        "tier": "recommended",
+        "bonus": true,
+        "fraction": 1,
+        "occurrences": 1,
+        "essentialsGain": null
+      },
+      "mcp-param-schemas": {
+        "tier": "recommended",
+        "bonus": true,
+        "fraction": 0.5,
+        "occurrences": 1,
+        "essentialsGain": 0.13
+      },
+      "mcp-server-identity": {
+        "tier": "required",
+        "bonus": true,
+        "fraction": 1,
+        "occurrences": 1,
+        "essentialsGain": null
+      },
+      "mcp-tool-listing": {
+        "tier": "recommended",
+        "bonus": true,
+        "fraction": 1,
+        "occurrences": 1,
+        "essentialsGain": null
+      },
+      "mcp-tool-naming": {
+        "tier": "recommended",
+        "bonus": true,
+        "fraction": 0,
+        "occurrences": 1,
+        "essentialsGain": 0.25
+      },
+      "mcp-server": {
+        "tier": "recommended",
+        "bonus": false,
+        "fraction": 1,
+        "occurrences": 1,
+        "essentialsGain": null
+      },
+      "mcp-error-handling": {
+        "tier": "required",
+        "bonus": true,
+        "fraction": 0.5,
+        "occurrences": 1,
+        "essentialsGain": 0.13
+      },
+      "mcp-transport-modern": {
+        "tier": "required",
+        "bonus": true,
+        "fraction": 1,
+        "occurrences": 1,
+        "essentialsGain": null
+      },
+      "mcp-tool-annotations": {
+        "tier": "recommended",
+        "bonus": true,
+        "fraction": 1,
+        "occurrences": 1,
+        "essentialsGain": null
+      },
+      "mcp-server-card": {
+        "tier": "emerging",
+        "bonus": true,
+        "fraction": 0.5,
+        "occurrences": 1,
+        "essentialsGain": 0.13
+      },
+      "mcp-multi-surface-coverage": {
+        "tier": "emerging",
+        "bonus": true,
+        "fraction": 0,
+        "occurrences": 1,
+        "essentialsGain": 0.25
+      }
+    },
+    "issues": [],
+    "scoreEvidence": {
+      "essential": [],
+      "recommended": [
+        "mcp-server"
+      ],
+      "bonus": [
+        "mcp-tool-descriptions",
+        "mcp-param-schemas",
+        "mcp-server-identity",
+        "mcp-tool-listing",
+        "mcp-error-handling",
+        "mcp-transport-modern",
+        "mcp-tool-annotations",
+        "mcp-server-card"
+      ]
+    }
+  },
+  "servedFromCache": true,
+  "resultAgeSeconds": 170
+}
