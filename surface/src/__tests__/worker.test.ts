@@ -23,6 +23,11 @@ describe("Atlas Worker routes", () => {
     return worker.fetch!(new Request(`https://atlas.example${path}`), env, {} as ExecutionContext);
   }
 
+  function expectClickjackingHeaders(response: Response): void {
+    expect(response.headers.get("content-security-policy")).toBe("frame-ancestors 'none'");
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
+  }
+
   it("redirects production HTTP before routing or storage while HTTPS passes through", async () => {
     const productionEnv = { ...env, ENVIRONMENT: "production" };
     const redirect = await worker.fetch!(
@@ -33,6 +38,7 @@ describe("Atlas Worker routes", () => {
 
     expect(redirect.status).toBe(308);
     expect(redirect.headers.get("location")).toBe("https://atlas.example/api/stories?metric=raw");
+    expect(redirect.headers.get("strict-transport-security")).toBe(null);
     expect(store.queries).toEqual([]);
 
     const secure = await worker.fetch!(
@@ -41,6 +47,8 @@ describe("Atlas Worker routes", () => {
       {} as ExecutionContext,
     );
     expect(secure.status).toBe(200);
+    expect(secure.headers.get("strict-transport-security")).toBe("max-age=31536000; includeSubDomains");
+    expectClickjackingHeaders(secure);
     expect(store.queries).toEqual([{ metric: "raw", limit: 20 }]);
   });
 
@@ -58,6 +66,8 @@ describe("Atlas Worker routes", () => {
       );
       expect(response.status).toBe(200);
       expect(response.headers.get("location")).toBe(null);
+      expect(response.headers.get("strict-transport-security")).toBe(null);
+      expectClickjackingHeaders(response);
     }
     expect(store.queries).toEqual([
       { metric: "normalized", limit: 20 },
@@ -116,6 +126,8 @@ describe("Atlas Worker routes", () => {
   it("serves machine discovery without touching storage", async () => {
     const robots = await get("/robots.txt");
     expect(robots.status).toBe(200);
+    expectClickjackingHeaders(robots);
+    expect(robots.headers.get("strict-transport-security")).toBe(null);
     expect(robots.headers.get("content-type")).toContain("text/plain");
     expect(await robots.text()).toContain("Sitemap: https://atlas.example/sitemap.xml");
 
@@ -240,10 +252,16 @@ describe("Atlas Worker routes", () => {
   it("adds discovery links while forwarding the real static homepage asset", async () => {
     const assetEnv = {
       ...env,
+      ENVIRONMENT: "production",
       ASSETS: {
         async fetch(): Promise<Response> {
           return new Response("<!doctype html><html lang=\"en\"><body>Atlas explorer</body></html>", {
-            headers: { "Content-Type": "text/html; charset=utf-8" },
+            headers: {
+              "Content-Type": "text/html; charset=utf-8",
+              "Content-Security-Policy": "default-src 'none'; frame-ancestors https://embed.invalid",
+              "X-Frame-Options": "SAMEORIGIN",
+              "Strict-Transport-Security": "max-age=0",
+            },
           });
         },
       },
@@ -255,6 +273,30 @@ describe("Atlas Worker routes", () => {
     );
     expect(await response.text()).toContain("Atlas explorer");
     expect(response.headers.get("link")).toContain("/.well-known/api-catalog");
+    expect(response.headers.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'none'");
+    expect(response.headers.get("x-frame-options")).toBe("DENY");
+    expect(response.headers.get("strict-transport-security")).toBe("max-age=31536000; includeSubDomains");
+  });
+
+  it("applies one clickjacking policy to API and protocol errors while gating HSTS to production HTTPS", async () => {
+    const apiError = await get("/api/stories?metric=unsupported");
+    expect(apiError.status).toBe(400);
+    expectClickjackingHeaders(apiError);
+    expect(apiError.headers.get("strict-transport-security")).toBe(null);
+
+    const protocolError = await worker.fetch!(
+      new Request("https://atlas.example/a2a", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: "bad-method", method: "DeleteEverything", params: {} }),
+      }),
+      { ...env, ENVIRONMENT: "production" },
+      {} as ExecutionContext,
+    );
+    expect(protocolError.status).toBe(200);
+    expect(await protocolError.json()).toMatchObject({ error: { code: -32601 } });
+    expectClickjackingHeaders(protocolError);
+    expect(protocolError.headers.get("strict-transport-security")).toBe("max-age=31536000; includeSubDomains");
   });
 
   it("returns a typed stories envelope", async () => {

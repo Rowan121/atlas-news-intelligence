@@ -81,6 +81,17 @@ function corsValues(request: Request, configured: string | undefined): Record<st
   };
 }
 
+function securityValues(request: Request, environment: string | undefined): Record<string, string> {
+  const url = new URL(request.url);
+  return {
+    "Content-Security-Policy": "frame-ancestors 'none'",
+    "X-Frame-Options": "DENY",
+    ...(environment === "production" && url.protocol === "https:"
+      ? { "Strict-Transport-Security": "max-age=31536000; includeSubDomains" }
+      : {}),
+  };
+}
+
 function parseStoryQuery(url: URL): StoryQuery {
   const metricValue = url.searchParams.get("metric") ?? "normalized";
   if (metricValue !== "raw" && metricValue !== "normalized") {
@@ -123,7 +134,10 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
       const staleAfterSeconds = parseStaleAfter(env.STALE_AFTER_SECONDS);
       const store = dependencies.store ?? new D1TruthStore(env.DB);
 
-      const corsHeaders = corsValues(request, env.CORS_ORIGIN);
+      const corsHeaders = {
+        ...corsValues(request, env.CORS_ORIGIN),
+        ...securityValues(request, env.ENVIRONMENT),
+      };
 
       try {
         if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
@@ -365,7 +379,17 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
 }
 
 function corsHeadersFor(headers: Headers, values: Record<string, string>): void {
-  for (const [name, value] of Object.entries(values)) headers.set(name, value);
+  for (const [name, value] of Object.entries(values)) {
+    if (name === "Content-Security-Policy") {
+      const preserved = (headers.get(name) ?? "")
+        .split(";")
+        .map((directive) => directive.trim())
+        .filter((directive) => directive !== "" && !/^frame-ancestors(?:\s|$)/i.test(directive));
+      headers.set(name, [...preserved, value].join("; "));
+      continue;
+    }
+    headers.set(name, value);
+  }
 }
 
 export default createWorker();
