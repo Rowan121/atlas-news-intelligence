@@ -34,6 +34,7 @@ export const story: StoryDetail = {
     evidence_quote: "The synthetic port authority closed Test Harbor.",
     evidence_start: 0,
     evidence_end: 48,
+    evidence_count: 1,
   },
   articles: [
     {

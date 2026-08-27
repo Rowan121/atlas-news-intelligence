@@ -82,6 +82,23 @@ const fixture = {
 } as const;
 
 describe("HttpNewsIntelligenceClient", () => {
+  it("preserves the browser global as the default fetch receiver", async () => {
+    const originalFetch = globalThis.fetch;
+    const receiverCheckingFetch = vi.fn(function (this: unknown) {
+      expect(this).toBe(globalThis);
+      return Promise.resolve(new Response(JSON.stringify(fixture), { status: 200 }));
+    });
+    globalThis.fetch = receiverCheckingFetch as typeof fetch;
+
+    try {
+      const client = new HttpNewsIntelligenceClient({ baseUrl: "https://atlas.example" });
+      await client.getSnapshot({ window: "24h", prominence: "normalized" });
+      expect(receiverCheckingFetch).toHaveBeenCalledOnce();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("requests the selected window and prominence and validates the response", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(fixture), {

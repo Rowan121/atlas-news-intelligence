@@ -60,7 +60,7 @@ const clusterSchema = z.object({
   sources: z.array(sourceSchema),
 });
 
-const snapshotSchema = z.object({
+export const intelligenceSnapshotSchema = z.object({
   generatedAt: z.iso.datetime(),
   window: z.enum(["6h", "24h", "7d"]),
   health: z.object({
@@ -118,7 +118,7 @@ export class HttpNewsIntelligenceClient implements NewsIntelligenceClient {
   constructor(options: HttpClientOptions = {}) {
     this.baseUrl = resolveBaseUrl(options.baseUrl);
     this.endpointPath = options.endpointPath ?? "/api/v1/intelligence";
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
   }
 
   async getSnapshot({ window, prominence, signal }: SnapshotQuery): Promise<IntelligenceSnapshot> {
@@ -152,7 +152,7 @@ export class HttpNewsIntelligenceClient implements NewsIntelligenceClient {
     }
 
     const payload: unknown = await response.json();
-    const parsed = snapshotSchema.safeParse(payload);
+    const parsed = intelligenceSnapshotSchema.safeParse(payload);
     if (!parsed.success) {
       throw new AtlasApiError(
         "The live intelligence response did not match the published data contract.",

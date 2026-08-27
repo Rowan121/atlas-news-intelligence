@@ -18,6 +18,7 @@ export interface EventLocation {
   evidence_quote: string | null;
   evidence_start: number | null;
   evidence_end: number | null;
+  evidence_count: number;
 }
 
 export interface Article {

@@ -41,6 +41,7 @@ interface LocationRow {
   evidence_quote: string | null;
   evidence_start: number | null;
   evidence_end: number | null;
+  evidence_count: number;
 }
 
 interface ArticleRow extends Article {}
@@ -118,7 +119,9 @@ export class D1TruthStore implements TruthStore {
       .prepare(
         `SELECT location_id, cluster_id, location_type, location_granularity, label, latitude, longitude,
                 country_code, region_code, confidence, evidence_article_id,
-                evidence_quote, evidence_start, evidence_end
+                evidence_quote, evidence_start, evidence_end,
+                (SELECT COUNT(*) FROM story_location_evidence evidence
+                  WHERE evidence.location_id = story_locations.location_id) AS evidence_count
          FROM story_locations
          WHERE location_type = 'event' AND cluster_id IN (${clusters.results.map(() => "?").join(",")})
          ORDER BY confidence DESC`,
@@ -149,7 +152,9 @@ export class D1TruthStore implements TruthStore {
       ).bind(clusterId),
       this.db.prepare(
         `SELECT location_id, location_type, location_granularity, label, latitude, longitude, country_code, region_code,
-                confidence, evidence_article_id, evidence_quote, evidence_start, evidence_end
+                confidence, evidence_article_id, evidence_quote, evidence_start, evidence_end,
+                (SELECT COUNT(*) FROM story_location_evidence evidence
+                  WHERE evidence.location_id = story_locations.location_id) AS evidence_count
          FROM story_locations WHERE cluster_id = ? ORDER BY location_type, confidence DESC`,
       ).bind(clusterId),
       this.db.prepare(

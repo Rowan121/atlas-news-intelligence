@@ -12,3 +12,8 @@ coverage/
 .cotal/
 hack-ws/
 artifacts/*.json
+artifacts/*.sql
+surface/src/contracts.js
+surface/src/contracts.js.map
+surface/src/contracts.d.ts
+surface/src/contracts.d.ts.map

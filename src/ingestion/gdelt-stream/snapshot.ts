@@ -1,7 +1,9 @@
 import type {
   Article,
+  Claim,
   ClusterMembership,
   EventLocation,
+  EventLocationEvidence,
   LocationType,
   PipelineHealth,
   StoryCluster,
@@ -37,6 +39,178 @@ interface JoinedDocument {
   event: GdeltEventRecord & { actionGeo: NonNullable<GdeltEventRecord["actionGeo"]> };
   mention: GdeltMentionRecord;
   gkg: GdeltGkgRecord & { pageTitle: string };
+}
+
+/**
+ * Conservative headline normalization used only to collapse GDELT event ids
+ * that describe the same titled story at the same primary event location.
+ * Location remains a mandatory second gate; title similarity alone never
+ * merges clusters.
+ */
+export function normalizeGdeltHeadline(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function normalizedPrimaryLocation(location: EventLocation): string {
+  return [
+    location.type,
+    location.countryCode?.toUpperCase() ?? "",
+    location.admin1?.toUpperCase() ?? "",
+    normalizeGdeltHeadline(location.name),
+    location.coordinates.latitude.toFixed(5),
+    location.coordinates.longitude.toFixed(5),
+  ].join("|");
+}
+
+export function gdeltDuplicateClusterKey(cluster: StoryCluster): string | undefined {
+  const primary = cluster.eventLocations[0];
+  const title = normalizeGdeltHeadline(cluster.canonicalTitle);
+  if (primary === undefined || title.length === 0) return undefined;
+  return `${title}|${normalizedPrimaryLocation(primary)}`;
+}
+
+function mergeMemberships(memberships: ClusterMembership[]): ClusterMembership[] {
+  const byArticle = new Map<string, ClusterMembership>();
+  for (const candidate of memberships) {
+    const existing = byArticle.get(candidate.articleId);
+    if (existing === undefined) {
+      byArticle.set(candidate.articleId, structuredClone(candidate));
+      continue;
+    }
+    const preferred = candidate.confidence > existing.confidence ? candidate : existing;
+    const matchedArticleIds = [existing.evidence.matchedArticleId, candidate.evidence.matchedArticleId]
+      .filter((value): value is string => value !== undefined)
+      .sort();
+    byArticle.set(candidate.articleId, {
+      articleId: candidate.articleId,
+      confidence: Math.max(existing.confidence, candidate.confidence),
+      evidence: {
+        ...(matchedArticleIds[0] === undefined ? {} : { matchedArticleId: matchedArticleIds[0] }),
+        threshold: Math.min(existing.evidence.threshold, candidate.evidence.threshold),
+        components: structuredClone(preferred.evidence.components),
+        reasons: [...new Set([...existing.evidence.reasons, ...candidate.evidence.reasons])].sort(),
+      },
+    });
+  }
+  return [...byArticle.values()].sort((left, right) => left.articleId.localeCompare(right.articleId));
+}
+
+function evidenceKey(evidence: EventLocationEvidence): string {
+  return [
+    evidence.articleId,
+    evidence.url,
+    evidence.quote,
+    evidence.start ?? "",
+    evidence.end ?? "",
+    evidence.method,
+  ].join("|");
+}
+
+function mergeLocations(locations: EventLocation[]): EventLocation[] {
+  const byLocation = new Map<string, EventLocation>();
+  for (const candidate of locations) {
+    const key = normalizedPrimaryLocation(candidate);
+    const existing = byLocation.get(key);
+    if (existing === undefined) {
+      byLocation.set(key, structuredClone(candidate));
+      continue;
+    }
+    const evidence = new Map<string, EventLocationEvidence>();
+    for (const item of [...existing.evidence, ...candidate.evidence]) evidence.set(evidenceKey(item), item);
+    const preferred = candidate.confidence > existing.confidence ? candidate : existing;
+    byLocation.set(key, {
+      ...structuredClone(preferred),
+      confidence: Math.max(existing.confidence, candidate.confidence),
+      evidence: [...evidence.values()].sort((left, right) => evidenceKey(left).localeCompare(evidenceKey(right))),
+    });
+  }
+  return [...byLocation.values()].sort(
+    (left, right) => right.confidence - left.confidence || normalizedPrimaryLocation(left).localeCompare(normalizedPrimaryLocation(right)),
+  );
+}
+
+function claimEvidenceKey(claim: Claim): string {
+  return `${claim.id}|${claim.text}|${claim.polarity}`;
+}
+
+function mergeClaims(claims: Claim[]): Claim[] {
+  const byClaim = new Map<string, Claim>();
+  for (const candidate of claims) {
+    const key = claimEvidenceKey(candidate);
+    const existing = byClaim.get(key);
+    if (existing === undefined) {
+      byClaim.set(key, structuredClone(candidate));
+      continue;
+    }
+    const evidence = new Map<string, Claim["evidence"][number]>();
+    for (const item of [...existing.evidence, ...candidate.evidence]) {
+      evidence.set([item.articleId, item.url, item.quote, item.start ?? "", item.end ?? ""].join("|"), item);
+    }
+    byClaim.set(key, {
+      ...structuredClone(existing),
+      confidence: Math.max(existing.confidence, candidate.confidence),
+      evidence: [...evidence.values()],
+    });
+  }
+  return [...byClaim.values()].sort((left, right) => claimEvidenceKey(left).localeCompare(claimEvidenceKey(right)));
+}
+
+/**
+ * Merge only exact normalized-title + primary-location duplicates. The output
+ * is stable across input ordering, retains each distinct article and all
+ * membership/location evidence, and leaves prominence empty for corpus-wide
+ * recomputation by the caller.
+ */
+export function mergeDuplicateGdeltClusters(clusters: StoryCluster[]): StoryCluster[] {
+  const groups = new Map<string, StoryCluster[]>();
+  for (const cluster of clusters) {
+    const key = gdeltDuplicateClusterKey(cluster) ?? `unmergeable:${cluster.id}`;
+    const group = groups.get(key) ?? [];
+    group.push(cluster);
+    groups.set(key, group);
+  }
+
+  const merged: StoryCluster[] = [];
+  for (const group of groups.values()) {
+    group.sort((left, right) => left.id.localeCompare(right.id));
+    const canonical = group[0]!;
+    const articlesById = new Map<string, Article>();
+    for (const article of group.flatMap((cluster) => cluster.articles)) {
+      const existing = articlesById.get(article.id);
+      if (
+        existing === undefined
+        || (article.source.providerScore ?? 0) > (existing.source.providerScore ?? 0)
+        || ((article.source.providerScore ?? 0) === (existing.source.providerScore ?? 0)
+          && article.canonicalUrl.localeCompare(existing.canonicalUrl) < 0)
+      ) {
+        articlesById.set(article.id, structuredClone(article));
+      }
+    }
+    const articles = [...articlesById.values()].sort(
+      (left, right) =>
+        (right.source.providerScore ?? 0) - (left.source.providerScore ?? 0)
+        || (right.publishedAt ?? "").localeCompare(left.publishedAt ?? "")
+        || left.canonicalUrl.localeCompare(right.canonicalUrl),
+    );
+    merged.push({
+      ...structuredClone(canonical),
+      id: group.map((cluster) => cluster.id).sort()[0]!,
+      canonicalTitle: canonical.canonicalTitle,
+      firstObservedAt: group.map((cluster) => cluster.firstObservedAt).sort()[0]!,
+      lastObservedAt: group.map((cluster) => cluster.lastObservedAt).sort().at(-1)!,
+      articles,
+      memberships: mergeMemberships(group.flatMap((cluster) => cluster.memberships)),
+      eventLocations: mergeLocations(group.flatMap((cluster) => cluster.eventLocations)),
+      claims: mergeClaims(group.flatMap((cluster) => cluster.claims)),
+      prominence: [],
+    });
+  }
+  return merged.sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function locationType(value: number): LocationType {
@@ -242,13 +416,14 @@ export function buildIntelligenceSnapshot(input: BuildSnapshotInput): Intelligen
       },
     });
   }
-  provisional.sort((left, right) => {
+  const merged = mergeDuplicateGdeltClusters(provisional);
+  merged.sort((left, right) => {
     const leftOutlets = new Set(left.articles.map((article) => article.publisher.id)).size;
     const rightOutlets = new Set(right.articles.map((article) => article.publisher.id)).size;
     return rightOutlets - leftOutlets || right.articles.length - left.articles.length || right.lastObservedAt.localeCompare(left.lastObservedAt);
   });
-  const clustersBeforeCap = provisional.length;
-  const clusters = provisional.slice(0, input.limits.maxClusters);
+  const clustersBeforeCap = merged.length;
+  const clusters = merged.slice(0, input.limits.maxClusters);
   const drafts: ArticleClusterDraft[] = clusters.map((cluster) => ({
     id: cluster.id,
     canonicalTitle: cluster.canonicalTitle,
@@ -260,6 +435,12 @@ export function buildIntelligenceSnapshot(input: BuildSnapshotInput): Intelligen
   }));
   const prominence = computeRegionalProminence(drafts);
   const warnings = parseWarnings(input);
+  const duplicateClustersMerged = provisional.length - merged.length;
+  if (duplicateClustersMerged > 0) {
+    warnings.push(
+      `merged ${duplicateClustersMerged} duplicate GlobalEventID cluster(s) by normalized title and primary event location.`,
+    );
+  }
   if (clustersBeforeCap > clusters.length) warnings.push("cluster cap reached; snapshot is partial.");
   const partial = warnings.some((warning) => warning.includes("cap reached"));
   const health: PipelineHealth = {

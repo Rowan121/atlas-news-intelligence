@@ -13,3 +13,4 @@ export * from "./ingestion/gdelt-stream/parsers.js";
 export * from "./ingestion/gdelt-stream/download.js";
 export * from "./ingestion/gdelt-stream/snapshot.js";
 export * from "./ingestion/gdelt-stream/loader.js";
+export * from "./export/d1-seed.js";

@@ -21,6 +21,43 @@ The implementation follows the official GDELT 2.0/2.1 raw schemas:
 
 Every emitted cluster is validated against Atlas's `StoryCluster` contract. Membership reasons retain the exact event/document joins, the mention confidence, and the `InRawText` gate. Event-location evidence is explicitly marked `provider_event_geotag`.
 
+GDELT can assign more than one `GlobalEventID` to syndicated copies of the same
+story. Atlas conservatively merges only clusters whose Unicode/punctuation-
+normalized headline **and** primary event location match. Every distinct
+article is retained; membership reasons and location-evidence rows are unioned;
+raw and source-normalized prominence are then recomputed over the merged corpus.
+Headline similarity by itself is never a merge gate.
+
+## Local D1 seed export
+
+Convert a successful snapshot into the existing Surface schema without making
+any cloud request:
+
+```bash
+npm run seed:d1 -- \
+  --input artifacts/gdelt-latest.json \
+  --output artifacts/gdelt-latest.sql
+```
+
+Both JSON and SQL artifacts are ignored by Git. The export is pure and
+byte-stable for the same input, SQL-escapes all text, namespaces record ids by
+batch and cluster, records the evidence-backed pipeline run and non-secret Cotal
+receipt, and retains every location-evidence row in
+`story_location_evidence`. Re-running a batch deletes only rows with that
+batch's `ingestion_run_id`; other ingestion runs are untouched.
+
+Cloudflare's file importer provides the atomic transaction. The generated file
+therefore intentionally omits `BEGIN`/`COMMIT`, which would otherwise nest a
+transaction under `wrangler d1 execute --file`. A future, separately approved
+write uses:
+
+```bash
+wrangler d1 execute <database-name> --file artifacts/gdelt-latest.sql
+```
+
+Generating the file does not execute this command, provision D1, authenticate,
+deploy, or schedule ingestion.
+
 ## Safety bounds
 
 - Fetches have abort timeouts, at most three attempts, and bounded exponential/retry-after backoff.

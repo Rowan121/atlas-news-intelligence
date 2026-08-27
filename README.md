@@ -6,7 +6,7 @@ Atlas is an analyst-grade public explorer for current global news. It maps real 
 
 **Built and locally verifiable; not yet deployed.** There is no production URL, production D1 database, or active Runtype surface yet. `surface/wrangler.jsonc` deliberately contains an all-zero D1 ID, so an accidental deploy cannot silently target a guessed database. The external writes still require Rowan's approval using the exact drafts in [`surface/EXTERNAL_PAYLOAD_DRAFTS.md`](surface/EXTERNAL_PAYLOAD_DRAFTS.md).
 
-The live GDELT loader currently produces a validated JSON snapshot. Importing that snapshot into D1 is a separate integration step and is not implied by a successful snapshot run. Tests use explicitly test-only fixtures; product code never substitutes them when live data is absent.
+The live GDELT loader produces a validated JSON snapshot, and the deterministic `seed:d1` bridge converts it into batch-scoped D1 SQL. Applying that SQL to any remote database remains an explicit, approval-gated deployment step. Tests use explicitly test-only fixtures; product code never substitutes them when live data is absent.
 
 ## Architecture
 
@@ -103,6 +103,15 @@ npm run probe:gdelt -- "earthquake"
 ```
 
 Neither command schedules polling, persists to D1, deploys, or fabricates fallback stories. See [`docs/GDELT_STREAM.md`](docs/GDELT_STREAM.md) for the join contract and safety bounds.
+
+### Verified local data bridge
+
+```bash
+npm run snapshot:gdelt -- --output artifacts/gdelt-latest.json
+npm run seed:d1 -- --input artifacts/gdelt-latest.json --output artifacts/gdelt-latest.sql
+```
+
+The first command reads the latest public GDELT stream once. The second performs a local, deterministic conversion into the Surface/D1 schema; it makes no cloud write. See [`docs/GDELT_STREAM.md`](docs/GDELT_STREAM.md) for the join, merge, evidence-retention, and idempotency rules.
 
 ## Truth and uncertainty rules
 

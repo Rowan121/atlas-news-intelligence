@@ -2,6 +2,7 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS story_clusters (
   cluster_id TEXT PRIMARY KEY,
+  ingestion_run_id TEXT NOT NULL REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
   canonical_title TEXT NOT NULL,
   summary TEXT,
   primary_region_code TEXT,
@@ -17,8 +18,9 @@ CREATE TABLE IF NOT EXISTS story_clusters (
 
 CREATE TABLE IF NOT EXISTS articles (
   article_id TEXT PRIMARY KEY,
+  ingestion_run_id TEXT NOT NULL REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
   cluster_id TEXT NOT NULL REFERENCES story_clusters(cluster_id) ON DELETE CASCADE,
-  canonical_url TEXT NOT NULL UNIQUE,
+  canonical_url TEXT NOT NULL,
   source_url TEXT NOT NULL,
   title TEXT NOT NULL,
   publisher_name TEXT NOT NULL,
@@ -32,11 +34,13 @@ CREATE TABLE IF NOT EXISTS articles (
   membership_confidence REAL NOT NULL CHECK (membership_confidence BETWEEN 0 AND 1),
   membership_evidence TEXT NOT NULL,
   content_fingerprint TEXT NOT NULL,
-  updated_at TEXT NOT NULL
+  updated_at TEXT NOT NULL,
+  UNIQUE (cluster_id, canonical_url)
 );
 
 CREATE TABLE IF NOT EXISTS story_locations (
   location_id TEXT PRIMARY KEY,
+  ingestion_run_id TEXT NOT NULL REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
   cluster_id TEXT NOT NULL REFERENCES story_clusters(cluster_id) ON DELETE CASCADE,
   location_type TEXT NOT NULL CHECK (location_type IN ('event', 'mentioned', 'publisher_origin', 'audience_region')),
   location_granularity TEXT NOT NULL CHECK (location_granularity IN ('city', 'admin1', 'country', 'region', 'point', 'unknown')),
@@ -53,8 +57,23 @@ CREATE TABLE IF NOT EXISTS story_locations (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS story_location_evidence (
+  location_evidence_id TEXT PRIMARY KEY,
+  ingestion_run_id TEXT NOT NULL REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
+  location_id TEXT NOT NULL REFERENCES story_locations(location_id) ON DELETE CASCADE,
+  article_id TEXT NOT NULL REFERENCES articles(article_id) ON DELETE CASCADE,
+  source_url TEXT NOT NULL,
+  evidence_quote TEXT NOT NULL,
+  evidence_start INTEGER,
+  evidence_end INTEGER,
+  evidence_method TEXT NOT NULL CHECK (evidence_method IN ('article_text', 'provider_event_geotag', 'manual_confirmed')),
+  updated_at TEXT NOT NULL,
+  UNIQUE (location_id, article_id, source_url, evidence_quote)
+);
+
 CREATE TABLE IF NOT EXISTS story_claims (
   claim_id TEXT PRIMARY KEY,
+  ingestion_run_id TEXT NOT NULL REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
   cluster_id TEXT NOT NULL REFERENCES story_clusters(cluster_id) ON DELETE CASCADE,
   normalized_claim TEXT NOT NULL,
   stance TEXT NOT NULL CHECK (stance IN ('supports', 'disputes', 'unclear')),
@@ -65,6 +84,7 @@ CREATE TABLE IF NOT EXISTS story_claims (
 );
 
 CREATE TABLE IF NOT EXISTS regional_prominence (
+  ingestion_run_id TEXT NOT NULL REFERENCES pipeline_runs(run_id) ON DELETE CASCADE,
   cluster_id TEXT NOT NULL REFERENCES story_clusters(cluster_id) ON DELETE CASCADE,
   region_code TEXT NOT NULL,
   window_start TEXT NOT NULL,
@@ -96,10 +116,13 @@ CREATE TABLE IF NOT EXISTS pipeline_runs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_story_clusters_last_observed ON story_clusters(last_observed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_story_clusters_run ON story_clusters(ingestion_run_id);
 CREATE INDEX IF NOT EXISTS idx_story_clusters_region_raw ON story_clusters(primary_region_code, raw_article_count DESC);
 CREATE INDEX IF NOT EXISTS idx_story_clusters_region_normalized ON story_clusters(primary_region_code, normalized_prominence DESC);
 CREATE INDEX IF NOT EXISTS idx_articles_cluster_published ON articles(cluster_id, published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_articles_publisher_domain ON articles(publisher_domain);
 CREATE INDEX IF NOT EXISTS idx_articles_retrieved ON articles(retrieved_at DESC);
+CREATE INDEX IF NOT EXISTS idx_articles_run ON articles(ingestion_run_id);
 CREATE INDEX IF NOT EXISTS idx_locations_cluster_type ON story_locations(cluster_id, location_type);
+CREATE INDEX IF NOT EXISTS idx_location_evidence_location ON story_location_evidence(location_id);
 CREATE INDEX IF NOT EXISTS idx_claims_cluster ON story_claims(cluster_id);

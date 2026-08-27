@@ -117,7 +117,7 @@ function uiLocation(location: EventLocation): UiLocation {
     latitude: location.latitude,
     longitude: location.longitude,
     confidence: location.confidence,
-    evidenceCount: location.evidence_article_id === null ? 0 : 1,
+    evidenceCount: location.evidence_count,
   };
 }
 

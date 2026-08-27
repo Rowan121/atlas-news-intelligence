@@ -178,6 +178,52 @@ describe("GDELT 2.x stream loader", () => {
     expect(validateIntelligenceSnapshot(snapshot)).toEqual([]);
   });
 
+  it("deterministically merges duplicate event ids and recomputes prominence", () => {
+    const secondUrl = "https://second-wire.example/world/tokyo-event";
+    const snapshot = buildIntelligenceSnapshot({
+      manifest: fixtureManifest(),
+      events: parseEventsTsv(
+        [eventRow({ id: "123456789" }), eventRow({ id: "123456790" })].join("\n"),
+        10,
+      ),
+      mentions: parseMentionsTsv(
+        [
+          mentionRow({ eventId: "123456789", url: ARTICLE_URL, confidence: 92 }),
+          mentionRow({ eventId: "123456790", url: secondUrl, confidence: 88 }),
+        ].join("\n"),
+        10,
+      ),
+      gkg: parseGkgTsv(
+        [
+          gkgRow({ url: ARTICLE_URL, title: "Tokyo leaders meet – live" }),
+          gkgRow({ url: secondUrl, title: "TOKYO leaders meet: live" }),
+        ].join("\n"),
+        10,
+      ),
+      generatedAt: NOW,
+      limits: tinyLimits(),
+      gates: {
+        mentionType: 1,
+        inRawText: true,
+        minimumConfidence: 80,
+        requireActionGeoCoordinates: true,
+        requireGkgPageTitle: true,
+      },
+    });
+
+    expect(snapshot.clusters).toHaveLength(1);
+    expect(snapshot.clusters[0]!.id).toBe("gdelt_event_123456789");
+    expect(snapshot.clusters[0]!.articles).toHaveLength(2);
+    expect(snapshot.clusters[0]!.memberships).toHaveLength(2);
+    expect(snapshot.clusters[0]!.eventLocations[0]!.evidence).toHaveLength(2);
+    expect(snapshot.clusters[0]!.prominence[0]).toMatchObject({
+      raw: { articleCount: 2, outletCount: 2 },
+      normalized: { articleShare: 1, sourceNormalizedShare: 1 },
+    });
+    expect(snapshot.health.warnings.join(" ")).toContain("duplicate GlobalEventID");
+    expect(validateIntelligenceSnapshot(snapshot)).toEqual([]);
+  });
+
   it("enforces web, InRawText, confidence, coordinates, exact GKG, and page-title gates", () => {
     const mentionsText = [
       mentionRow(),
