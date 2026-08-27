@@ -22,6 +22,27 @@ function apiLinks(): string {
   ].join(", ");
 }
 
+function explicitMediaQuality(accept: string, mediaType: string): number | null {
+  for (const entry of accept.split(",")) {
+    const [rawType, ...parameters] = entry.trim().split(";");
+    if (rawType?.toLowerCase() !== mediaType) continue;
+    const qualityParameter = parameters.find((parameter) => parameter.trim().toLowerCase().startsWith("q="));
+    if (qualityParameter === undefined) return 1;
+    const quality = Number(qualityParameter.trim().slice(2));
+    return Number.isFinite(quality) ? Math.max(0, Math.min(1, quality)) : 0;
+  }
+  return null;
+}
+
+function prefersMarkdown(request: Request): boolean {
+  if (new URL(request.url).pathname.endsWith(".md")) return true;
+  const accept = request.headers.get("Accept") ?? "";
+  const markdown = explicitMediaQuality(accept, "text/markdown");
+  if (markdown === null || markdown === 0) return false;
+  const html = explicitMediaQuality(accept, "text/html");
+  return html === null || markdown >= html;
+}
+
 export function attachDiscoveryHeaders(response: Response): Response {
   response.headers.set("Link", apiLinks());
   response.headers.set("X-Content-Type-Options", "nosniff");
@@ -139,8 +160,7 @@ function documentationHtml(origin: string): string {
 
 export function docs(request: Request): Response {
   const origin = new URL(request.url).origin;
-  const accept = request.headers.get("Accept") ?? "";
-  if (accept.includes("text/markdown") || new URL(request.url).pathname.endsWith(".md")) {
+  if (prefersMarkdown(request)) {
     return attachDiscoveryHeaders(text(documentationMarkdown(origin), "text/markdown; charset=utf-8", { headers: CACHE_HEADERS }));
   }
   return attachDiscoveryHeaders(text(documentationHtml(origin), "text/html; charset=utf-8", { headers: CACHE_HEADERS }));
@@ -153,7 +173,6 @@ export function llms(origin: string): Response {
 
 export function integrations(request: Request): Response {
   const origin = new URL(request.url).origin;
-  const accept = request.headers.get("Accept") ?? "";
   const markdown = `# Atlas integration provenance
 
 Atlas uses GDELT as the public current-news backbone and MapLibre for browser mapping. Tavily may enrich retrieval only when the existing configured access is used. Cotal receipts preserve agent coordination provenance; Nebius is used only through existing Cotal platform access. Tenki supplies existing hosted sandboxes. Runtype is the intended product-surface and evaluation plane. Mitosis may preserve workflow provenance where a live receipt exists.
@@ -163,7 +182,7 @@ Sponsor presence is never inferred from configuration alone. A provider counts a
 - [Pipeline health and latest receipt](${origin}/health)
 - [API documentation](${origin}/docs)
 `;
-  if (accept.includes("text/markdown")) {
+  if (prefersMarkdown(request)) {
     return attachDiscoveryHeaders(text(markdown, "text/markdown; charset=utf-8", { headers: CACHE_HEADERS }));
   }
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas integration provenance</title><link rel="canonical" href="${origin}/integrations"></head><body><main><h1>Atlas integration provenance</h1><p>Atlas uses GDELT as its current-news backbone and MapLibre for mapping. Optional sponsor services count as used only when a sanitized live receipt exists; configuration alone is not usage.</p><p>Cotal receipts preserve coordination provenance. Nebius is used only through Cotal. Tavily, Tenki, Runtype, and Mitosis are reported only from real invocations. AIsa and HUD are excluded.</p><ul><li><a href="/health">Pipeline health and latest receipt</a></li><li><a href="/docs">API documentation</a></li></ul></main></body></html>`;
@@ -293,4 +312,3 @@ export function a2aAgentCard(origin: string): Response {
     ],
   }, { headers: CACHE_HEADERS });
 }
-

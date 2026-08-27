@@ -59,6 +59,19 @@ describe("Atlas Worker routes", () => {
     expect(await response.text()).toContain("## Public REST API");
   });
 
+  it("honors explicit Accept quality and never mislabels an HTML fallback", async () => {
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/docs", {
+        headers: { Accept: "text/markdown;q=0, text/html;q=1" },
+      }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    expect(await response.text()).toContain("<!doctype html>");
+  });
+
   it("publishes an RFC 9727 linkset and a matching HEAD relation", async () => {
     const response = await get("/.well-known/api-catalog");
     expect(response.headers.get("content-type")).toContain("application/linkset+json");
