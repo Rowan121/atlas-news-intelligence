@@ -4,6 +4,8 @@
 
 Canonical ledger: `/Users/rowancooper/Documents/ChatGPT/App Project/COORDINATION.md`
 
+GitHub repository: `https://github.com/Rowan121/atlas-news-intelligence`
+
 ## Common preamble — included in every terminal
 
 You are one execution seat in a fenced multi-agent build. The main Codex task is the only coordinator, merger, and human-in-the-loop route. Read `COORDINATION.md` completely before acting and again at the start of every loop. Use Cotal `team.rowan` for receipts and dependency messages. Never contact Rowan directly.
@@ -31,7 +33,7 @@ Target hosted model: **Qwen3.5-397B-A17B**
 
 Branch: `codex/news-data`
 
-Worktree: `<WORKTREE_A>`
+Worktree: `/Users/rowancooper/Documents/ChatGPT/atlas-news-worktrees/data`
 
 Cotal subject: `news.data`
 
@@ -60,7 +62,7 @@ Target hosted model: **Kimi K2.7 Code**
 
 Branch: `codex/news-ui`
 
-Worktree: `<WORKTREE_B>`
+Worktree: `/Users/rowancooper/Documents/ChatGPT/atlas-news-worktrees/ui`
 
 Cotal subject: `news.ui`
 
@@ -91,7 +93,7 @@ Target hosted model: **DeepSeek V4 Pro**
 
 Branch: `codex/news-surface`
 
-Worktree: `<WORKTREE_C>`
+Worktree: `/Users/rowancooper/Documents/ChatGPT/atlas-news-worktrees/surface`
 
 Cotal subject: `news.surface`
 
@@ -122,7 +124,7 @@ Target hosted model: **Hermes 4 405B**
 
 Branch: none; read-only candidate checkout
 
-Workspace: `<READ_ONLY_CANDIDATE>`
+Workspace: `/Users/rowancooper/Documents/ChatGPT/atlas-news-worktrees/verify`
 
 Cotal subject: `news.verify`
 
