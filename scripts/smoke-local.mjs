@@ -17,6 +17,19 @@ const expected = {
 };
 const checks = [];
 
+function assertSecurityHeaders(response) {
+  assert.match(
+    response.headers.get("content-security-policy") ?? "",
+    /(?:^|;)\s*frame-ancestors\s+'none'(?:\s*;|$)/i,
+    "every browser, API, discovery, protocol, asset, and controlled-error response must deny framing",
+  );
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+  assert.equal(
+    response.headers.get("strict-transport-security"),
+    new URL(base).protocol === "https:" ? "max-age=31536000; includeSubDomains" : null,
+  );
+}
+
 function optionalInteger(name) {
   const value = process.env[name];
   if (value === undefined) return undefined;
@@ -35,6 +48,7 @@ async function check(name, route, init, validate) {
     const bytes = Buffer.from(await response.arrayBuffer());
     const text = bytes.toString("utf8");
     const contentType = response.headers.get("content-type") ?? "";
+    assertSecurityHeaders(response);
     await validate({ response, bytes, text, contentType });
     checks.push({
       name,
