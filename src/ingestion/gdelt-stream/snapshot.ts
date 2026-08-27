@@ -9,7 +9,7 @@ import type {
   StoryCluster,
   ValidationIssue,
 } from "../../schema/types.js";
-import { validateStoryCluster } from "../../schema/types.js";
+import { sameStorySourceContext, validateStoryCluster } from "../../schema/types.js";
 import type { ArticleClusterDraft } from "../../clustering/engine.js";
 import { canonicalizeUrl, domainFromUrl, stableId } from "../sources.js";
 import { computeRegionalProminence } from "../../prominence/metrics.js";
@@ -274,6 +274,7 @@ function articleFromJoin(joined: JoinedDocument, generatedAt: string): Article |
       providerRecordId: joined.gkg.recordId,
       providerScore: joined.mention.confidence / 100,
     },
+    sameStory: sameStorySourceContext(),
   };
 }
 

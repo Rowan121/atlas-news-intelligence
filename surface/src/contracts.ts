@@ -21,6 +21,64 @@ export interface EventLocation {
   evidence_count: number;
 }
 
+export interface AssessmentEvidence {
+  articleId: string;
+  url: string;
+  quote: string;
+}
+
+export interface MarketRegion {
+  regionCode: string;
+  label: string;
+  coordinates?: { latitude: number; longitude: number };
+}
+
+export interface AudienceRegionExposure extends MarketRegion {
+  share?: number;
+}
+
+export interface UnknownAssessment {
+  status: "unknown";
+  value: null;
+  confidence: null;
+  method: "unavailable";
+  evidence: [];
+  reason: string;
+}
+
+export interface ObservedAssessment<T, Method extends string> {
+  status: "observed";
+  value: T;
+  confidence: number;
+  method: Method;
+  evidence: AssessmentEvidence[];
+  reason: null;
+}
+
+export type PublisherOriginAssessment =
+  | UnknownAssessment
+  | ObservedAssessment<MarketRegion, "provider_metadata" | "publisher_registry">;
+export type CoverageMarketsAssessment =
+  | UnknownAssessment
+  | ObservedAssessment<MarketRegion[], "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed">;
+export type AudienceExposureAssessment =
+  | UnknownAssessment
+  | ObservedAssessment<AudienceRegionExposure[], "first_party_audience_telemetry" | "provider_audience_measurement" | "manual_confirmed">;
+export type FramingAssessment =
+  | UnknownAssessment
+  | ObservedAssessment<"supports" | "disputes" | "straight_report" | "mixed" | "unclear", "claim_stance_comparison" | "model_analysis" | "manual_confirmed">;
+export type ToneAssessment =
+  | UnknownAssessment
+  | ObservedAssessment<"positive" | "negative" | "neutral" | "mixed" | "unclear", "model_analysis" | "manual_confirmed">;
+
+export interface SameStorySourceContext {
+  publisherOrigin: PublisherOriginAssessment;
+  coverageMarkets: CoverageMarketsAssessment;
+  audienceExposure: AudienceExposureAssessment;
+  framing: FramingAssessment;
+  tone: ToneAssessment;
+}
+
 export interface Article {
   article_id: string;
   canonical_url: string;
@@ -28,14 +86,13 @@ export interface Article {
   title: string;
   publisher_name: string;
   publisher_domain: string;
-  publisher_origin_country: string | null;
-  audience_region_code: string | null;
   language: string;
   published_at: IsoTimestamp;
   retrieved_at: IsoTimestamp;
   evidence_snippet: string | null;
   membership_confidence: number;
   membership_evidence: string;
+  same_story: SameStorySourceContext;
 }
 
 export interface ClaimEvidence {
@@ -48,13 +105,18 @@ export interface ClaimEvidence {
 }
 
 export interface RegionalProminence {
+  basis: "event_location";
   region_code: string;
   window_start: IsoTimestamp;
   window_end: IsoTimestamp;
   raw_article_count: number;
   unique_publisher_count: number;
   regional_source_volume: number;
+  regional_outlet_count: number;
   normalized_score: number;
+  article_share: number;
+  outlet_share: number;
+  source_normalized_share: number;
   formula_version: string;
   computed_at: IsoTimestamp;
 }

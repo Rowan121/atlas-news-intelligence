@@ -17,7 +17,7 @@ The implementation follows the official GDELT 2.0/2.1 raw schemas:
 3. Retain primary web mentions only: `MentionType = 1`, `InRawText = 1`, `Confidence >= 80`, and an Events `ActionGeo` with valid coordinates.
 4. Join `Mentions.MentionIdentifier = GKG.DocumentIdentifier` exactly, require GKG source collection `1` (WEB), and require a real `<PAGE_TITLE>` from the GKG Extras field.
 5. Use Events columns 52–59 (one-based) for the event location. The `ActionGeo_CountryCode` value is GDELT's documented FIPS10-4/GENC-transition value, not silently relabeled as ISO-3166.
-6. Use GKG `SourceCommonName` plus the URL domain for publisher metadata. Publisher location is never inferred and never substituted for event location.
+6. Use GKG `SourceCommonName` plus the URL domain for publisher identity. Publisher location is never inferred and never substituted for event location.
 
 Every emitted cluster is validated against Atlas's `StoryCluster` contract. Membership reasons retain the exact event/document joins, the mention confidence, and the `InRawText` gate. Event-location evidence is explicitly marked `provider_event_geotag`.
 
@@ -27,6 +27,14 @@ normalized headline **and** primary event location match. Every distinct
 article is retained; membership reasons and location-evidence rows are unioned;
 raw and source-normalized prominence are then recomputed over the merged corpus.
 Headline similarity by itself is never a merge gate.
+
+The raw stream does not provide verified outlet coverage markets, actual
+audience geography, framing, or tone. Atlas emits typed unknown assessments for
+all four rather than inferring them from `ActionGeo`, language, publisher name,
+or domain. `ActionGeo` remains cited provider event-geotag evidence; when a
+cluster has multiple cited event-location candidates, the Surface selects one
+primary deterministically by confidence, evidence count, then location id and
+retains the remaining candidates for inspection.
 
 ## Incomplete latest-batch recovery
 

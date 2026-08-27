@@ -17,11 +17,22 @@ describe("GDELT snapshot to D1 seed", () => {
     expect(dataset.clusters[0]!.articles).toHaveLength(2);
     expect(dataset.clusters[0]!.locationEvidence).toHaveLength(2);
     expect(dataset.clusters[0]!.prominence[0]).toMatchObject({
+      basis: "event_location",
       raw_article_count: 2,
       unique_publisher_count: 2,
       regional_source_volume: 2,
+      regional_outlet_count: 2,
       normalized_score: 1,
+      source_normalized_share: 1,
     });
+    expect(dataset.clusters[0]!.articles[0]!.same_story).toMatchObject({
+      coverageMarkets: { status: "unknown", value: null },
+      audienceExposure: { status: "unknown", value: null },
+      framing: { status: "unknown", value: null },
+      tone: { status: "unknown", value: null },
+    });
+    expect(dataset.clusters[0]!.story.articles[0]).not.toHaveProperty("audience_region_code");
+    expect(dataset.clusters[0]!.story.articles[0]).not.toHaveProperty("publisher_origin_country");
     expect(dataset.clusters[0]!.story.membership_explanation).toContain("1320000001");
     expect(dataset.clusters[0]!.story.membership_explanation).toContain("1320000002");
     expect(dataset.run).toMatchObject({
@@ -48,6 +59,9 @@ describe("GDELT snapshot to D1 seed", () => {
     expect(first).toContain("DELETE FROM articles WHERE ingestion_run_id = 'gdelt:20260827063000';");
     expect(first).not.toMatch(/DELETE FROM [a-z_]+;/);
     expect(first).toContain("City''s flood response");
+    expect(first).toContain("same_story_json");
+    expect(first).toContain("source_normalized_share");
+    expect(first).toContain("'event_location'");
     expect(first).toContain("atlas_data");
   });
 
@@ -74,7 +88,44 @@ describe("GDELT snapshot to D1 seed", () => {
     expect(db.prepare("SELECT COUNT(*) AS count FROM story_clusters").get()).toEqual({ count: 1 });
     expect(db.prepare("SELECT COUNT(*) AS count FROM articles").get()).toEqual({ count: 2 });
     expect(db.prepare("SELECT COUNT(*) AS count FROM story_location_evidence").get()).toEqual({ count: 2 });
+    expect(db.prepare("SELECT basis, regional_outlet_count, source_normalized_share FROM regional_prominence").get())
+      .toEqual({ basis: "event_location", regional_outlet_count: 2, source_normalized_share: 1 });
+    const sameStory = db.prepare("SELECT same_story_json FROM articles LIMIT 1").get() as { same_story_json: string };
+    expect(JSON.parse(sameStory.same_story_json)).toMatchObject({ audienceExposure: { status: "unknown" } });
     expect(db.prepare("SELECT COUNT(*) AS count FROM pipeline_runs WHERE run_id = 'gdelt:other-batch'").get()).toEqual({ count: 1 });
+    db.close();
+  });
+
+  it("migrates legacy rows to explicit unknown source context without fabricating prominence components", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec(`
+      CREATE TABLE articles (article_id TEXT PRIMARY KEY);
+      CREATE TABLE regional_prominence (
+        unique_publisher_count INTEGER NOT NULL,
+        formula_version TEXT NOT NULL
+      );
+      INSERT INTO articles (article_id) VALUES ('legacy-article');
+      INSERT INTO regional_prominence (unique_publisher_count, formula_version)
+      VALUES (3, 'atlas-regional-prominence-v1');
+    `);
+    db.exec(readFileSync(
+      new URL("../surface/schema/migrations/0002_same_story.sql", import.meta.url),
+      "utf8",
+    ));
+
+    const article = db.prepare("SELECT same_story_json FROM articles").get() as { same_story_json: string };
+    expect(JSON.parse(article.same_story_json)).toMatchObject({
+      coverageMarkets: { status: "unknown", value: null },
+      audienceExposure: { status: "unknown", value: null },
+    });
+    expect(db.prepare(`SELECT regional_outlet_count, article_share, source_normalized_share,
+      basis, formula_version FROM regional_prominence`).get()).toEqual({
+      regional_outlet_count: 3,
+      article_share: 0,
+      source_normalized_share: 0,
+      basis: "event_location",
+      formula_version: "atlas-regional-prominence-v1-legacy-components-unavailable",
+    });
     db.close();
   });
 });

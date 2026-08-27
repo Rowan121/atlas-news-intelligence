@@ -21,6 +21,8 @@ import { stableId } from "../ingestion/sources.js";
 export interface SeedArticle extends SurfaceArticle {
   ingestion_run_id: string;
   cluster_id: string;
+  publisher_origin_country: string | null;
+  audience_region_code: string | null;
   content_fingerprint: string;
   updated_at: string;
 }
@@ -156,6 +158,7 @@ function surfaceArticles(
         evidence_snippet: representativeSnippet(cluster, article.id),
         membership_confidence: membership.confidence,
         membership_evidence: JSON.stringify(membership.evidence),
+        same_story: structuredClone(article.sameStory),
         content_fingerprint: contentFingerprint(article),
         updated_at: generatedAt,
       };
@@ -266,13 +269,18 @@ function surfaceProminence(
     .map((entry) => ({
       ingestion_run_id: runId,
       cluster_id: clusterId,
+      basis: entry.basis,
       region_code: entry.regionKey,
       window_start: cluster.firstObservedAt,
       window_end: cluster.lastObservedAt,
       raw_article_count: entry.raw.articleCount,
       unique_publisher_count: entry.raw.outletCount,
       regional_source_volume: entry.normalized.denominators.regionalArticleMemberships,
+      regional_outlet_count: entry.normalized.denominators.regionalOutlets,
       normalized_score: entry.normalized.score,
+      article_share: entry.normalized.articleShare,
+      outlet_share: entry.normalized.outletShare,
+      source_normalized_share: entry.normalized.sourceNormalizedShare,
       formula_version: "atlas-regional-prominence-v1",
       computed_at: generatedAt,
     }));
@@ -331,7 +339,15 @@ export function convertSnapshotToD1(snapshot: IntelligenceSnapshot): D1SeedDatas
         })),
       ),
       primary_event_location: primaryLocation,
-      articles: articles.map(({ ingestion_run_id: _run, cluster_id: _cluster, content_fingerprint: _fingerprint, updated_at: _updated, ...article }) => article),
+      articles: articles.map(({
+        ingestion_run_id: _run,
+        cluster_id: _cluster,
+        publisher_origin_country: _legacyPublisherOrigin,
+        audience_region_code: _legacyAudienceRegion,
+        content_fingerprint: _fingerprint,
+        updated_at: _updated,
+        ...article
+      }) => article),
       locations: convertedLocations.locations.map(({ ingestion_run_id: _run, cluster_id: _cluster, updated_at: _updated, ...location }) => location),
       claims: claims.map(({ ingestion_run_id: _run, cluster_id: _cluster, updated_at: _updated, ...claim }) => claim),
       regional_prominence: prominence.map(({ ingestion_run_id: _run, cluster_id: _cluster, ...entry }) => entry),
@@ -510,14 +526,14 @@ export function renderD1Seed(dataset: D1SeedDataset): string {
         "article_id", "ingestion_run_id", "cluster_id", "canonical_url", "source_url", "title",
         "publisher_name", "publisher_domain", "publisher_origin_country", "audience_region_code",
         "language", "published_at", "retrieved_at", "evidence_snippet", "membership_confidence",
-        "membership_evidence", "content_fingerprint", "updated_at",
+        "membership_evidence", "same_story_json", "content_fingerprint", "updated_at",
       ],
       cluster.articles.map((article) => [
         article.article_id, article.ingestion_run_id, article.cluster_id, article.canonical_url,
         article.source_url, article.title, article.publisher_name, article.publisher_domain,
         article.publisher_origin_country, article.audience_region_code, article.language,
         article.published_at, article.retrieved_at, article.evidence_snippet,
-        article.membership_confidence, article.membership_evidence, article.content_fingerprint,
+        article.membership_confidence, article.membership_evidence, JSON.stringify(article.same_story), article.content_fingerprint,
         article.updated_at,
       ]),
     ));
@@ -565,12 +581,14 @@ export function renderD1Seed(dataset: D1SeedDataset): string {
       [
         "ingestion_run_id", "cluster_id", "region_code", "window_start", "window_end",
         "raw_article_count", "unique_publisher_count", "regional_source_volume",
-        "normalized_score", "formula_version", "computed_at",
+        "regional_outlet_count", "normalized_score", "article_share", "outlet_share",
+        "source_normalized_share", "basis", "formula_version", "computed_at",
       ],
       cluster.prominence.map((entry) => [
         entry.ingestion_run_id, entry.cluster_id, entry.region_code, entry.window_start,
         entry.window_end, entry.raw_article_count, entry.unique_publisher_count,
-        entry.regional_source_volume, entry.normalized_score, entry.formula_version,
+        entry.regional_source_volume, entry.regional_outlet_count, entry.normalized_score,
+        entry.article_share, entry.outlet_share, entry.source_normalized_share, entry.basis, entry.formula_version,
         entry.computed_at,
       ]),
     ));

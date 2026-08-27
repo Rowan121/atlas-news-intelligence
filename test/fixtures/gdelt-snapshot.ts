@@ -1,4 +1,4 @@
-import type { StoryCluster } from "../../src/schema/types.js";
+import { sameStorySourceContext, type StoryCluster } from "../../src/schema/types.js";
 import type { IntelligenceSnapshot } from "../../src/ingestion/gdelt-stream/types.js";
 
 const generatedAt = "2026-08-27T06:35:00.000Z";
@@ -25,6 +25,7 @@ function cluster(
       publishedAt: "2026-08-27T06:30:00.000Z",
       retrievedAt: generatedAt,
       source: { provider: "gdelt", providerRecordId: `${eventId}-1`, providerScore: confidence },
+      sameStory: sameStorySourceContext(),
     }],
     memberships: [{
       articleId,
@@ -58,6 +59,7 @@ function cluster(
     }],
     claims: [],
     prominence: [{
+      basis: "event_location",
       regionKey: "TS",
       regionName: "TS",
       raw: { articleCount: 1, outletCount: 1 },

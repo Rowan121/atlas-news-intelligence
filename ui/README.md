@@ -17,7 +17,15 @@ local development, Vite proxies `/api` to `ATLAS_API_PROXY` (default
 Liberty style.
 
 The runtime validator in `src/api.ts` is the canonical UI-side contract. It keeps
-event locations separate from publisher origins and refuses malformed records. A
+event locations, publisher origins, cited outlet coverage markets, and measured
+audience exposure as separate dimensions and refuses malformed records. Source
+framing/tone and cluster conflict/omission signals carry an observed/unknown or
+assessed/not-assessed status with confidence, method, evidence, and reason.
+Event-region prominence declares its basis and denominators; coverage heat is
+unavailable unless source records contain cited coverage-market evidence. A
+coverage-heat coordinate remains null unless that same market assessment
+supplied coordinates with confidence, method, and evidence. Event markers and
+publisher origins are never coordinate fallbacks. A
 missing endpoint renders a visible connection-pending state. It never falls back to
 mock news; deterministic records live only in test files.
 

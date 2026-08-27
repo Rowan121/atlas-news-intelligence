@@ -65,6 +65,7 @@ export function computeRegionalProminence(
       }
       const sourceNormalizedShare = region.outlets.size === 0 ? 0 : perOutletShare / region.outlets.size;
       entries.push({
+        basis: "event_location",
         regionKey,
         regionName: region.name || fallbackName,
         raw: {

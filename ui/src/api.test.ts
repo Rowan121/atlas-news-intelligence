@@ -1,5 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
-import { AtlasApiError, HttpNewsIntelligenceClient } from "./api";
+import { AtlasApiError, HttpNewsIntelligenceClient, intelligenceSnapshotSchema } from "./api";
+
+const unknown = (reason: string) => ({
+  status: "unknown" as const,
+  value: null,
+  confidence: null,
+  method: "unavailable" as const,
+  evidence: [] as [],
+  reason,
+});
 
 const fixture = {
   generatedAt: "2026-08-27T01:00:00.000Z",
@@ -41,11 +50,35 @@ const fixture = {
           longitude: 20,
           confidence: 0.9,
           evidenceCount: 2,
+          isPrimary: true,
         },
       ],
       primaryRegionId: "region-test",
       rawProminence: 12,
       normalizedProminence: 0.65,
+      prominence: {
+        basis: "event_location",
+        caveat: "Event geography, not audience reach.",
+        byRegion: [{
+          regionId: "region-test",
+          regionLabel: "Test region",
+          raw: { articleCount: 12, outletCount: 2 },
+          normalized: {
+            score: 0.65,
+            articleShare: 0.6,
+            outletShare: 0.5,
+            sourceNormalizedShare: 0.7,
+            denominators: { regionalArticleMemberships: 20, regionalOutlets: 4 },
+            formulaVersion: "atlas-regional-prominence-v1",
+          },
+        }],
+      },
+      coverageHeat: {
+        status: "unavailable",
+        basis: "coverage_market",
+        markets: [],
+        reason: "No evidence-backed coverage-market metadata.",
+      },
       articleCount: 2,
       publisherCount: 2,
       languageCount: 1,
@@ -53,21 +86,40 @@ const fixture = {
       lastObservedAt: "2026-08-27T00:58:00.000Z",
       membershipConfidence: 0.88,
       signals: {
-        conflict: false,
-        underreported: false,
-        conflictSummary: null,
-        undercoverageSummary: null,
+        conflict: {
+          status: "not_assessed",
+          confidence: null,
+          method: "unavailable",
+          summary: null,
+          evidence: [],
+          reason: "No evidence-backed claims.",
+        },
+        omission: {
+          status: "not_assessed",
+          confidence: null,
+          method: "unavailable",
+          summary: null,
+          evidence: [],
+          reason: "No regional baseline.",
+        },
       },
       sources: [
         {
           id: "source-test",
           publisher: "Fixture Publisher",
+          publisherDomain: "fixture.example",
           publisherOrigin: {
-            label: "Publisher test origin",
-            countryCode: "PO",
-            latitude: null,
-            longitude: null,
+            status: "observed",
+            value: { regionCode: "PO", label: "Publisher test origin" },
+            confidence: 0.8,
+            method: "publisher_registry",
+            evidence: [],
+            reason: null,
           },
+          coverageMarkets: unknown("No verified coverage markets."),
+          audienceExposure: unknown("No measured audience geography."),
+          framing: unknown("No framing analysis."),
+          tone: unknown("No tone analysis."),
           articleTitle: "Fixture article",
           url: "https://example.com/test-fixture",
           language: "en",
@@ -100,6 +152,8 @@ describe("HttpNewsIntelligenceClient", () => {
   });
 
   it("requests the selected window and prominence and validates the response", async () => {
+    const fixtureValidation = intelligenceSnapshotSchema.safeParse(fixture);
+    expect(fixtureValidation.success, fixtureValidation.error?.message).toBe(true);
     const fetchImpl = vi.fn().mockResolvedValue(
       new Response(JSON.stringify(fixture), {
         status: 200,

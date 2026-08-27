@@ -1,10 +1,19 @@
 # Lane A — Atlas/Data
 
-State: INTEGRATED — LIVE STREAM VERIFIED
+State: INTEGRATED — SAME-STORY CONTRACT VERIFIED LOCALLY
 
 ## Current contract
 
-Deliver the smallest real Atlas truth layer: canonical article/cluster/location/claim schema, live-source clients, evidence-backed event geolocation, explainable hybrid clustering, source-normalized regional prominence, and a validated 24-hour truth slice.
+Deliver the smallest real Atlas truth layer: canonical article/cluster/location/claim schema, live-source clients, evidence-backed event geolocation, explainable hybrid clustering, source-normalized regional prominence, a validated 24-hour truth slice, and a truthful cross-regional SAME-STORY comparison contract.
+
+## SAME-STORY integration decision
+
+- Event location, publisher origin, outlet coverage market, and measured audience exposure are separate fields and never proxy for one another.
+- Source comparison assessments use observed/unknown discriminated records carrying value, confidence, method, evidence, and reason.
+- GDELT coverage-market, audience, framing, and tone values remain unknown because the current raw stream does not supply defensible evidence for them.
+- Event-region prominence declares `basis: event_location`, retains raw and source-normalized components and denominators, and explicitly disclaims audience reach.
+- Coverage heat is computed only from observed coverage-market assessments; otherwise it is unavailable. Conflict requires opposed cited claims from distinct publishers; omission is not assessed without a regional baseline.
+- Surface collapses duplicate summary rows by cluster id and chooses one primary event-location candidate by confidence, evidence count, then stable location id while retaining other cited candidates.
 
 ## Receipts
 

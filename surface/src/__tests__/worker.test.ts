@@ -184,9 +184,184 @@ describe("Atlas Worker routes", () => {
         id: story.cluster_id,
         primaryRegionId: "TEST-EU",
         eventLocations: [{ locationType: "city", evidenceCount: 1 }],
-        sources: [{ publisher: "Fixture Wire", claimPosition: "reports" }],
+        prominence: {
+          basis: "event_location",
+          byRegion: [{
+            normalized: {
+              sourceNormalizedShare: 0.4,
+              denominators: { regionalArticleMemberships: 5, regionalOutlets: 3 },
+            },
+          }],
+        },
+        coverageHeat: { status: "unavailable", basis: "coverage_market", markets: [] },
+        signals: {
+          conflict: { status: "not_assessed" },
+          omission: { status: "not_assessed" },
+        },
+        sources: [{
+          publisher: "Fixture Wire",
+          claimPosition: "reports",
+          publisherOrigin: { status: "observed", value: { regionCode: "ZZ" } },
+          coverageMarkets: { status: "unknown", value: null },
+          audienceExposure: { status: "unknown", value: null },
+          framing: { status: "unknown", value: null },
+          tone: { status: "unknown", value: null },
+        }],
       }],
     });
+  });
+
+  it("builds SAME-STORY coverage heat and conflict only from cited cross-publisher evidence", async () => {
+    const compared = structuredClone(story);
+    const first = compared.articles[0]!;
+    first.same_story.coverageMarkets = {
+      status: "observed",
+      value: [
+        { regionCode: "TEST-NA", label: "Test North" },
+        {
+          regionCode: "TEST-EU",
+          label: "Test Europe",
+          coordinates: { latitude: 48.8, longitude: 2.3 },
+        },
+      ],
+      confidence: 0.9,
+      method: "provider_coverage_metadata",
+      evidence: [{ articleId: first.article_id, url: first.canonical_url, quote: "Fixture coverage metadata." }],
+      reason: null,
+    };
+    compared.articles.push({
+      ...structuredClone(first),
+      article_id: "test-article-2",
+      canonical_url: "https://second.example.invalid/test-only/article-2",
+      source_url: "https://second.example.invalid/test-only/article-2",
+      publisher_name: "Second Fixture Wire",
+      publisher_domain: "second.example.invalid",
+      same_story: {
+        ...structuredClone(first.same_story),
+        publisherOrigin: {
+          status: "observed",
+          value: { regionCode: "YY", label: "Second synthetic origin" },
+          confidence: 0.8,
+          method: "publisher_registry",
+          evidence: [],
+          reason: null,
+        },
+        coverageMarkets: {
+          status: "observed",
+          value: [{ regionCode: "TEST-EU", label: "Test Europe" }],
+          confidence: 0.9,
+          method: "provider_coverage_metadata",
+          evidence: [{
+            articleId: "test-article-2",
+            url: "https://second.example.invalid/test-only/article-2",
+            quote: "Fixture coverage metadata.",
+          }],
+          reason: null,
+        },
+      },
+    });
+    compared.claims = [
+      {
+        claim_id: "claim-support",
+        normalized_claim: "the harbor is closed",
+        stance: "supports",
+        confidence: 0.9,
+        evidence_article_id: first.article_id,
+        evidence_quote: "The harbor is closed.",
+      },
+      {
+        claim_id: "claim-dispute",
+        normalized_claim: "the harbor is closed",
+        stance: "disputes",
+        confidence: 0.8,
+        evidence_article_id: "test-article-2",
+        evidence_quote: "The harbor remains open.",
+      },
+    ];
+    store.stories = [compared];
+
+    const response = await get("/api/v1/intelligence?window=24h&prominence=normalized");
+    const body = await response.json() as {
+      clusters: Array<{
+        coverageHeat: unknown;
+        signals: unknown;
+        sources: unknown[];
+      }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.clusters[0]).toMatchObject({
+      coverageHeat: {
+        status: "observed",
+        basis: "coverage_market",
+        markets: [
+          {
+            regionCode: "TEST-EU",
+            rawArticleCount: 2,
+            uniquePublisherCount: 2,
+            sourceNormalizedShare: 0.75,
+            coordinates: {
+              latitude: 48.8,
+              longitude: 2.3,
+              confidence: 0.9,
+              method: "provider_coverage_metadata",
+            },
+          },
+          {
+            regionCode: "TEST-NA",
+            rawArticleCount: 1,
+            uniquePublisherCount: 1,
+            sourceNormalizedShare: 0.25,
+            coordinates: null,
+          },
+        ],
+      },
+      signals: {
+        conflict: { status: "detected", confidence: 0.8, method: "claim_stance_comparison" },
+        omission: { status: "not_assessed", method: "unavailable" },
+      },
+      sources: [
+        { framing: { status: "observed", value: "supports" }, audienceExposure: { status: "unknown" } },
+        { framing: { status: "observed", value: "disputes" }, audienceExposure: { status: "unknown" } },
+      ],
+    });
+  });
+
+  it("collapses duplicate summary ids and chooses one deterministic evidence-ranked event anchor", async () => {
+    const multiLocation = structuredClone(story);
+    multiLocation.locations.push({
+      ...structuredClone(multiLocation.locations[0]!),
+      location_id: "test-location-stronger",
+      label: "Stronger cited event location",
+      region_code: "TEST-PRIMARY",
+      latitude: 35,
+      longitude: 45,
+      confidence: 0.95,
+      evidence_count: 2,
+    });
+    store.stories = [multiLocation, structuredClone(multiLocation)];
+
+    const response = await get("/api/v1/intelligence?window=24h&prominence=normalized");
+    const body = await response.json() as {
+      health: { message: string | null };
+      clusters: Array<{
+        id: string;
+        primaryRegionId: string;
+        eventLocations: Array<{ id: string; isPrimary: boolean }>;
+      }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.clusters.length).toBe(1);
+    expect(body.clusters[0]).toMatchObject({
+      id: story.cluster_id,
+      primaryRegionId: "TEST-PRIMARY",
+      eventLocations: [
+        { id: "test-location-stronger", isPrimary: true },
+        { id: "test-location-event", isPrimary: false },
+      ],
+    });
+    expect(body.health.message).toContain("duplicate cluster summary row");
   });
 
   it("translates a seven-day raw intelligence query into the truth-store window", async () => {

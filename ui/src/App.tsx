@@ -140,7 +140,7 @@ function StoryCard({
   mode: ProminenceMode;
   onSelect: () => void;
 }) {
-  const location = cluster.eventLocations[0];
+  const location = cluster.eventLocations.find((candidate) => candidate.isPrimary) ?? cluster.eventLocations[0];
   return (
     <button type="button" className="story-card" onClick={onSelect}>
       <span className="story-rank" aria-label={`Prominence ${formatProminence(cluster, mode)}`}>
@@ -154,10 +154,10 @@ function StoryCard({
         <strong>{cluster.canonicalTitle}</strong>
         {cluster.summary && <span className="story-summary">{cluster.summary}</span>}
         <span className="signal-row">
-          {cluster.signals.conflict && (
+          {cluster.signals.conflict.status === "detected" && (
             <span className="signal-badge signal-conflict"><Scale size={13} /> Claims differ</span>
           )}
-          {cluster.signals.underreported && (
+          {cluster.signals.omission.status === "detected" && (
             <span className="signal-badge signal-gap"><ShieldAlert size={13} /> Coverage gap</span>
           )}
           <span className="confidence-badge">
@@ -171,18 +171,22 @@ function StoryCard({
 }
 
 function ToneBar({ source }: { source: SourceCoverage }) {
-  // Claim stance is not sentiment. Until the evidence-backed framing contract
-  // supplies a score, the UI states that the assessment is unavailable.
+  const value = source.tone.status === "observed" ? source.tone.value : "unknown";
+  const positions = { negative: 8, mixed: 50, neutral: 50, unclear: 50, positive: 92, unknown: 50 } as const;
+  const label = source.tone.status === "observed"
+    ? `${source.tone.value.replace("_", " ")} · ${Math.round(source.tone.confidence * 100)}% confidence`
+    : "Tone not assessed";
   return (
-    <div className="tone-block" aria-label={`Framing tone for ${source.publisher} has not been assessed`}>
+    <div className="tone-block" aria-label={`Coverage tone for ${source.publisher}: ${label}`}>
       <div className="tone-label-row">
         <span>Critical / negative</span>
-        <strong>Framing not assessed</strong>
+        <strong>{label}</strong>
         <span>Supportive / positive</span>
       </div>
-      <div className="tone-track is-unknown">
-        <span className="tone-marker" style={{ left: "50%" }} />
+      <div className={`tone-track${source.tone.status === "observed" ? "" : " is-unknown"}`}>
+        <span className="tone-marker" style={{ left: `${positions[value]}%` }} />
       </div>
+      {source.tone.status === "observed" && <small className="assessment-method">Method: {source.tone.method.replaceAll("_", " ")}</small>}
     </div>
   );
 }
@@ -190,21 +194,34 @@ function ToneBar({ source }: { source: SourceCoverage }) {
 function SourceVariantCard({ source }: { source: SourceCoverage }) {
   const brand = publisherColor(source.publisher);
   const cardStyle = { "--publisher-color": brand } as CSSProperties;
+  const publisherOrigin = source.publisherOrigin.status === "observed"
+    ? source.publisherOrigin.value.label
+    : "Not verified";
+  const coverageMarkets = source.coverageMarkets.status === "observed"
+    ? source.coverageMarkets.value.map((market) => market.label).join(", ")
+    : "Not evidenced in this record";
+  const audienceExposure = source.audienceExposure.status === "observed"
+    ? source.audienceExposure.value.map((market) => `${market.label}${market.share === undefined ? "" : ` (${Math.round(market.share * 100)}%)`}`).join(", ")
+    : "Not measured";
+  const framing = source.framing.status === "observed"
+    ? `${source.framing.value.replaceAll("_", " ")} · ${Math.round(source.framing.confidence * 100)}% confidence`
+    : "Not assessed";
   return (
     <article className="source-variant-card" style={cardStyle}>
       <header className="source-identity">
         <span className="publisher-mark" aria-hidden="true">{publisherInitials(source.publisher)}</span>
         <span>
           <strong>{source.publisher}</strong>
-          <small>Publisher origin: {source.publisherOrigin?.label ?? "not verified"}</small>
+          <small>Publisher origin: {publisherOrigin}</small>
         </span>
         <span className="source-language">{source.language.toLocaleUpperCase()}</span>
       </header>
       <h3>{source.articleTitle}</h3>
       {source.excerpt && <p className="source-excerpt">{source.excerpt}</p>}
       <dl className="geography-facts">
-        <div><dt>Coverage market</dt><dd>Not evidenced in this record</dd></div>
-        <div><dt>Audience exposure</dt><dd>Not measured</dd></div>
+        <div><dt>Coverage market</dt><dd>{coverageMarkets}</dd></div>
+        <div><dt>Audience exposure</dt><dd>{audienceExposure}</dd></div>
+        <div><dt>Framing</dt><dd>{framing}</dd></div>
       </dl>
       <ToneBar source={source} />
       <footer>
@@ -218,7 +235,7 @@ function SourceVariantCard({ source }: { source: SourceCoverage }) {
 }
 
 function FocusedStory({ cluster }: { cluster: StoryCluster }) {
-  const location = cluster.eventLocations[0];
+  const location = cluster.eventLocations.find((candidate) => candidate.isPrimary) ?? cluster.eventLocations[0];
   return (
     <article className="focused-story-card" aria-label="Selected story">
       <span className="mode-chip">Selected same-story cluster</span>
@@ -232,6 +249,12 @@ function FocusedStory({ cluster }: { cluster: StoryCluster }) {
       <p className="truth-caption">
         The event location anchors the story. Heat appears only from separately evidenced coverage markets; it never represents reader location by assumption.
       </p>
+      {(cluster.signals.conflict.status === "detected" || cluster.signals.omission.status === "detected") && (
+        <div className="focused-signal-summary">
+          {cluster.signals.conflict.status === "detected" && <span>{cluster.signals.conflict.summary}</span>}
+          {cluster.signals.omission.status === "detected" && <span>{cluster.signals.omission.summary}</span>}
+        </div>
+      )}
     </article>
   );
 }
@@ -273,9 +296,23 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
   const regions = snapshot?.regions ?? [];
   const health = snapshot?.health;
 
-  // Filled only by evidence-backed coverage-market records. Publisher origin is
-  // deliberately excluded because it is not proof of distribution or exposure.
-  const coverageHeatPoints: CoverageHeatPoint[] = [];
+  // Only the coverageHeat contract can populate this layer. Publisher origin,
+  // event location, and audience exposure are deliberately not fallbacks.
+  const coverageHeatPoints: CoverageHeatPoint[] = useMemo(() => {
+    if (focusedCluster?.coverageHeat.status !== "observed") return [];
+    return focusedCluster.coverageHeat.markets.flatMap((market) => {
+      if (market.coordinates === null) return [];
+      return [{
+        id: market.regionCode,
+        label: market.label,
+        latitude: market.coordinates.latitude,
+        longitude: market.coordinates.longitude,
+        rawProminence: market.rawArticleCount,
+        normalizedProminence: market.sourceNormalizedShare,
+        evidenceCount: market.coordinates.evidence.length,
+      }];
+    });
+  }, [focusedCluster]);
 
   const onSelectRegion = (id: string | null) => {
     setSelectedRegionId(id);
@@ -376,10 +413,10 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             </div>
           )}
 
-          {viewMode === "story" && coverageHeatPoints.length === 0 && (
+          {focusedCluster && coverageHeatPoints.length === 0 && (
             <div className="coverage-unavailable-note" role="note">
               <ShieldAlert size={16} />
-              <span><strong>Coverage heat withheld</strong> No verified coverage-market coordinates are attached to this cluster yet.</span>
+              <span><strong>Coverage heat withheld</strong> {focusedCluster.coverageHeat.reason ?? "No verified coverage-market coordinates are attached to this cluster yet."}</span>
             </div>
           )}
 

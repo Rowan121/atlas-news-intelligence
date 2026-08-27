@@ -15,19 +15,56 @@ export interface EventLocation extends Coordinates {
   locationType: "city" | "admin1" | "country" | "multi-region" | "unknown";
   confidence: number;
   evidenceCount: number;
+  isPrimary: boolean;
 }
 
-export interface PublisherOrigin {
-  label: string;
-  countryCode: string | null;
-  latitude: number | null;
-  longitude: number | null;
+export interface AssessmentEvidence {
+  articleId: string;
+  url: string;
+  quote: string;
 }
+
+export interface MarketRegion {
+  regionCode: string;
+  label: string;
+  coordinates?: Coordinates;
+}
+
+export interface AudienceRegionExposure extends MarketRegion { share?: number }
+
+export interface UnknownAssessment {
+  status: "unknown";
+  value: null;
+  confidence: null;
+  method: "unavailable";
+  evidence: [];
+  reason: string;
+}
+
+export interface ObservedAssessment<T, Method extends string> {
+  status: "observed";
+  value: T;
+  confidence: number;
+  method: Method;
+  evidence: AssessmentEvidence[];
+  reason: null;
+}
+
+export type PublisherOriginAssessment = UnknownAssessment | ObservedAssessment<MarketRegion, "provider_metadata" | "publisher_registry">;
+export type CoverageMarketsAssessment = UnknownAssessment | ObservedAssessment<MarketRegion[], "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed">;
+export type AudienceExposureAssessment = UnknownAssessment | ObservedAssessment<AudienceRegionExposure[], "first_party_audience_telemetry" | "provider_audience_measurement" | "manual_confirmed">;
+export type FramingAssessment = UnknownAssessment | ObservedAssessment<"supports" | "disputes" | "straight_report" | "mixed" | "unclear", "claim_stance_comparison" | "model_analysis" | "manual_confirmed">;
+export type ToneAssessment = UnknownAssessment | ObservedAssessment<"positive" | "negative" | "neutral" | "mixed" | "unclear", "model_analysis" | "manual_confirmed">;
 
 export interface SourceCoverage {
   id: string;
   publisher: string;
-  publisherOrigin: PublisherOrigin | null;
+  publisherDomain: string;
+  publisherOrigin: PublisherOriginAssessment;
+  coverageMarkets: CoverageMarketsAssessment;
+  audienceExposure: AudienceExposureAssessment;
+  framing: FramingAssessment;
+  tone: ToneAssessment;
   articleTitle: string;
   url: string;
   language: string;
@@ -38,10 +75,53 @@ export interface SourceCoverage {
 }
 
 export interface ClusterSignals {
-  conflict: boolean;
-  underreported: boolean;
-  conflictSummary: string | null;
-  undercoverageSummary: string | null;
+  conflict: SignalAssessment;
+  omission: SignalAssessment;
+}
+
+export interface SignalAssessment {
+  status: "detected" | "not_detected" | "not_assessed";
+  confidence: number | null;
+  method: "claim_stance_comparison" | "coverage_baseline_comparison" | "unavailable";
+  summary: string | null;
+  evidence: AssessmentEvidence[];
+  reason: string | null;
+}
+
+export interface ClusterProminence {
+  basis: "event_location";
+  caveat: string;
+  byRegion: Array<{
+    regionId: string;
+    regionLabel: string;
+    raw: { articleCount: number; outletCount: number };
+    normalized: {
+      score: number;
+      articleShare: number;
+      outletShare: number;
+      sourceNormalizedShare: number;
+      denominators: { regionalArticleMemberships: number; regionalOutlets: number };
+      formulaVersion: string;
+    };
+  }>;
+}
+
+export interface CoverageHeat {
+  status: "observed" | "unavailable";
+  basis: "coverage_market";
+  markets: Array<{
+    regionCode: string;
+    label: string;
+    rawArticleCount: number;
+    uniquePublisherCount: number;
+    sourceNormalizedShare: number;
+    coordinates: null | (Coordinates & {
+      confidence: number;
+      method: "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed";
+      evidence: AssessmentEvidence[];
+    });
+  }>;
+  reason: string | null;
 }
 
 export interface StoryCluster {
@@ -52,6 +132,8 @@ export interface StoryCluster {
   primaryRegionId: string;
   rawProminence: number;
   normalizedProminence: number;
+  prominence: ClusterProminence;
+  coverageHeat: CoverageHeat;
   articleCount: number;
   publisherCount: number;
   languageCount: number;

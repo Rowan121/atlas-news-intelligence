@@ -4,10 +4,31 @@ The truth layer deliberately separates **where an event happened** from **where 
 
 ## Canonical records
 
-- `Article` retains canonical and source URLs, publisher identity and optional origin, language, publish/retrieval times, and source-provider metadata.
+- `Article` retains canonical and source URLs, publisher identity and optional origin, language, publish/retrieval times, source-provider metadata, and a typed `sameStory` comparison context.
 - `EventLocation` requires coordinates, a type, confidence, and at least one article-text or provider-geotag evidence span. Publisher metadata is forbidden as event-location evidence.
 - `Claim` retains the claim text, polarity, confidence, and linked evidence spans. The initial pipeline preserves this schema but does not invent claims when extraction is unavailable.
 - `StoryCluster` retains every article, explainable membership evidence, event locations, raw prominence, source-normalized prominence, and pipeline health.
+
+## SAME-STORY source comparison
+
+Every article carries five independent assessments: `publisherOrigin`,
+`coverageMarkets`, `audienceExposure`, `framing`, and `tone`. An observed
+assessment includes a value, confidence, method, and evidence references. An
+unknown assessment has `value:null`, `confidence:null`, `method:"unavailable"`,
+an empty evidence array, and a human-readable reason.
+
+These fields are not interchangeable. Publisher origin is where an outlet is
+based. Coverage market is a cited market the outlet serves. Audience exposure
+requires first-party telemetry or a named audience-measurement provider. Atlas
+never turns publisher headquarters, an article language, a URL domain, or an
+event location into readership geography. GDELT's raw Events/Mentions/GKG
+stream does not provide verified coverage-market or audience-exposure data, so
+those fields remain explicitly unknown for the current live feed.
+
+Conflict is detected only when evidence-backed stances on the same normalized
+claim come from distinct publishers. With no extracted claims—or claims from
+only one publisher—the result is `not_assessed`, not `false`. Omission likewise
+stays `not_assessed` until a defensible regional coverage baseline exists.
 
 All timestamps are ISO-8601 UTC strings. Confidence values are finite numbers in `[0, 1]`. URLs must be HTTP(S). `validateStoryCluster` and `validateTruthSlice` return structured issues; they never silently repair truth records.
 
@@ -29,6 +50,26 @@ For each event region the pipeline reports:
 - source-normalized share, which gives each observed outlet equal weight before averaging its share devoted to the cluster.
 
 The normalized score is the mean of article share and source-normalized share. Denominators are always included so the UI can explain the number and avoid presenting it as audience reach.
+
+Every prominence record declares `basis:"event_location"`. The UI's separate
+`coverageHeat` is computed only from observed `coverageMarkets`; when none are
+available it is `unavailable` with an empty market list. Coverage heat is never
+derived from event locations, publisher origin, region labels, or audience
+exposure. A heat-market coordinate is `null` unless the coverage-market
+assessment itself supplied coordinates; when present, the coordinate retains
+that assessment's confidence, method, and evidence.
+
+## Surface schema migration
+
+Fresh databases use `surface/schema/schema.sql`. A database created from the
+previous schema must apply
+`surface/schema/migrations/0002_same_story.sql` before the matching Worker is
+deployed. The migration adds `articles.same_story_json` and the regional
+prominence component/basis columns. Existing articles are backfilled with
+explicitly unknown assessments. Existing prominence rows are labeled
+`atlas-regional-prominence-v1-legacy-components-unavailable`; re-seed a current
+GDELT run before serving the new contract rather than presenting defaulted
+component values as measurements.
 
 ## Source behavior
 

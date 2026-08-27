@@ -15,19 +15,102 @@ const locationSchema = z.object({
   longitude: z.number().min(-180).max(180),
   confidence: z.number().min(0).max(1),
   evidenceCount: z.number().int().nonnegative(),
+  isPrimary: z.boolean(),
 });
+
+const assessmentEvidenceSchema = z.object({
+  articleId: z.string().min(1),
+  url: z.url(),
+  quote: z.string().min(1),
+});
+
+const marketRegionSchema = z.object({
+  regionCode: z.string().min(1),
+  label: z.string().min(1),
+  coordinates: z.object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  }).optional(),
+});
+
+const unknownAssessmentSchema = z.object({
+  status: z.literal("unknown"),
+  value: z.null(),
+  confidence: z.null(),
+  method: z.literal("unavailable"),
+  evidence: z.tuple([]),
+  reason: z.string().min(1),
+});
+
+const publisherOriginSchema = z.discriminatedUnion("status", [
+  unknownAssessmentSchema,
+  z.object({
+    status: z.literal("observed"),
+    value: marketRegionSchema,
+    confidence: z.number().min(0).max(1),
+    method: z.enum(["provider_metadata", "publisher_registry"]),
+    evidence: z.array(assessmentEvidenceSchema),
+    reason: z.null(),
+  }),
+]);
+
+const coverageMarketsSchema = z.discriminatedUnion("status", [
+  unknownAssessmentSchema,
+  z.object({
+    status: z.literal("observed"),
+    value: z.array(marketRegionSchema).min(1),
+    confidence: z.number().min(0).max(1),
+    method: z.enum(["provider_coverage_metadata", "publisher_registry", "manual_confirmed"]),
+    evidence: z.array(assessmentEvidenceSchema).min(1),
+    reason: z.null(),
+  }),
+]);
+
+const audienceExposureSchema = z.discriminatedUnion("status", [
+  unknownAssessmentSchema,
+  z.object({
+    status: z.literal("observed"),
+    value: z.array(marketRegionSchema.extend({ share: z.number().min(0).max(1).optional() })).min(1),
+    confidence: z.number().min(0).max(1),
+    method: z.enum(["first_party_audience_telemetry", "provider_audience_measurement", "manual_confirmed"]),
+    evidence: z.array(assessmentEvidenceSchema).min(1),
+    reason: z.null(),
+  }),
+]);
+
+const framingSchema = z.discriminatedUnion("status", [
+  unknownAssessmentSchema,
+  z.object({
+    status: z.literal("observed"),
+    value: z.enum(["supports", "disputes", "straight_report", "mixed", "unclear"]),
+    confidence: z.number().min(0).max(1),
+    method: z.enum(["claim_stance_comparison", "model_analysis", "manual_confirmed"]),
+    evidence: z.array(assessmentEvidenceSchema).min(1),
+    reason: z.null(),
+  }),
+]);
+
+const toneSchema = z.discriminatedUnion("status", [
+  unknownAssessmentSchema,
+  z.object({
+    status: z.literal("observed"),
+    value: z.enum(["positive", "negative", "neutral", "mixed", "unclear"]),
+    confidence: z.number().min(0).max(1),
+    method: z.enum(["model_analysis", "manual_confirmed"]),
+    evidence: z.array(assessmentEvidenceSchema).min(1),
+    reason: z.null(),
+  }),
+]);
 
 const sourceSchema = z.object({
   id: z.string().min(1),
   publisher: z.string().min(1),
-  publisherOrigin: z
-    .object({
-      label: z.string().min(1),
-      countryCode: z.string().nullable(),
-      latitude: z.number().min(-90).max(90).nullable(),
-      longitude: z.number().min(-180).max(180).nullable(),
-    })
-    .nullable(),
+  publisherDomain: z.string().min(1),
+  publisherOrigin: publisherOriginSchema,
+  coverageMarkets: coverageMarketsSchema,
+  audienceExposure: audienceExposureSchema,
+  framing: framingSchema,
+  tone: toneSchema,
   articleTitle: z.string().min(1),
   url: z.url(),
   language: z.string().min(1),
@@ -37,6 +120,64 @@ const sourceSchema = z.object({
   claimPosition: z.enum(["supports", "disputes", "reports", "unclear"]),
 });
 
+const signalSchema = z.object({
+  status: z.enum(["detected", "not_detected", "not_assessed"]),
+  confidence: z.number().min(0).max(1).nullable(),
+  method: z.enum(["claim_stance_comparison", "coverage_baseline_comparison", "unavailable"]),
+  summary: z.string().nullable(),
+  evidence: z.array(assessmentEvidenceSchema),
+  reason: z.string().nullable(),
+});
+
+const prominenceSchema = z.object({
+  basis: z.literal("event_location"),
+  caveat: z.string().min(1),
+  byRegion: z.array(z.object({
+    regionId: z.string().min(1),
+    regionLabel: z.string().min(1),
+    raw: z.object({ articleCount: z.number().int().nonnegative(), outletCount: z.number().int().nonnegative() }),
+    normalized: z.object({
+      score: z.number().min(0).max(1),
+      articleShare: z.number().min(0).max(1),
+      outletShare: z.number().min(0).max(1),
+      sourceNormalizedShare: z.number().min(0).max(1),
+      denominators: z.object({
+        regionalArticleMemberships: z.number().int().nonnegative(),
+        regionalOutlets: z.number().int().nonnegative(),
+      }),
+      formulaVersion: z.string().min(1),
+    }),
+  })),
+});
+
+const coverageHeatSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("observed"),
+    basis: z.literal("coverage_market"),
+    markets: z.array(z.object({
+      regionCode: z.string().min(1),
+      label: z.string().min(1),
+      rawArticleCount: z.number().int().nonnegative(),
+      uniquePublisherCount: z.number().int().nonnegative(),
+      sourceNormalizedShare: z.number().min(0).max(1),
+      coordinates: z.object({
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        confidence: z.number().min(0).max(1),
+        method: z.enum(["provider_coverage_metadata", "publisher_registry", "manual_confirmed"]),
+        evidence: z.array(assessmentEvidenceSchema).min(1),
+      }).nullable(),
+    })).min(1),
+    reason: z.null(),
+  }),
+  z.object({
+    status: z.literal("unavailable"),
+    basis: z.literal("coverage_market"),
+    markets: z.tuple([]),
+    reason: z.string().min(1),
+  }),
+]);
+
 const clusterSchema = z.object({
   id: z.string().min(1),
   canonicalTitle: z.string().min(1),
@@ -45,18 +186,15 @@ const clusterSchema = z.object({
   primaryRegionId: z.string().min(1),
   rawProminence: z.number().nonnegative(),
   normalizedProminence: z.number().min(0).max(1),
+  prominence: prominenceSchema,
+  coverageHeat: coverageHeatSchema,
   articleCount: z.number().int().nonnegative(),
   publisherCount: z.number().int().nonnegative(),
   languageCount: z.number().int().nonnegative(),
   firstObservedAt: z.iso.datetime(),
   lastObservedAt: z.iso.datetime(),
   membershipConfidence: z.number().min(0).max(1),
-  signals: z.object({
-    conflict: z.boolean(),
-    underreported: z.boolean(),
-    conflictSummary: z.string().nullable(),
-    undercoverageSummary: z.string().nullable(),
-  }),
+  signals: z.object({ conflict: signalSchema, omission: signalSchema }),
   sources: z.array(sourceSchema),
 });
 

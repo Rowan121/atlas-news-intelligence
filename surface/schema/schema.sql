@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS articles (
   evidence_snippet TEXT,
   membership_confidence REAL NOT NULL CHECK (membership_confidence BETWEEN 0 AND 1),
   membership_evidence TEXT NOT NULL,
+  same_story_json TEXT NOT NULL,
   content_fingerprint TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   UNIQUE (cluster_id, canonical_url)
@@ -92,7 +93,12 @@ CREATE TABLE IF NOT EXISTS regional_prominence (
   raw_article_count INTEGER NOT NULL CHECK (raw_article_count >= 0),
   unique_publisher_count INTEGER NOT NULL CHECK (unique_publisher_count >= 0),
   regional_source_volume INTEGER NOT NULL CHECK (regional_source_volume >= 0),
+  regional_outlet_count INTEGER NOT NULL CHECK (regional_outlet_count >= 0),
   normalized_score REAL NOT NULL CHECK (normalized_score >= 0),
+  article_share REAL NOT NULL CHECK (article_share BETWEEN 0 AND 1),
+  outlet_share REAL NOT NULL CHECK (outlet_share BETWEEN 0 AND 1),
+  source_normalized_share REAL NOT NULL CHECK (source_normalized_share BETWEEN 0 AND 1),
+  basis TEXT NOT NULL CHECK (basis = 'event_location'),
   formula_version TEXT NOT NULL,
   computed_at TEXT NOT NULL,
   PRIMARY KEY (cluster_id, region_code, window_start, window_end)

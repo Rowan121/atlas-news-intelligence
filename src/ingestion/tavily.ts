@@ -1,4 +1,4 @@
-import type { Article } from "../schema/types.js";
+import { sameStorySourceContext, type Article } from "../schema/types.js";
 import {
   canonicalizeUrl,
   domainFromUrl,
@@ -76,6 +76,7 @@ function mapRecord(record: TavilyResultRecord, retrievedAt: string): Article | u
       provider: "tavily",
       ...(providerScore === undefined ? {} : { providerScore }),
     },
+    sameStory: sameStorySourceContext(),
   };
 }
 

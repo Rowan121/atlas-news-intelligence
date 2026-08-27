@@ -34,14 +34,41 @@ describe("live GDELT → Surface → UI contract", () => {
       rawProminence: 2,
       publisherCount: 2,
       languageCount: 1,
+      prominence: {
+        basis: "event_location",
+        byRegion: [{
+          normalized: {
+            sourceNormalizedShare: 1,
+            denominators: { regionalArticleMemberships: 2, regionalOutlets: 2 },
+          },
+        }],
+      },
+      coverageHeat: {
+        status: "unavailable",
+        basis: "coverage_market",
+        markets: [],
+      },
+      signals: {
+        conflict: { status: "not_assessed", method: "unavailable" },
+        omission: { status: "not_assessed", method: "unavailable" },
+      },
       sources: [
-        { publisher: "Wire One", language: "und" },
-        { publisher: "Wire Two", language: "und" },
+        {
+          publisher: "Wire One",
+          language: "und",
+          publisherOrigin: { status: "unknown" },
+          coverageMarkets: { status: "unknown" },
+          audienceExposure: { status: "unknown" },
+          framing: { status: "unknown" },
+          tone: { status: "unknown" },
+        },
+        { publisher: "Wire Two", language: "und", audienceExposure: { status: "unknown" } },
       ],
     });
     expect(parsed.data.clusters[0]!.eventLocations[0]).toMatchObject({
       label: "Fixture City, Testland",
       evidenceCount: 2,
+      isPrimary: true,
     });
   });
 });

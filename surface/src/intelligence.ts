@@ -20,17 +20,18 @@ interface UiLocation {
   longitude: number;
   confidence: number;
   evidenceCount: number;
+  isPrimary: boolean;
 }
 
 interface UiSource {
   id: string;
   publisher: string;
-  publisherOrigin: {
-    label: string;
-    countryCode: string | null;
-    latitude: number | null;
-    longitude: number | null;
-  } | null;
+  publisherDomain: string;
+  publisherOrigin: Article["same_story"]["publisherOrigin"];
+  coverageMarkets: Article["same_story"]["coverageMarkets"];
+  audienceExposure: Article["same_story"]["audienceExposure"];
+  framing: Article["same_story"]["framing"];
+  tone: Article["same_story"]["tone"];
   articleTitle: string;
   url: string;
   language: string;
@@ -38,6 +39,49 @@ interface UiSource {
   retrievedAt: string;
   excerpt: string | null;
   claimPosition: "supports" | "disputes" | "reports" | "unclear";
+}
+
+interface UiSignalAssessment {
+  status: "detected" | "not_detected" | "not_assessed";
+  confidence: number | null;
+  method: "claim_stance_comparison" | "coverage_baseline_comparison" | "unavailable";
+  summary: string | null;
+  evidence: Array<{ articleId: string; url: string; quote: string }>;
+  reason: string | null;
+}
+
+interface UiRegionalProminence {
+  regionId: string;
+  regionLabel: string;
+  raw: { articleCount: number; outletCount: number };
+  normalized: {
+    score: number;
+    articleShare: number;
+    outletShare: number;
+    sourceNormalizedShare: number;
+    denominators: { regionalArticleMemberships: number; regionalOutlets: number };
+    formulaVersion: string;
+  };
+}
+
+interface UiCoverageHeat {
+  status: "observed" | "unavailable";
+  basis: "coverage_market";
+  markets: Array<{
+    regionCode: string;
+    label: string;
+    rawArticleCount: number;
+    uniquePublisherCount: number;
+    sourceNormalizedShare: number;
+    coordinates: null | {
+      latitude: number;
+      longitude: number;
+      confidence: number;
+      method: "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed";
+      evidence: Array<{ articleId: string; url: string; quote: string }>;
+    };
+  }>;
+  reason: string | null;
 }
 
 interface UiCluster {
@@ -48,18 +92,19 @@ interface UiCluster {
   primaryRegionId: string;
   rawProminence: number;
   normalizedProminence: number;
+  prominence: {
+    basis: "event_location";
+    caveat: string;
+    byRegion: UiRegionalProminence[];
+  };
+  coverageHeat: UiCoverageHeat;
   articleCount: number;
   publisherCount: number;
   languageCount: number;
   firstObservedAt: string;
   lastObservedAt: string;
   membershipConfidence: number;
-  signals: {
-    conflict: boolean;
-    underreported: boolean;
-    conflictSummary: string | null;
-    undercoverageSummary: string | null;
-  };
+  signals: { conflict: UiSignalAssessment; omission: UiSignalAssessment };
   sources: UiSource[];
 }
 
@@ -102,7 +147,7 @@ export interface IntelligenceSnapshot {
 
 const windowHours: Record<IntelligenceWindow, number> = { "6h": 6, "24h": 24, "7d": 168 };
 
-function uiLocation(location: EventLocation): UiLocation {
+function uiLocation(location: EventLocation, isPrimary: boolean): UiLocation {
   const locationType = location.location_granularity === "region"
     ? "multi-region"
     : location.location_granularity === "point"
@@ -118,6 +163,7 @@ function uiLocation(location: EventLocation): UiLocation {
     longitude: location.longitude,
     confidence: location.confidence,
     evidenceCount: location.evidence_count,
+    isPrimary,
   };
 }
 
@@ -137,14 +183,12 @@ function uiSource(article: Article, claims: ClaimEvidence[]): UiSource {
   return {
     id: article.article_id,
     publisher: article.publisher_name,
-    publisherOrigin: article.publisher_origin_country === null
-      ? null
-      : {
-          label: article.publisher_origin_country,
-          countryCode: article.publisher_origin_country,
-          latitude: null,
-          longitude: null,
-        },
+    publisherDomain: article.publisher_domain,
+    publisherOrigin: article.same_story.publisherOrigin,
+    coverageMarkets: article.same_story.coverageMarkets,
+    audienceExposure: article.same_story.audienceExposure,
+    framing: framingAssessment(article, claims),
+    tone: article.same_story.tone,
     articleTitle: article.title,
     url: article.canonical_url,
     language: article.language,
@@ -155,16 +199,199 @@ function uiSource(article: Article, claims: ClaimEvidence[]): UiSource {
   };
 }
 
-function conflictSignal(claims: ClaimEvidence[]): { conflict: boolean; summary: string | null } {
-  const byClaim = new Map<string, Set<ClaimEvidence["stance"]>>();
-  for (const claim of claims) {
-    const stances = byClaim.get(claim.normalized_claim) ?? new Set<ClaimEvidence["stance"]>();
-    stances.add(claim.stance);
-    byClaim.set(claim.normalized_claim, stances);
+function claimEvidence(article: Article, claim: ClaimEvidence): { articleId: string; url: string; quote: string } {
+  return { articleId: article.article_id, url: article.canonical_url, quote: claim.evidence_quote };
+}
+
+function framingAssessment(article: Article, claims: ClaimEvidence[]): Article["same_story"]["framing"] {
+  const matches = claims.filter((claim) => claim.evidence_article_id === article.article_id);
+  if (matches.length === 0) return article.same_story.framing;
+  const stances = new Set(matches.map((claim) => claim.stance));
+  const value = stances.size > 1
+    ? "mixed"
+    : stances.has("supports")
+      ? "supports"
+      : stances.has("disputes")
+        ? "disputes"
+        : "unclear";
+  return {
+    status: "observed",
+    value,
+    confidence: Math.min(...matches.map((claim) => claim.confidence)),
+    method: "claim_stance_comparison",
+    evidence: matches.map((claim) => claimEvidence(article, claim)),
+    reason: null,
+  };
+}
+
+function conflictSignal(story: StoryDetail): UiSignalAssessment {
+  if (story.claims.length === 0) {
+    return {
+      status: "not_assessed",
+      confidence: null,
+      method: "unavailable",
+      summary: null,
+      evidence: [],
+      reason: "No evidence-backed claims were extracted for cross-source comparison.",
+    };
   }
-  const conflict = [...byClaim.entries()].find(([, stances]) => stances.has("supports") && stances.has("disputes"));
-  if (conflict === undefined) return { conflict: false, summary: null };
-  return { conflict: true, summary: `Sources disagree on: ${conflict[0]}` };
+  const articleById = new Map(story.articles.map((article) => [article.article_id, article]));
+  const claimPublishers = new Set(
+    story.claims.flatMap((claim) => {
+      const article = articleById.get(claim.evidence_article_id);
+      return article === undefined ? [] : [article.publisher_domain];
+    }),
+  );
+  if (claimPublishers.size < 2) {
+    return {
+      status: "not_assessed",
+      confidence: null,
+      method: "unavailable",
+      summary: null,
+      evidence: [],
+      reason: "Conflict requires evidence-backed claims from at least two distinct publishers.",
+    };
+  }
+  const byClaim = new Map<string, ClaimEvidence[]>();
+  for (const claim of story.claims) {
+    const entries = byClaim.get(claim.normalized_claim) ?? [];
+    entries.push(claim);
+    byClaim.set(claim.normalized_claim, entries);
+  }
+  for (const [normalizedClaim, entries] of byClaim) {
+    const supporting = entries.filter((claim) => claim.stance === "supports");
+    const disputing = entries.filter((claim) => claim.stance === "disputes");
+    for (const support of supporting) {
+      const supportArticle = articleById.get(support.evidence_article_id);
+      if (supportArticle === undefined) continue;
+      const dispute = disputing.find((candidate) => {
+        const candidateArticle = articleById.get(candidate.evidence_article_id);
+        return candidateArticle !== undefined && candidateArticle.publisher_domain !== supportArticle.publisher_domain;
+      });
+      if (dispute === undefined) continue;
+      const disputeArticle = articleById.get(dispute.evidence_article_id)!;
+      return {
+        status: "detected",
+        confidence: Math.min(support.confidence, dispute.confidence),
+        method: "claim_stance_comparison",
+        summary: `Distinct publishers support and dispute: ${normalizedClaim}`,
+        evidence: [claimEvidence(supportArticle, support), claimEvidence(disputeArticle, dispute)],
+        reason: null,
+      };
+    }
+  }
+  return {
+    status: "not_detected",
+    confidence: Math.min(...story.claims.map((claim) => claim.confidence)),
+    method: "claim_stance_comparison",
+    summary: "No opposed stances were found among the evidence-backed cross-publisher claims.",
+    evidence: story.claims.flatMap((claim) => {
+      const article = articleById.get(claim.evidence_article_id);
+      return article === undefined ? [] : [claimEvidence(article, claim)];
+    }),
+    reason: null,
+  };
+}
+
+function omissionSignal(): UiSignalAssessment {
+  return {
+    status: "not_assessed",
+    confidence: null,
+    method: "unavailable",
+    summary: null,
+    evidence: [],
+    reason: "No evidence-backed regional coverage baseline is available; omission is not inferred from publisher origin.",
+  };
+}
+
+function coverageHeat(sources: UiSource[]): UiCoverageHeat {
+  const observed = sources.filter(
+    (source): source is UiSource & { coverageMarkets: Extract<UiSource["coverageMarkets"], { status: "observed" }> } =>
+      source.coverageMarkets.status === "observed",
+  );
+  if (observed.length === 0) {
+    return {
+      status: "unavailable",
+      basis: "coverage_market",
+      markets: [],
+      reason: "No evidence-backed coverage-market metadata is available for this story; publisher origin and audience are not substitutes.",
+    };
+  }
+  const assignments = new Map<string, {
+    label: string;
+    articleIds: Set<string>;
+    publishers: Set<string>;
+    byPublisher: Map<string, number>;
+    coordinates: null | {
+      latitude: number;
+      longitude: number;
+      confidence: number;
+      method: "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed";
+      evidence: Array<{ articleId: string; url: string; quote: string }>;
+      sourceId: string;
+    };
+  }>();
+  const publisherTotals = new Map<string, number>();
+  for (const source of observed) {
+    const uniqueMarkets = new Map(source.coverageMarkets.value.map((market) => [market.regionCode, market]));
+    publisherTotals.set(source.publisherDomain, (publisherTotals.get(source.publisherDomain) ?? 0) + uniqueMarkets.size);
+    for (const market of uniqueMarkets.values()) {
+      const entry = assignments.get(market.regionCode) ?? {
+        label: market.label,
+        articleIds: new Set<string>(),
+        publishers: new Set<string>(),
+        byPublisher: new Map<string, number>(),
+        coordinates: null,
+      };
+      entry.articleIds.add(source.id);
+      entry.publishers.add(source.publisherDomain);
+      entry.byPublisher.set(source.publisherDomain, (entry.byPublisher.get(source.publisherDomain) ?? 0) + 1);
+      if (
+        market.coordinates !== undefined
+        && (
+          entry.coordinates === null
+          || source.coverageMarkets.confidence > entry.coordinates.confidence
+          || (
+            source.coverageMarkets.confidence === entry.coordinates.confidence
+            && source.id.localeCompare(entry.coordinates.sourceId) < 0
+          )
+        )
+      ) {
+        entry.coordinates = {
+          ...market.coordinates,
+          confidence: source.coverageMarkets.confidence,
+          method: source.coverageMarkets.method,
+          evidence: source.coverageMarkets.evidence,
+          sourceId: source.id,
+        };
+      }
+      assignments.set(market.regionCode, entry);
+    }
+  }
+  const markets = [...assignments.entries()].map(([regionCode, entry]) => {
+    let normalized = 0;
+    for (const [publisher, total] of publisherTotals) {
+      normalized += total === 0 ? 0 : (entry.byPublisher.get(publisher) ?? 0) / total;
+    }
+    const coordinates = entry.coordinates === null
+      ? null
+      : {
+          latitude: entry.coordinates.latitude,
+          longitude: entry.coordinates.longitude,
+          confidence: entry.coordinates.confidence,
+          method: entry.coordinates.method,
+          evidence: entry.coordinates.evidence,
+        };
+    return {
+      regionCode,
+      label: entry.label,
+      rawArticleCount: entry.articleIds.size,
+      uniquePublisherCount: entry.publishers.size,
+      sourceNormalizedShare: publisherTotals.size === 0 ? 0 : normalized / publisherTotals.size,
+      coordinates,
+    };
+  }).sort((left, right) => right.sourceNormalizedShare - left.sourceNormalizedShare || left.regionCode.localeCompare(right.regionCode));
+  return { status: "observed", basis: "coverage_market", markets, reason: null };
 }
 
 function meanConfidence(story: StoryDetail): number {
@@ -175,12 +402,17 @@ function meanConfidence(story: StoryDetail): number {
 function mapCluster(story: StoryDetail): UiCluster | null {
   const eventLocations = story.locations
     .filter((location) => location.location_type === "event" && location.evidence_article_id !== null)
-    .sort((left, right) => right.confidence - left.confidence)
-    .map(uiLocation);
+    .sort((left, right) =>
+      right.confidence - left.confidence
+      || right.evidence_count - left.evidence_count
+      || left.location_id.localeCompare(right.location_id),
+    )
+    .map((location, index) => uiLocation(location, index === 0));
   const primary = eventLocations[0];
   if (primary === undefined) return null;
 
-  const conflict = conflictSignal(story.claims);
+  const sources = story.articles.map((article) => uiSource(article, story.claims));
+  const conflict = conflictSignal(story);
   return {
     id: story.cluster_id,
     canonicalTitle: story.canonical_title,
@@ -189,6 +421,32 @@ function mapCluster(story: StoryDetail): UiCluster | null {
     primaryRegionId: primary.regionId,
     rawProminence: story.raw_article_count,
     normalizedProminence: Math.max(0, Math.min(1, story.normalized_prominence)),
+    prominence: {
+      basis: "event_location",
+      caveat: "Event-location prominence measures observed corpus coverage of events in a region; it is not audience reach.",
+      byRegion: story.regional_prominence
+        .filter((entry) => !entry.formula_version.endsWith("legacy-components-unavailable"))
+        .map((entry) => ({
+          regionId: entry.region_code,
+          regionLabel: entry.region_code,
+          raw: {
+            articleCount: entry.raw_article_count,
+            outletCount: entry.unique_publisher_count,
+          },
+          normalized: {
+            score: Math.max(0, Math.min(1, entry.normalized_score)),
+            articleShare: Math.max(0, Math.min(1, entry.article_share)),
+            outletShare: Math.max(0, Math.min(1, entry.outlet_share)),
+            sourceNormalizedShare: Math.max(0, Math.min(1, entry.source_normalized_share)),
+            denominators: {
+              regionalArticleMemberships: entry.regional_source_volume,
+              regionalOutlets: entry.regional_outlet_count,
+            },
+            formulaVersion: entry.formula_version,
+          },
+        })),
+    },
+    coverageHeat: coverageHeat(sources),
     articleCount: story.articles.length,
     publisherCount: new Set(story.articles.map((article) => article.publisher_domain)).size,
     languageCount: new Set(story.articles.map((article) => article.language)).size,
@@ -196,12 +454,10 @@ function mapCluster(story: StoryDetail): UiCluster | null {
     lastObservedAt: story.last_observed_at,
     membershipConfidence: Math.max(0, Math.min(1, meanConfidence(story))),
     signals: {
-      conflict: conflict.conflict,
-      underreported: false,
-      conflictSummary: conflict.summary,
-      undercoverageSummary: null,
+      conflict,
+      omission: omissionSignal(),
     },
-    sources: story.articles.map((article) => uiSource(article, story.claims)),
+    sources,
   };
 }
 
@@ -209,9 +465,11 @@ function mapHealth(
   health: PipelineHealth,
   regionCount: number,
   omittedUnlocated: number,
+  duplicateSummaryRows: number,
 ): IntelligenceSnapshot["health"] {
   const reasons = [...health.reasons];
   if (omittedUnlocated > 0) reasons.push(`${omittedUnlocated} cluster(s) omitted without cited event locations`);
+  if (duplicateSummaryRows > 0) reasons.push(`${duplicateSummaryRows} duplicate cluster summary row(s) collapsed by cluster id`);
   return {
     status: health.status === "ok" ? "healthy" : health.status === "unavailable" ? "stale" : "degraded",
     lastSuccessfulIngestionAt: health.latest_story_at,
@@ -235,7 +493,9 @@ export async function buildIntelligenceSnapshot(
     now,
     staleAfterSeconds,
   );
-  const details = await Promise.all(summaries.map((summary) => store.getStory(summary.cluster_id)));
+  const clusterIds = [...new Set(summaries.map((summary) => summary.cluster_id))];
+  const duplicateSummaryRows = summaries.length - clusterIds.length;
+  const details = await Promise.all(clusterIds.map((clusterId) => store.getStory(clusterId)));
   const mapped = details.flatMap((detail) => {
     if (detail === null) return [];
     const cluster = mapCluster(detail);
@@ -293,7 +553,7 @@ export async function buildIntelligenceSnapshot(
   return {
     generatedAt: now.toISOString(),
     window,
-    health: mapHealth(health, regionList.length, details.length - mapped.length),
+    health: mapHealth(health, regionList.length, details.length - mapped.length, duplicateSummaryRows),
     regions: regionList,
     clusters: mapped,
   };

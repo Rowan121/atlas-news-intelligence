@@ -1,7 +1,8 @@
-import type {
-  Article,
-  EventLocation,
-  StoryCluster,
+import {
+  sameStorySourceContext,
+  type Article,
+  type EventLocation,
+  type StoryCluster,
 } from "../../src/schema/types.js";
 import type {
   Gazetteer,
@@ -25,6 +26,7 @@ export function makeArticle(
     retrievedAt: FIXED_NOW,
     publishedAt: "2026-08-27T00:00:00.000Z",
     source: { provider: "gdelt" },
+    sameStory: sameStorySourceContext(overrides.publisher?.origin),
     ...overrides,
   };
 }
@@ -170,6 +172,7 @@ export function makeValidCluster(overrides: Partial<StoryCluster> = {}): StoryCl
     claims: [],
     prominence: [
       {
+        basis: "event_location",
         regionKey: "JP",
         regionName: "JP",
         raw: { articleCount: 2, outletCount: 2 },

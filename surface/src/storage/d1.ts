@@ -6,6 +6,7 @@ import type {
   PipelineRun,
   PipelineRunInput,
   RegionalProminence,
+  SameStorySourceContext,
   StoryDetail,
   StoryQuery,
   StorySummary,
@@ -45,7 +46,11 @@ interface LocationRow {
   evidence_count: number;
 }
 
-interface ArticleRow extends Article {}
+interface ArticleRow extends Omit<Article, "same_story"> {
+  publisher_origin_country: string | null;
+  audience_region_code: string | null;
+  same_story_json: string;
+}
 interface ClaimRow extends ClaimEvidence {}
 interface ProminenceRow extends RegionalProminence {}
 
@@ -79,6 +84,41 @@ const CLUSTER_COLUMNS = `
 
 function mapLocation(row: LocationRow): EventLocation {
   return { ...row };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sameStoryContext(value: string): SameStorySourceContext {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error("D1 article same_story_json was not valid JSON");
+  }
+  if (!isRecord(parsed)) throw new Error("D1 article same_story_json was not an object");
+  for (const field of ["publisherOrigin", "coverageMarkets", "audienceExposure", "framing", "tone"] as const) {
+    const assessment = parsed[field];
+    if (
+      !isRecord(assessment)
+      || (assessment.status !== "observed" && assessment.status !== "unknown")
+      || !Array.isArray(assessment.evidence)
+    ) {
+      throw new Error(`D1 article same_story_json had an invalid ${field} assessment`);
+    }
+  }
+  return parsed as unknown as SameStorySourceContext;
+}
+
+function mapArticle(row: ArticleRow): Article {
+  const {
+    publisher_origin_country: _legacyPublisherOrigin,
+    audience_region_code: _legacyAudienceRegion,
+    same_story_json,
+    ...article
+  } = row;
+  return { ...article, same_story: sameStoryContext(same_story_json) };
 }
 
 function mapSummary(row: ClusterRow, location: LocationRow | null): StorySummary {
@@ -135,7 +175,7 @@ export class D1TruthStore implements TruthStore {
                   WHERE evidence.location_id = story_locations.location_id) AS evidence_count
          FROM story_locations
          WHERE location_type = 'event' AND cluster_id IN (${clusters.results.map(() => "?").join(",")})
-         ORDER BY confidence DESC`,
+         ORDER BY confidence DESC, evidence_count DESC, location_id ASC`,
       )
       .bind(...clusters.results.map((cluster) => cluster.cluster_id))
       .all<LocationRow & { cluster_id: string }>();
@@ -158,7 +198,7 @@ export class D1TruthStore implements TruthStore {
       this.db.prepare(
         `SELECT article_id, canonical_url, source_url, title, publisher_name, publisher_domain,
                 publisher_origin_country, audience_region_code, language, published_at, retrieved_at,
-                evidence_snippet, membership_confidence, membership_evidence
+                evidence_snippet, membership_confidence, membership_evidence, same_story_json
          FROM articles WHERE cluster_id = ? ORDER BY published_at DESC`,
       ).bind(clusterId),
       this.db.prepare(
@@ -174,7 +214,8 @@ export class D1TruthStore implements TruthStore {
       ).bind(clusterId),
       this.db.prepare(
         `SELECT region_code, window_start, window_end, raw_article_count, unique_publisher_count,
-                regional_source_volume, normalized_score, formula_version, computed_at
+                regional_source_volume, regional_outlet_count, normalized_score, article_share,
+                outlet_share, source_normalized_share, basis, formula_version, computed_at
          FROM regional_prominence WHERE cluster_id = ? ORDER BY normalized_score DESC`,
       ).bind(clusterId),
     ]);
@@ -200,7 +241,7 @@ export class D1TruthStore implements TruthStore {
 
     return {
       ...mapSummary(cluster, primary),
-      articles,
+      articles: articles.map(mapArticle),
       locations: locations.map(mapLocation),
       claims,
       regional_prominence: regionalProminence,

@@ -29,7 +29,7 @@
       "slug": "compare-regional-coverage",
       "method": "GET",
       "path": "/api/v1/intelligence?window={window}&prominence={prominence}",
-      "description": "Draft activation-gated capability: compare the same story across evidenced source or audience regions without conflating those regions with event location. Do not activate until the deployed response contains those evidence fields."
+      "description": "Compare event-location prominence and evidence-backed coverage-market heat when available, while keeping publisher origin and measured audience exposure separate. Unknown dimensions remain explicit."
     },
     {
       "name": "Inspect Pipeline Health",
@@ -79,6 +79,7 @@
       "criteria": [
         "Event locations have coordinates, type, confidence, and source evidence.",
         "Publisher origin is never presented as the event location.",
+        "Publisher origin is never used as a proxy for coverage market or audience exposure.",
         "Low-confidence or absent locations remain explicit and do not become map assertions."
       ]
     },
@@ -99,7 +100,8 @@
       "criteria": [
         "Membership confidence and matching evidence are present for every article.",
         "Articles grouped together refer to the same underlying event, not only a similar topic.",
-        "Conflicting coverage stays within the event cluster while distinct events remain separate."
+        "Conflicting coverage stays within the event cluster while distinct events remain separate.",
+        "Conflict requires opposed evidence-backed claims from distinct publishers; omission abstains without a regional baseline."
       ]
     },
     {

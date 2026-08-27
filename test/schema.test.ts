@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertStoryCluster, isHttpUrl, isIsoDateTime, validateStoryCluster } from "../src/schema/types.js";
-import { makeValidCluster, tokyoA, tokyoLocation } from "./fixtures/articles.js";
+import { makeArticle, makeValidCluster, tokyoA, tokyoLocation } from "./fixtures/articles.js";
 
 describe("story-cluster schema", () => {
   it("accepts a valid evidence-backed cluster", () => {
@@ -34,6 +34,50 @@ describe("story-cluster schema", () => {
     expect(validateStoryCluster(cluster).map((issue) => issue.code)).toContain(
       "invalid_event_location_evidence_method",
     );
+  });
+
+  it("keeps publisher origin separate from coverage markets and measured audience", () => {
+    const article = makeArticle({
+      id: "origin-separated",
+      url: "https://origin.example/story",
+      title: "Test-only source geography",
+      publisher: {
+        id: "publisher-origin",
+        name: "Origin Publisher",
+        domain: "origin.example",
+        origin: {
+          countryName: "Originland",
+          countryCode: "OR",
+          confidence: 0.8,
+          evidenceSource: "publisher_registry",
+        },
+      },
+    });
+    expect(article.sameStory.publisherOrigin).toMatchObject({
+      status: "observed",
+      value: { regionCode: "OR", label: "Originland" },
+    });
+    expect(article.sameStory.coverageMarkets).toMatchObject({ status: "unknown", value: null });
+    expect(article.sameStory.audienceExposure).toMatchObject({ status: "unknown", value: null });
+  });
+
+  it("requires evidence for an observed coverage market", () => {
+    const cluster = structuredClone(makeValidCluster());
+    cluster.articles[0]!.sameStory.coverageMarkets = {
+      status: "observed",
+      value: [{ regionCode: "JP", label: "Japan" }],
+      confidence: 0.8,
+      method: "provider_coverage_metadata",
+      evidence: [],
+      reason: null,
+    };
+    expect(validateStoryCluster(cluster).map((issue) => issue.code)).toContain("missing_assessment_evidence");
+  });
+
+  it("requires an explicit event-location prominence basis", () => {
+    const cluster = structuredClone(makeValidCluster());
+    (cluster.prominence[0]! as { basis: string }).basis = "audience";
+    expect(validateStoryCluster(cluster).map((issue) => issue.code)).toContain("invalid_prominence_basis");
   });
 
   it("rejects out-of-range coordinates and confidence", () => {

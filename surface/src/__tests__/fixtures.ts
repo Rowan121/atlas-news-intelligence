@@ -4,8 +4,13 @@ import type {
   StoryDetail,
   StoryQuery,
   StorySummary,
+  UnknownAssessment,
 } from "../contracts";
 import type { TruthStore } from "../store";
+
+function unknown(reason: string): UnknownAssessment {
+  return { status: "unknown", value: null, confidence: null, method: "unavailable", evidence: [], reason };
+}
 
 // Test-only synthetic records. These values never ship through the production store.
 export const story: StoryDetail = {
@@ -44,19 +49,46 @@ export const story: StoryDetail = {
       title: "Synthetic harbor closure",
       publisher_name: "Fixture Wire",
       publisher_domain: "example.invalid",
-      publisher_origin_country: "ZZ",
-      audience_region_code: "TEST-EU",
       language: "en",
       published_at: "2026-08-26T11:00:00.000Z",
       retrieved_at: "2026-08-26T11:31:00.000Z",
       evidence_snippet: "Test-only evidence.",
       membership_confidence: 0.93,
       membership_evidence: "Synthetic fixture entities match.",
+      same_story: {
+        publisherOrigin: {
+          status: "observed",
+          value: { regionCode: "ZZ", label: "Synthetic publisher origin" },
+          confidence: 0.8,
+          method: "publisher_registry",
+          evidence: [],
+          reason: null,
+        },
+        coverageMarkets: unknown("No fixture coverage-market measurement."),
+        audienceExposure: unknown("No fixture audience measurement."),
+        framing: unknown("No fixture framing analysis."),
+        tone: unknown("No fixture tone analysis."),
+      },
     },
   ],
   locations: [],
   claims: [],
-  regional_prominence: [],
+  regional_prominence: [{
+    basis: "event_location",
+    region_code: "TEST-EU",
+    window_start: "2026-08-26T10:00:00.000Z",
+    window_end: "2026-08-26T11:30:00.000Z",
+    raw_article_count: 2,
+    unique_publisher_count: 2,
+    regional_source_volume: 5,
+    regional_outlet_count: 3,
+    normalized_score: 0.4,
+    article_share: 0.4,
+    outlet_share: 2 / 3,
+    source_normalized_share: 0.4,
+    formula_version: "atlas-regional-prominence-v1",
+    computed_at: "2026-08-26T12:00:00.000Z",
+  }],
 };
 story.locations = story.primary_event_location === null ? [] : [story.primary_event_location];
 

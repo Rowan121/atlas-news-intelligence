@@ -1,4 +1,4 @@
-import type { Article } from "../schema/types.js";
+import { sameStorySourceContext, type Article } from "../schema/types.js";
 import {
   canonicalizeUrl,
   domainFromUrl,
@@ -69,6 +69,13 @@ function mapRecord(record: GdeltArticleRecord, retrievedAt: string): Article | u
   const countryName = stringValue(record.sourcecountry);
   const publishedAt = parseGdeltDate(record.seendate);
   const language = stringValue(record.language);
+  const publisherOrigin = countryName === undefined
+    ? undefined
+    : {
+        countryName,
+        confidence: 0.8,
+        evidenceSource: "provider_metadata" as const,
+      };
   return {
     id: stableId("article", canonicalUrl),
     url,
@@ -78,20 +85,13 @@ function mapRecord(record: GdeltArticleRecord, retrievedAt: string): Article | u
       id: stableId("publisher", domain),
       name: domain,
       domain,
-      ...(countryName === undefined
-        ? {}
-        : {
-            origin: {
-              countryName,
-              confidence: 0.8,
-              evidenceSource: "provider_metadata" as const,
-            },
-          }),
+      ...(publisherOrigin === undefined ? {} : { origin: publisherOrigin }),
     },
     ...(language === undefined ? {} : { language }),
     ...(publishedAt === undefined ? {} : { publishedAt }),
     retrievedAt,
     source: { provider: "gdelt" },
+    sameStory: sameStorySourceContext(publisherOrigin),
   };
 }
 
