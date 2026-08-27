@@ -17,33 +17,47 @@ The candidate must also have one current, evidence-backed `artifacts/gdelt-lates
 ## Approval 1 — existing Cloudflare OAuth and D1 creation
 
 This is the first exact external-write payload. It creates one empty D1 database and nothing else.
+The current `wrangler whoami` state is unauthenticated. A temporary preview account is forbidden; authenticate only Rowan's existing Cloudflare account and stop if the account cannot be selected unambiguously.
 
 ```json
 {
   "provider": "cloudflare",
-  "account": "Rowan's existing Cloudflare account",
+  "candidate": "f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650",
+  "working_directory": "/tmp/atlas-news-ui-correction/surface",
+  "wrangler_version": "4.126.0",
   "actions": [
     {
       "action": "wrangler.oauth.login",
-      "command": "npx wrangler login"
+      "command": "npx --no-install wrangler login --use-keyring --scopes account:read user:read d1:write"
     },
     {
       "action": "d1.create",
       "database_name": "atlas-news-intelligence-prod",
-      "jurisdiction": "default",
-      "command": "npx wrangler d1 create atlas-news-intelligence-prod"
+      "command": "npx --no-install wrangler d1 create atlas-news-intelligence-prod"
     }
   ],
+  "capture": [
+    "selected_account_name",
+    "selected_account_id",
+    "database_name",
+    "database_uuid"
+  ],
+  "abort_if": [
+    "The Cloudflare account is ambiguous",
+    "OAuth fails",
+    "The database name already exists"
+  ],
   "constraints": [
-    "Do not create another Cloudflare account",
+    "Use Rowan's existing Cloudflare account only",
+    "Do not use or create a temporary preview account",
     "Do not mint or paste an API token",
-    "Stop immediately if existing-account OAuth fails",
     "Do not deploy a Worker in this approval"
   ]
 }
 ```
 
 The returned database UUID must be shown to Rowan in the next payload. Locally replace only `database_id` and `database_name` after that UUID is observed; never guess it.
+Approval 1 does not authorize Approvals 2–7. Those remain separate approvals blocked on the observed database UUID, deployed HTTPS origin, remote-write receipts, and provider-returned IDs stated below.
 
 ## Approval 2 — remote schema
 
@@ -57,7 +71,7 @@ This payload is not exact until Approval 1 returns the real `database_id`; subst
   "database_name": "atlas-news-intelligence-prod",
   "remote": true,
   "file": "surface/schema/schema.sql",
-  "file_sha256": "75194816b1eeffd8be867f02412808e7c29a33059e1b83a1b09d21b5b9b45da3",
+  "file_sha256": "f3d30b54bd56066b149c19dc425f71778f2512073ebb86bb489bf1bda339f6ee",
   "command": "npx wrangler d1 execute atlas-news-intelligence-prod --remote --file schema/schema.sql"
 }
 ```
@@ -86,7 +100,7 @@ Run the command from `surface/`; the `../artifacts` path is therefore intentiona
 
 ## Approval 4 — combined Worker and static explorer deployment
 
-This payload is not exact until the real D1 UUID, frozen commit SHA, and successful remote row-count receipt exist. No final hostname is required because the Worker uses same-origin CORS and Cloudflare assigns the origin.
+This payload is not exact until the real D1 UUID and successful remote row-count receipt exist. The product-code commit is frozen below. No final hostname is required because the Worker uses same-origin CORS and Cloudflare assigns the origin.
 
 ```json
 {
@@ -94,7 +108,7 @@ This payload is not exact until the real D1 UUID, frozen commit SHA, and success
   "action": "workers.deploy",
   "worker_name": "atlas-news-intelligence-api",
   "entrypoint": "surface/src/index.ts",
-  "commit_sha": "FROZEN_RELEASE_COMMIT_REQUIRED",
+  "commit_sha": "f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650",
   "compatibility_date": "2026-08-27",
   "bindings": {
     "DB": {
@@ -127,7 +141,7 @@ This payload is not exact until the real D1 UUID, frozen commit SHA, and success
     ]
   },
   "vars": {
-    "BUILD_VERSION": "FROZEN_RELEASE_COMMIT_REQUIRED",
+    "BUILD_VERSION": "f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650",
     "ENVIRONMENT": "production",
     "CORS_ORIGIN": "self",
     "STALE_AFTER_SECONDS": "1800"
@@ -148,7 +162,7 @@ Runtype access is treated as working. The platform definition is ready, but this
   "action": "product.ensure",
   "existing_account_only": true,
   "definition_file": "surface/runtype/atlas-product.json",
-  "definition_sha256": "f4ee1a328593c7deef7c813520f56c6dfc3d896081842e382809d454c512eeaa",
+  "definition_sha256": "e3d1c97246ecac8cddb03c3dce32c642bb93d178872e0de0ffc35bfe415e1dbc",
   "product": "Atlas News Intelligence",
   "environment": "production",
   "ATLAS_API_BASE_URL": "DEPLOYED_HTTPS_ORIGIN_REQUIRED",
@@ -199,7 +213,7 @@ Hacker Bob is intentionally reserved for the final candidate. This is a quota-co
   "provider": "hacker_bob",
   "action": "security.scan",
   "target": "DEPLOYED_HTTPS_ORIGIN_REQUIRED",
-  "commit_sha": "FROZEN_RELEASE_COMMIT_REQUIRED",
+  "commit_sha": "f7e7a6c21a44b5cff8ff95fb7422b9b51a4ca650",
   "scope": "public unauthenticated web, REST, MCP, A2A, discovery files",
   "max_runs": 1,
   "mutation": false,
