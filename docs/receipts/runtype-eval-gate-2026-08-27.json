@@ -1,0 +1,103 @@
+{
+  "provider": "runtype",
+  "observed_at": "2026-08-27T21:04:36Z",
+  "scope": "existing Atlas external-agent capability and five approved named eval suites",
+  "account": {
+    "organization_id": "org_3IT75qvcZ2a3uWeJSMGeUPSGb2D",
+    "authenticated_org_match": true
+  },
+  "atlas_objects": {
+    "product_id": "prod_01m12akcm1em7rbjzf7d7tegr1",
+    "capability_id": "prodcap_01m12anppbejfrsxtvvampcngg",
+    "external_agent_id": "agent_01m12anp9ze0va72dmvns83zt6"
+  },
+  "credential": {
+    "name": "Atlas Eval Gate 2026-08-27",
+    "key_id": "key_01m12fpdkbedztxn1ywmqcx27t",
+    "account_key_count_before": 1,
+    "account_key_count_after": 2,
+    "environment": "test",
+    "permissions": [
+      "EVALS:READ",
+      "EVALS:WRITE"
+    ],
+    "expires_at": "2026-08-29T23:59:59.999Z",
+    "same_key_id_rotated_after_scope_correction": true,
+    "secret_material_recorded": false,
+    "storage": {
+      "format": "runtype.api-key/v1",
+      "location": "~/.runtype/keys",
+      "file_mode": "0600"
+    }
+  },
+  "authentication": {
+    "auth_me_status": 200,
+    "organization_matches_atlas": true,
+    "eval_suite_list": {
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "FLOWS:READ or EVALS:READ permission required",
+      "cf_ray": "a31e07dac9370653-SJC"
+    },
+    "eval_ensure_hash_probe": {
+      "status": 403,
+      "message": "Insufficient permissions",
+      "cf_ray": "a31e08125ab59d09-SJC",
+      "created": false
+    }
+  },
+  "endpoint_compatibility": {
+    "synchronous_eval_run": {
+      "endpoint": "POST /v1/eval/run",
+      "supported_for_external_agent": false,
+      "source": "Runtype API reference and @runtypelabs/sdk 9.2.1 generated OpenAPI"
+    },
+    "external_agent_batch_path": {
+      "endpoint": "POST /v1/eval/submit",
+      "supported_configuration": "one delegated external-agent baseline without overrides",
+      "attempted": false,
+      "reason": "The prerequisite EVALS:WRITE suite creation request was rejected with HTTP 403."
+    }
+  },
+  "suites": [
+    {
+      "name": "geolocation-fidelity",
+      "created": false,
+      "run": false
+    },
+    {
+      "name": "citation-integrity",
+      "created": false,
+      "run": false
+    },
+    {
+      "name": "cluster-coherence",
+      "created": false,
+      "run": false
+    },
+    {
+      "name": "abstention-and-failure",
+      "created": false,
+      "run": false
+    },
+    {
+      "name": "agent-surface-conformance",
+      "created": false,
+      "run": false
+    }
+  ],
+  "usage": {
+    "unit": "daily_eval_runs",
+    "before": 0,
+    "after": 0,
+    "delta": 0,
+    "daily_limit": 100
+  },
+  "billing": {
+    "personal_provider_key_attached": false,
+    "model_or_provider_run_started": false,
+    "numeric_cost_delta_claimed": false
+  },
+  "result": "blocked",
+  "blocker": "Runtype authenticated the new eval-only credential to the correct Atlas organization, but the eval read and write endpoints rejected the exact displayed EVALS:READ and EVALS:WRITE scopes before suite creation. No suite or eval run exists, so the Runtype surfaces remain draft."
+}

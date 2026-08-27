@@ -1,6 +1,6 @@
 # Release and agent-readiness audit
 
-The P0 candidate is deployed on the existing Cloudflare Worker and D1 resources. The final build uses real GDELT records, a visible MapLibre globe, evidence-backed primary editorial-market heat, and genuine REST/MCP/A2A surfaces. The full local release gate and a 19-check production smoke passed after the last live-only asset security fix. The one approved Hacker Bob scan was consumed once and its two response observations were remediated. The complete production receipt is [here](./PRODUCTION_RELEASE_2026-08-27.md); Agent D's independent final ORA/IsItAgentReady verification is deliberately last.
+The P0 candidate is deployed on the existing Cloudflare Worker and D1 resources. The final build uses real GDELT records, a visible MapLibre globe, evidence-backed primary editorial-market heat, and genuine REST/MCP/A2A surfaces. The full local release gate and a 25-check production smoke passed after the last live-only asset security fix. The one approved Hacker Bob scan was consumed once and its two response observations were remediated. The complete production receipt is [here](./PRODUCTION_RELEASE_2026-08-27.md); Agent D's independent final ORA/IsItAgentReady verification is deliberately last.
 
 ## Truthful profile
 
@@ -53,7 +53,7 @@ After this candidate:
 | Bot training/inference policy | Open owner choice | Robots permits crawl; no unsupported owner Content Signals policy was invented |
 | Localization | English only | `<html lang="en">`; locale parity N/A |
 | Canonical origin/redirects | PASS | HTTP 308 to HTTPS; HSTS only on production HTTPS |
-| Runtype product/capability | PARTIAL | Genuine final A2A execution; surfaces remain draft because required named eval creation needs a prohibited new API credential |
+| Runtype product/capability | BLOCKED AT EVAL AUTH | Genuine final A2A execution. One explicitly authorized eval-only key authenticated to the correct organization, but Runtype rejected its displayed `EVALS:READ`/`EVALS:WRITE` scopes with 403 before suite creation. Surfaces remain draft. |
 | External ORA/IsItAgentReady | FINAL AGENT D GATE | Existing Agent D owns the complete attached-document checklist and final frozen-origin verdict |
 | Hacker Bob | CONSUMED / REMEDIATED | One scan only; HSTS/clickjacking observations fixed; no second scan permitted |
 
@@ -61,7 +61,9 @@ After this candidate:
 
 Only the same existing Agent D's final independent ORA/IsItAgentReady pass remains. The atomic D1 refresh, Worker deploy, live browser/REST/MCP/A2A/security verification, final Runtype execution, and one Hacker Bob scan are complete. Any implementation change after Agent D's verdict invalidates that verdict and requires a new independent pass.
 
-Runtype activation remains intentionally blocked rather than silently waived: the five named eval suites cannot be created from the available signed-in UI, and the SDK/API path requires minting a credential. Tavily, Tenki, Mitosis, and Cotal/Nebius are not claimed as used without sanitized final-run receipts. None of these limits justifies creating an account, hunting for a key, attaching a personal provider key, or enabling AIsa/HUD.
+Runtype activation remains intentionally blocked rather than silently waived. Rowan authorized exactly one new eval-only management credential. It was created in Test, reduced from the UI's unusable `EVALS:*` wildcard to explicit `EVALS:READ` and `EVALS:WRITE`, rotated under the same key ID, stored in Runtype's `runtype.api-key/v1` format with mode `0600`, and authenticated successfully to the Atlas organization. Nevertheless, `GET /v1/eval/suites` and a non-writing hash probe to `POST /v1/eval/ensure` returned 403 before any suite could be created. Runtype's synchronous `/v1/eval/run` also excludes external agents; the documented external-agent path is `/v1/eval/submit`, which could not be reached because suite creation was denied. The sanitized receipt is [`receipts/runtype-eval-gate-2026-08-27.json`](./receipts/runtype-eval-gate-2026-08-27.json). Eval usage remained `0/100`, no personal provider key was attached, and all surfaces remain draft.
+
+Tavily, Tenki, Mitosis, and Cotal/Nebius are not claimed as used without sanitized final-run receipts. None of these limits justifies creating another credential or account, hunting for a key, attaching a personal provider key, or enabling AIsa/HUD.
 
 ## Current evidence profile
 

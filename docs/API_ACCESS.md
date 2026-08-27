@@ -14,7 +14,7 @@ This matrix is frozen for the build. Agents must use the working set and must no
 | Cotal | `hack` mesh reachable; this machine lacks user-auth material for a live snapshot | No builder credits by design; $300 judged prize | Coordination/provenance only when a sanitized receipt is available |
 | Tenki | Working key; hosted sandboxes active | $110 was last observed, while event copy advertises $100 | Hosted Cotal sandboxes; direct use only if necessary |
 | Nebius | No direct key | Working indirectly through Cotal platform-issued Token Factory access | Models for hosted agents; never seek a direct key |
-| Runtype | Working existing signed-in account; Atlas product/capability/surfaces created | $5 promo balance and estimated bill $0 observed; debug execution counters remain outside product runs | Final A2A capability succeeds; surfaces stay draft because named eval creation requires a prohibited new API credential |
+| Runtype | Working existing signed-in account; Atlas product/capability/surfaces created; one user-authorized eval-only management key | $5 promo balance and estimated bill $0 observed; eval usage remains 0/100 | Final A2A capability succeeds; named eval creation is blocked by Runtype returning 403 for the key's displayed `EVALS:READ`/`EVALS:WRITE` scopes, so surfaces stay draft |
 | Mitosis | Working key | 500 account credits were last observed; event publishes no builder-credit offer | Optional provenance/memory if it materially improves the product |
 | AIsa | Excluded from this build | $1 trial was last observed, not the advertised $100 | Do not use |
 | Cloudflare | Working saved existing-account OAuth with Wrangler 4.127.0 | Existing production Worker and D1 only; no replacement resource or key | Approved atomic D1 refresh and final Worker deployment complete |
@@ -24,7 +24,7 @@ This matrix is frozen for the build. Agents must use the working set and must no
 ## Non-negotiable access rules
 
 - Never print, commit, message, or copy credential values.
-- Never request or mint additional keys during this build.
+- Do not request or mint any additional key beyond the one explicitly authorized `Atlas Eval Gate 2026-08-27` credential.
 - Never attach a personal model/provider key to Cotal or Runtype.
 - Use no-key public sources first, then fixed hackathon credits.
 - Runtype and Cloudflare may use only their existing-account OAuth flows.

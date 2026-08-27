@@ -128,7 +128,7 @@ verification of the remediated state.
 
 The existing signed-in Runtype account started with no Atlas product, product
 runs/errors `0/0`, an observed $5 promo balance, and estimated bill $0. The
-approved existing-account workflow created no credential and produced:
+approved existing-account workflow produced:
 
 | Runtype object | ID |
 | --- | --- |
@@ -153,12 +153,26 @@ The final post-deployment debug execution sent
 counter, which remained `0`; no numeric bill or credit delta is invented.
 
 Runtype's Evals page showed zero saved evals and `0/100` for the day but no UI
-control to create the five approved named suites. The SDK/API path requires an
-API key. Because creating, hunting, or replacing credentials is prohibited, the
-geolocation-fidelity, citation-integrity, cluster-coherence,
-abstention-and-failure, and agent-surface-conformance suites could not be
-created. REST, MCP, and A2A therefore remain draft rather than being activated
-without the required gate.
+control to create the five approved named suites. Rowan subsequently authorized
+exactly one new eval-only management credential. The key authenticates to the
+correct Atlas organization, has explicit `EVALS:READ` and `EVALS:WRITE` scopes,
+expires on 2026-08-29, and is stored only in Runtype's supported
+`runtype.api-key/v1` file format under `~/.runtype/keys` with mode `0600`. Its
+value is absent from this repository, chat receipts, screenshots, and logs.
+
+Runtype nevertheless returned HTTP 403 for both eval-suite read and the
+non-writing `eval/ensure` hash probe. The former said `FLOWS:READ or EVALS:READ
+permission required`; the latter said `Insufficient permissions`. The
+synchronous `/v1/eval/run` endpoint does not support the existing external A2A
+agent; Runtype documents `/v1/eval/submit` as the delegated external-agent batch
+path, limited to one baseline configuration without overrides. That batch path
+could not be invoked honestly because the prerequisite suite write was denied.
+
+Accordingly, geolocation-fidelity, citation-integrity, cluster-coherence,
+abstention-and-failure, and agent-surface-conformance were neither created nor
+run. Eval usage stayed `0/100`, no model/provider execution or personal billing
+key was attached, and REST/MCP/A2A remain draft. The sanitized failure receipt
+is [`docs/receipts/runtype-eval-gate-2026-08-27.json`](./receipts/runtype-eval-gate-2026-08-27.json).
 
 ## Other integrations and truthful limits
 

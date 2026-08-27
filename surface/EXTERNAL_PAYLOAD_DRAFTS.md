@@ -210,9 +210,15 @@ invented.
 Do not activate on a partial or failed eval. Preserve returned IDs, results, and sanitized usage evidence.
 
 The signed-in Evals page showed zero saved evals and `0/100` for the day but no
-create control. Saved suites require the SDK/API, whose available path requires
-an API key. The no-key-hunting/no-key-minting boundary therefore blocks this
-payload exactly; draft is the correct final status.
+create control. Rowan authorized exactly one eval-only API credential for the
+SDK/API path. It authenticated to the correct Atlas organization, but Runtype
+returned HTTP 403 for both the key's displayed `EVALS:READ` suite read and its
+`EVALS:WRITE` non-writing ensure probe. The synchronous `/v1/eval/run` endpoint
+also excludes external agents; the documented delegated-agent path is
+`/v1/eval/submit`, which cannot be reached honestly without first creating the
+suite. No suite or run exists, usage remains `0/100`, and draft is the correct
+final status. See the sanitized receipt at
+`docs/receipts/runtype-eval-gate-2026-08-27.json`.
 
 ## Payload 7 — one final Hacker Bob scan
 
