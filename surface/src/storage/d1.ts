@@ -146,7 +146,15 @@ export class D1TruthStore implements TruthStore {
     const predicates: string[] = [];
     const bindings: unknown[] = [];
     if (query.region !== undefined) {
-      predicates.push("primary_region_code = ?");
+      predicates.push(`EXISTS (
+        SELECT 1
+        FROM story_locations AS region_location
+        INNER JOIN story_location_evidence AS region_evidence
+          ON region_evidence.location_id = region_location.location_id
+        WHERE region_location.cluster_id = story_clusters.cluster_id
+          AND region_location.location_type = 'event'
+          AND region_location.region_code = ?
+      )`);
       bindings.push(query.region);
     }
     if (query.since !== undefined) {

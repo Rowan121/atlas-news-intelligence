@@ -379,6 +379,15 @@ describe("Atlas Worker routes", () => {
     const multiLocation = structuredClone(story);
     multiLocation.locations.push({
       ...structuredClone(multiLocation.locations[0]!),
+      location_id: "test-location-same-region",
+      label: "Second cited location in Test Europe",
+      latitude: 13,
+      longitude: 23,
+      confidence: 0.85,
+      evidence_count: 1,
+    });
+    multiLocation.locations.push({
+      ...structuredClone(multiLocation.locations[0]!),
       location_id: "test-location-stronger",
       label: "Stronger cited event location",
       region_code: "TEST-PRIMARY",
@@ -397,6 +406,12 @@ describe("Atlas Worker routes", () => {
         primaryRegionId: string;
         eventLocations: Array<{ id: string; isPrimary: boolean }>;
       }>;
+      regions: Array<{
+        id: string;
+        rawProminence: number;
+        storyCount: number;
+        topClusterIds: string[];
+      }>;
     };
 
     expect(response.status).toBe(200);
@@ -407,7 +422,13 @@ describe("Atlas Worker routes", () => {
       eventLocations: [
         { id: "test-location-stronger", isPrimary: true },
         { id: "test-location-event", isPrimary: false },
+        { id: "test-location-same-region", isPrimary: false },
       ],
+    });
+    expect(body.regions.find((region) => region.id === "TEST-EU")).toMatchObject({
+      rawProminence: 2,
+      storyCount: 1,
+      topClusterIds: [story.cluster_id],
     });
     expect(body.health.message).toContain("duplicate cluster summary row");
   });

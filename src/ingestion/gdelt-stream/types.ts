@@ -116,6 +116,8 @@ export interface IntelligenceSnapshot {
   health: PipelineHealth;
   clusters: StoryCluster[];
   validationIssues: Array<{ clusterId: string; issues: ValidationIssue[] }>;
+  /** Optional, explicit provenance supplied with the source artifact. */
+  cotalReceipt?: unknown;
 }
 
 export type GdeltLoadStage = "manifest" | "events" | "mentions" | "gkg" | "join" | "validation";

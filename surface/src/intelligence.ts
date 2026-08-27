@@ -506,7 +506,16 @@ export async function buildIntelligenceSnapshot(
   for (const cluster of mapped) {
     const story = details.find((detail) => detail?.cluster_id === cluster.id);
     if (story === null || story === undefined) continue;
+    // A story may retain several evidence-backed event locations in the same
+    // region. The first one is the deterministic evidence-ranked representative
+    // from mapCluster; prominence and ranking still count the cluster once.
+    const representativeByRegion = new Map<string, UiLocation>();
     for (const location of cluster.eventLocations) {
+      if (!representativeByRegion.has(location.regionId)) {
+        representativeByRegion.set(location.regionId, location);
+      }
+    }
+    for (const location of representativeByRegion.values()) {
       const existing = regions.get(location.regionId) ?? {
         id: location.regionId,
         label: location.label,

@@ -1,7 +1,9 @@
 import type {
   Article as SurfaceArticle,
   ClaimEvidence as SurfaceClaimEvidence,
+  CotalReceipt,
   EventLocation as SurfaceEventLocation,
+  IntegrationReceipt,
   PipelineHealth as SurfacePipelineHealth,
   PipelineRunInput,
   RegionalProminence as SurfaceRegionalProminence,
@@ -78,6 +80,101 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function sourceStringArray(value: unknown, path: string): string[] {
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
+    throw new Error(`${path} must be an array of strings.`);
+  }
+  return [...value];
+}
+
+function sourceIntegrationReceipt(value: unknown, index: number): IntegrationReceipt {
+  if (!isRecord(value)) throw new Error(`integrations[${index}] must be an object.`);
+  const provider = value.provider;
+  const capability = value.capability;
+  const observedAt = value.observed_at;
+  if (typeof provider !== "string" || provider.trim() === "") {
+    throw new Error(`integrations[${index}].provider is required.`);
+  }
+  if (typeof capability !== "string" || capability.trim() === "") {
+    throw new Error(`integrations[${index}].capability is required.`);
+  }
+  if (typeof observedAt !== "string" || !Number.isFinite(Date.parse(observedAt))) {
+    throw new Error(`integrations[${index}].observed_at must be ISO-8601.`);
+  }
+  if (value.status !== "succeeded" && value.status !== "degraded" && value.status !== "failed") {
+    throw new Error(`integrations[${index}].status is invalid.`);
+  }
+  const externalRequestId = value.external_request_id ?? null;
+  if (externalRequestId !== null && typeof externalRequestId !== "string") {
+    throw new Error(`integrations[${index}].external_request_id must be a string or null.`);
+  }
+  let usage: IntegrationReceipt["usage"] = null;
+  if (value.usage !== undefined && value.usage !== null) {
+    if (!isRecord(value.usage)) throw new Error(`integrations[${index}].usage must be an object or null.`);
+    const rawUsage = value.usage;
+    if (
+      typeof rawUsage.unit !== "string"
+      || rawUsage.unit.trim() === ""
+      || typeof rawUsage.before !== "number"
+      || !Number.isFinite(rawUsage.before)
+      || typeof rawUsage.after !== "number"
+      || !Number.isFinite(rawUsage.after)
+      || typeof rawUsage.delta !== "number"
+      || !Number.isFinite(rawUsage.delta)
+      || Math.abs((rawUsage.after - rawUsage.before) - rawUsage.delta) > 1e-9
+    ) {
+      throw new Error(`integrations[${index}].usage must contain a consistent unit, before, after, and delta.`);
+    }
+    usage = {
+      unit: rawUsage.unit,
+      before: rawUsage.before,
+      after: rawUsage.after,
+      delta: rawUsage.delta,
+    };
+  }
+  return {
+    provider: provider.trim(),
+    capability: capability.trim(),
+    status: value.status,
+    observed_at: new Date(observedAt).toISOString(),
+    external_request_id: externalRequestId,
+    usage,
+    evidence_urls: sourceStringArray(value.evidence_urls ?? [], `integrations[${index}].evidence_urls`),
+  };
+}
+
+function parseSourceCotalReceipt(value: unknown): CotalReceipt {
+  if (!isRecord(value)) throw new Error("receipt must be an object.");
+  if (typeof value.agent !== "string" || value.agent.trim() === "") {
+    throw new Error("receipt agent is required.");
+  }
+  if (typeof value.task_id !== "string" || value.task_id.trim() === "") {
+    throw new Error("receipt task_id is required.");
+  }
+  const commit = value.commit ?? null;
+  if (commit !== null && (typeof commit !== "string" || !/^[0-9a-f]{7,64}$/.test(commit))) {
+    throw new Error("receipt commit must be a Git SHA.");
+  }
+  const next = value.next ?? null;
+  if (next !== null && typeof next !== "string") throw new Error("receipt next must be a string or null.");
+  if (value.integrations !== undefined && !Array.isArray(value.integrations)) {
+    throw new Error("receipt integrations must be an array.");
+  }
+  return {
+    agent: value.agent.trim(),
+    task_id: value.task_id.trim(),
+    commit,
+    tests: sourceStringArray(value.tests ?? [], "receipt tests"),
+    artifact_paths: sourceStringArray(value.artifact_paths ?? [], "receipt artifact_paths"),
+    evidence_urls: sourceStringArray(value.evidence_urls ?? [], "receipt evidence_urls"),
+    blockers: sourceStringArray(value.blockers ?? [], "receipt blockers"),
+    next,
+    ...(value.integrations === undefined
+      ? {}
+      : { integrations: value.integrations.map((entry, index) => sourceIntegrationReceipt(entry, index)) }),
+  };
+}
+
 /** Accept either the successful loader envelope or the snapshot itself. */
 export function snapshotFromDocument(document: unknown): IntelligenceSnapshot {
   const candidate = isRecord(document) && document.ok === true ? document.snapshot : document;
@@ -89,7 +186,15 @@ export function snapshotFromDocument(document: unknown): IntelligenceSnapshot {
   ) {
     throw new Error("Input is not a successful Atlas GDELT intelligence snapshot.");
   }
-  const snapshot = candidate as unknown as IntelligenceSnapshot;
+  const envelopeReceipt = isRecord(document)
+    ? (document.cotalReceipt ?? document.cotal_receipt)
+    : undefined;
+  const embeddedReceipt = candidate.cotalReceipt ?? candidate.cotal_receipt;
+  const sourceReceipt = embeddedReceipt ?? envelopeReceipt;
+  const snapshot = {
+    ...candidate,
+    ...(sourceReceipt === undefined ? {} : { cotalReceipt: sourceReceipt }),
+  } as unknown as IntelligenceSnapshot;
   const issues = validateIntelligenceSnapshot(snapshot);
   if (issues.length > 0) {
     throw new Error(
@@ -97,6 +202,16 @@ export function snapshotFromDocument(document: unknown): IntelligenceSnapshot {
     );
   }
   return snapshot;
+}
+
+function sourceCotalReceipt(snapshot: IntelligenceSnapshot): PipelineRunInput["cotal_receipt"] {
+  if (snapshot.cotalReceipt === undefined) return null;
+  try {
+    return parseSourceCotalReceipt(snapshot.cotalReceipt);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "unknown validation failure";
+    throw new Error(`Snapshot Cotal receipt is invalid: ${reason}`, { cause: error });
+  }
 }
 
 function namespaced(runId: string, sourceId: string): string {
@@ -401,16 +516,7 @@ export function convertSnapshotToD1(snapshot: IntelligenceSnapshot): D1SeedDatas
     error_kind: null,
     error_message: snapshot.health.warnings.length === 0 ? null : snapshot.health.warnings.join("; "),
     retryable: false,
-    cotal_receipt: {
-      agent: "atlas_data",
-      task_id: "news.data.live-stream",
-      commit: null,
-      tests: ["snapshot contract validated", "D1 export invariants validated"],
-      artifact_paths: ["artifacts/gdelt-latest.json"],
-      evidence_urls: snapshot.source.files.map((file) => file.url),
-      blockers: [],
-      next: "apply the evidence-backed SQL only after the approved release gate",
-    },
+    cotal_receipt: sourceCotalReceipt(snapshot),
   };
   const latestStoryAt = clusters.map((cluster) => cluster.story.last_observed_at).sort().at(-1) ?? null;
   const health: SurfacePipelineHealth = {

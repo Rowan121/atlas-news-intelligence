@@ -41,8 +41,41 @@ describe("GDELT snapshot to D1 seed", () => {
       status: "succeeded",
       records_seen: 6,
       records_upserted: 7,
-      cotal_receipt: { agent: "atlas_data", task_id: "news.data.live-stream", commit: null },
+      cotal_receipt: null,
     });
+  });
+
+  it("preserves an explicit validated source receipt instead of synthesizing provenance", () => {
+    const receipt = {
+      agent: "atlas_data",
+      task_id: "news.data.live-stream",
+      commit: "248046f",
+      tests: ["52/52", "typecheck"],
+      artifact_paths: ["artifacts/gdelt-latest.json"],
+      evidence_urls: ["https://data.gdeltproject.org/gdeltv2/lastupdate.txt"],
+      blockers: [],
+      next: "convert the evidence-backed snapshot",
+    };
+    const snapshot = snapshotFromDocument({
+      ok: true,
+      snapshot: gdeltSnapshotFixture,
+      diagnostics: [],
+      cotal_receipt: receipt,
+    });
+    const dataset = convertSnapshotToD1(snapshot);
+
+    expect(dataset.run.cotal_receipt).toEqual(receipt);
+    expect(renderD1Seed(dataset)).toContain('"commit":"248046f"');
+  });
+
+  it("rejects a malformed explicit source receipt", () => {
+    const snapshot = snapshotFromDocument({
+      ok: true,
+      snapshot: gdeltSnapshotFixture,
+      diagnostics: [],
+      cotalReceipt: { agent: "atlas_data", task_id: "news.data.live-stream", commit: "not-a-sha" },
+    });
+    expect(() => convertSnapshotToD1(snapshot)).toThrow(/Snapshot Cotal receipt is invalid/);
   });
 
   it("renders byte-stable escaped SQL scoped to the same run", () => {
@@ -62,7 +95,7 @@ describe("GDELT snapshot to D1 seed", () => {
     expect(first).toContain("same_story_json");
     expect(first).toContain("source_normalized_share");
     expect(first).toContain("'event_location'");
-    expect(first).toContain("atlas_data");
+    expect(dataset.run.cotal_receipt).toBeNull();
   });
 
   it("executes twice against the Surface schema without touching another run", () => {
