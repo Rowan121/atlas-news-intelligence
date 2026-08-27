@@ -40,7 +40,7 @@ const WINDOW_OPTIONS: Array<{ value: TimeWindow; label: string }> = [
 ];
 
 const DEFAULT_CLIENT = createDefaultClient();
-const COMPACT_LAYOUT_QUERY = "(max-width: 900px)";
+const COMPACT_LAYOUT_QUERY = "(max-width: 760px)";
 
 function compactLayoutMatches() {
   return typeof globalThis.window !== "undefined"

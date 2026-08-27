@@ -325,7 +325,7 @@ describe("App live-data states", () => {
   it("keeps the closed mobile panel inert and restores focus to its trigger", async () => {
     vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({
       matches: true,
-      media: "(max-width: 900px)",
+      media: "(max-width: 760px)",
       onchange: null,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
@@ -352,5 +352,29 @@ describe("App live-data states", () => {
     await waitFor(() => expect(trigger).toHaveFocus());
     expect(panel).toHaveAttribute("aria-hidden", "true");
     expect(panel).toHaveAttribute("inert");
+  });
+
+  it("keeps the visible tablet panel interactive above the 760px drawer breakpoint", async () => {
+    const viewportWidth = 800;
+    vi.stubGlobal("matchMedia", vi.fn().mockImplementation((query: string) => ({
+      matches: query === "(max-width: 760px)" && viewportWidth <= 760,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })));
+    const client: NewsIntelligenceClient = {
+      getSnapshot: vi.fn().mockResolvedValue(emptySnapshot),
+    };
+    const { container } = render(<App client={client} />);
+
+    await screen.findByText("No eligible clusters in this window.");
+    const panel = container.querySelector("#story-feed") as HTMLElement;
+    expect(globalThis.matchMedia).toHaveBeenCalledWith("(max-width: 760px)");
+    expect(panel).not.toHaveAttribute("aria-hidden");
+    expect(panel).not.toHaveAttribute("inert");
   });
 });
