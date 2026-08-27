@@ -517,6 +517,35 @@ describe("Atlas Worker routes", () => {
     expect(snapshot.clusters[0]?.sources[0]?.audienceExposure).toBe(undefined);
   });
 
+  it("loads every intelligence cluster in bounded store batches", async () => {
+    store.stories = Array.from({ length: 101 }, (_, index) => ({
+      ...structuredClone(story),
+      cluster_id: `test-cluster-${index}`,
+      canonical_title: `Test story ${index}`,
+    }));
+
+    const response = await get("/api/v1/intelligence?window=24h&prominence=normalized");
+    expect(response.status).toBe(200);
+    const snapshot = await response.json() as { clusters: Array<{ id: string }> };
+
+    expect(snapshot.clusters.length).toBe(101);
+    expect(store.queries).toEqual([
+      {
+        since: "2026-08-25T12:00:00.000Z",
+        until: "2026-08-26T12:00:00.000Z",
+        metric: "normalized",
+        limit: 100,
+      },
+      {
+        since: "2026-08-25T12:00:00.000Z",
+        until: "2026-08-26T12:00:00.000Z",
+        metric: "normalized",
+        limit: 100,
+        offset: 100,
+      },
+    ]);
+  });
+
   it("builds SAME-STORY editorial-market heat and conflict only from cited cross-network evidence", async () => {
     const compared = structuredClone(story);
     const first = compared.articles[0]!;

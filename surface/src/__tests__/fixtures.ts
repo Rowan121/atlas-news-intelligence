@@ -112,7 +112,10 @@ export class MemoryTruthStore implements TruthStore {
 
   async listStories(query: StoryQuery, _now: Date, _staleAfterSeconds: number): Promise<StorySummary[]> {
     this.queries.push(query);
-    return this.stories.map(({ articles: _articles, locations: _locations, claims: _claims, regional_prominence: _prominence, ...summary }) => summary);
+    const offset = query.offset ?? 0;
+    return this.stories
+      .slice(offset, offset + query.limit)
+      .map(({ articles: _articles, locations: _locations, claims: _claims, regional_prominence: _prominence, ...summary }) => summary);
   }
 
   async getStory(clusterId: string): Promise<StoryDetail | null> {

@@ -290,8 +290,8 @@ export class D1TruthStore implements TruthStore {
     const where = predicates.length === 0 ? "" : `WHERE ${predicates.join(" AND ")}`;
     const order = query.metric === "raw" ? "raw_article_count" : "normalized_prominence";
     const clusters = await this.db
-      .prepare(`SELECT ${CLUSTER_COLUMNS} FROM story_clusters ${where} ORDER BY ${order} DESC, last_observed_at DESC LIMIT ?`)
-      .bind(...bindings, query.limit)
+      .prepare(`SELECT ${CLUSTER_COLUMNS} FROM story_clusters ${where} ORDER BY ${order} DESC, last_observed_at DESC LIMIT ? OFFSET ?`)
+      .bind(...bindings, query.limit, query.offset ?? 0)
       .all<ClusterRow>();
 
     if (clusters.results.length === 0) return [];

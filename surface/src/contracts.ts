@@ -154,6 +154,7 @@ export interface StoryQuery {
   until?: IsoTimestamp;
   metric: ProminenceMetric;
   limit: number;
+  offset?: number;
 }
 
 export interface PipelineRun {

@@ -6,6 +6,7 @@ import type {
   PipelineHealth,
   ProminenceMetric,
   StoryDetail,
+  StorySummary,
 } from "./contracts";
 import type { TruthStore } from "./store";
 
@@ -500,11 +501,23 @@ export async function buildIntelligenceSnapshot(
   staleAfterSeconds: number,
 ): Promise<IntelligenceSnapshot> {
   const since = new Date(now.getTime() - windowHours[window] * 3_600_000).toISOString();
-  const summaries = await store.listStories(
-    { since, until: now.toISOString(), metric, limit: 100 },
-    now,
-    staleAfterSeconds,
-  );
+  const summaries: StorySummary[] = [];
+  const batchSize = 100;
+  for (let offset = 0; ; offset += batchSize) {
+    const batch = await store.listStories(
+      {
+        since,
+        until: now.toISOString(),
+        metric,
+        limit: batchSize,
+        ...(offset === 0 ? {} : { offset }),
+      },
+      now,
+      staleAfterSeconds,
+    );
+    summaries.push(...batch);
+    if (batch.length < batchSize) break;
+  }
   const clusterIds = [...new Set(summaries.map((summary) => summary.cluster_id))];
   const duplicateSummaryRows = summaries.length - clusterIds.length;
   const details = await Promise.all(clusterIds.map((clusterId) => store.getStory(clusterId)));
