@@ -231,6 +231,10 @@ function representativeSnippet(cluster: StoryCluster, articleId: string): string
     const evidence = claim.evidence.find((item) => item.articleId === articleId);
     if (evidence !== undefined) return evidence.quote;
   }
+  const article = cluster.articles.find((candidate) => candidate.id === articleId);
+  if (article?.summary !== undefined && article.summary.trim() !== "") {
+    return article.summary.trim().slice(0, 1_200);
+  }
   return null;
 }
 
