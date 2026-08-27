@@ -278,6 +278,91 @@ describe("Atlas Worker routes", () => {
     expect(response.headers.get("strict-transport-security")).toBe("max-age=31536000; includeSubDomains");
   });
 
+  it("forwards built asset paths through the Worker without changing asset representation metadata", async () => {
+    const assetRequests: Array<{ method: string; pathname: string }> = [];
+    const assetEnv = {
+      ...env,
+      ENVIRONMENT: "production",
+      ASSETS: {
+        async fetch(input: RequestInfo | URL): Promise<Response> {
+          const request = input instanceof Request ? input : new Request(input);
+          const pathname = new URL(request.url).pathname;
+          assetRequests.push({ method: request.method, pathname });
+          if (pathname === "/assets/missing.js") {
+            return new Response("missing asset", {
+              status: 404,
+              statusText: "Not Found",
+              headers: {
+                "Content-Type": "text/plain; charset=utf-8",
+                "Cache-Control": "public, max-age=60",
+                ETag: "\"missing-etag\"",
+              },
+            });
+          }
+          return new Response("console.log('atlas');", {
+            status: 200,
+            headers: {
+              "Content-Type": "application/javascript; charset=utf-8",
+              "Cache-Control": "public, max-age=31536000, immutable",
+              ETag: "\"asset-etag\"",
+            },
+          });
+        },
+      },
+    } as Env;
+
+    const asset = await worker.fetch!(
+      new Request("https://atlas.example/assets/index.js"),
+      assetEnv,
+      {} as ExecutionContext,
+    );
+    expect(asset.status).toBe(200);
+    expect(await asset.text()).toBe("console.log('atlas');");
+    expect(asset.headers.get("content-type")).toBe("application/javascript; charset=utf-8");
+    expect(asset.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(asset.headers.get("etag")).toBe("\"asset-etag\"");
+    expect(asset.headers.get("strict-transport-security")).toBe("max-age=31536000; includeSubDomains");
+    expectClickjackingHeaders(asset);
+
+    const head = await worker.fetch!(
+      new Request("https://atlas.example/assets/index.js", { method: "HEAD" }),
+      assetEnv,
+      {} as ExecutionContext,
+    );
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe("");
+    expect(head.headers.get("content-type")).toBe("application/javascript; charset=utf-8");
+    expect(head.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(head.headers.get("etag")).toBe("\"asset-etag\"");
+    expectClickjackingHeaders(head);
+
+    const missingAsset = await worker.fetch!(
+      new Request("https://atlas.example/assets/missing.js"),
+      assetEnv,
+      {} as ExecutionContext,
+    );
+    expect(missingAsset.status).toBe(404);
+    expect(missingAsset.statusText).toBe("Not Found");
+    expect(await missingAsset.text()).toBe("missing asset");
+    expect(missingAsset.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(missingAsset.headers.get("cache-control")).toBe("public, max-age=60");
+    expect(missingAsset.headers.get("etag")).toBe("\"missing-etag\"");
+    expectClickjackingHeaders(missingAsset);
+
+    const nonAssetMiss = await worker.fetch!(
+      new Request("https://atlas.example/not-an-asset"),
+      assetEnv,
+      {} as ExecutionContext,
+    );
+    expect(nonAssetMiss.status).toBe(404);
+    expect(await nonAssetMiss.json()).toMatchObject({ ok: false, error: { kind: "not_found" } });
+    expect(assetRequests).toEqual([
+      { method: "GET", pathname: "/assets/index.js" },
+      { method: "HEAD", pathname: "/assets/index.js" },
+      { method: "GET", pathname: "/assets/missing.js" },
+    ]);
+  });
+
   it("applies one clickjacking policy to API and protocol errors while gating HSTS to production HTTPS", async () => {
     const apiError = await get("/api/stories?metric=unsupported");
     expect(apiError.status).toBe(400);

@@ -16,6 +16,7 @@
       "/mcp",
       "/a2a",
       "/a2a/*",
+      "/assets/*",
       "/robots.txt",
       "/sitemap.xml",
       "/llms.txt",

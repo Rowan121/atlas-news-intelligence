@@ -234,6 +234,19 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
           return response;
         }
 
+        if (url.pathname.startsWith("/assets/")) {
+          readMethod(request);
+          if (env.ASSETS === undefined) throw new HttpProblem(404, "not_found", "Asset not found");
+          const asset = await env.ASSETS.fetch(request);
+          const response = new Response(request.method === "HEAD" ? null : asset.body, {
+            status: asset.status,
+            statusText: asset.statusText,
+            headers: asset.headers,
+          });
+          corsHeadersFor(response.headers, corsHeaders);
+          return response;
+        }
+
         if (url.pathname === "/") {
           readMethod(request);
           if (documentationRepresentation(request) !== "html") {
