@@ -1,9 +1,25 @@
 import { z } from "zod";
 import type {
+  EditorialMarketEvidenceKind,
+  EditorialMarketMethod,
   IntelligenceSnapshot,
   NewsIntelligenceClient,
   SnapshotQuery,
 } from "./types";
+
+function evidenceSupportsEditorialMarketMethod(
+  method: EditorialMarketMethod,
+  evidence: Array<{ kind: EditorialMarketEvidenceKind }>,
+) {
+  const kinds = new Set(evidence.map((item) => item.kind));
+  if (method === "documented_outlet_market") {
+    return kinds.has("outlet_market_documentation");
+  }
+  if (method === "language_and_publisher_location") {
+    return kinds.has("outlet_language") && kinds.has("publisher_location");
+  }
+  return true;
+}
 
 const locationSchema = z.object({
   id: z.string().min(1),
@@ -22,6 +38,13 @@ const assessmentEvidenceSchema = z.object({
   articleId: z.string().min(1),
   url: z.url(),
   quote: z.string().min(1),
+});
+
+const editorialMarketEvidenceSchema = z.object({
+  kind: z.enum(["outlet_market_documentation", "outlet_language", "publisher_location"]),
+  url: z.url(),
+  quote: z.string().min(1),
+  articleId: z.string().min(1).optional(),
 });
 
 const marketRegionSchema = z.object({
@@ -54,29 +77,28 @@ const publisherOriginSchema = z.discriminatedUnion("status", [
   }),
 ]);
 
-const coverageMarketsSchema = z.discriminatedUnion("status", [
+const editorialMarketSchema = z.discriminatedUnion("status", [
   unknownAssessmentSchema,
   z.object({
     status: z.literal("observed"),
-    value: z.array(marketRegionSchema).min(1),
+    value: marketRegionSchema,
     confidence: z.number().min(0).max(1),
-    method: z.enum(["provider_coverage_metadata", "publisher_registry", "manual_confirmed"]),
-    evidence: z.array(assessmentEvidenceSchema).min(1),
+    method: z.enum(["documented_outlet_market", "language_and_publisher_location", "manual_confirmed"]),
+    evidence: z.array(editorialMarketEvidenceSchema).min(1),
     reason: z.null(),
   }),
-]);
-
-const audienceExposureSchema = z.discriminatedUnion("status", [
-  unknownAssessmentSchema,
-  z.object({
-    status: z.literal("observed"),
-    value: z.array(marketRegionSchema.extend({ share: z.number().min(0).max(1).optional() })).min(1),
-    confidence: z.number().min(0).max(1),
-    method: z.enum(["first_party_audience_telemetry", "provider_audience_measurement", "manual_confirmed"]),
-    evidence: z.array(assessmentEvidenceSchema).min(1),
-    reason: z.null(),
-  }),
-]);
+]).superRefine((assessment, context) => {
+  if (
+    assessment.status === "observed"
+    && !evidenceSupportsEditorialMarketMethod(assessment.method, assessment.evidence)
+  ) {
+    context.addIssue({
+      code: "custom",
+      message: "Editorial-market evidence does not support the declared method.",
+      path: ["method"],
+    });
+  }
+});
 
 const framingSchema = z.discriminatedUnion("status", [
   unknownAssessmentSchema,
@@ -107,8 +129,7 @@ const sourceSchema = z.object({
   publisher: z.string().min(1),
   publisherDomain: z.string().min(1),
   publisherOrigin: publisherOriginSchema,
-  coverageMarkets: coverageMarketsSchema,
-  audienceExposure: audienceExposureSchema,
+  editorialMarket: editorialMarketSchema,
   framing: framingSchema,
   tone: toneSchema,
   articleTitle: z.string().min(1),
@@ -150,29 +171,39 @@ const prominenceSchema = z.object({
   })),
 });
 
+const editorialMarketCoordinatesSchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  confidence: z.number().min(0).max(1),
+  method: z.enum(["documented_outlet_market", "language_and_publisher_location", "manual_confirmed"]),
+  evidence: z.array(editorialMarketEvidenceSchema).min(1),
+}).superRefine((coordinates, context) => {
+  if (!evidenceSupportsEditorialMarketMethod(coordinates.method, coordinates.evidence)) {
+    context.addIssue({
+      code: "custom",
+      message: "Editorial-market coordinate evidence does not support the declared method.",
+      path: ["method"],
+    });
+  }
+});
+
 const coverageHeatSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("observed"),
-    basis: z.literal("coverage_market"),
+    basis: z.literal("editorial_market"),
     markets: z.array(z.object({
       regionCode: z.string().min(1),
       label: z.string().min(1),
       rawArticleCount: z.number().int().nonnegative(),
       uniquePublisherCount: z.number().int().nonnegative(),
       sourceNormalizedShare: z.number().min(0).max(1),
-      coordinates: z.object({
-        latitude: z.number().min(-90).max(90),
-        longitude: z.number().min(-180).max(180),
-        confidence: z.number().min(0).max(1),
-        method: z.enum(["provider_coverage_metadata", "publisher_registry", "manual_confirmed"]),
-        evidence: z.array(assessmentEvidenceSchema).min(1),
-      }).nullable(),
+      coordinates: editorialMarketCoordinatesSchema.nullable(),
     })).min(1),
     reason: z.null(),
   }),
   z.object({
     status: z.literal("unavailable"),
-    basis: z.literal("coverage_market"),
+    basis: z.literal("editorial_market"),
     markets: z.tuple([]),
     reason: z.string().min(1),
   }),
@@ -196,6 +227,38 @@ const clusterSchema = z.object({
   membershipConfidence: z.number().min(0).max(1),
   signals: z.object({ conflict: signalSchema, omission: signalSchema }),
   sources: z.array(sourceSchema),
+}).superRefine((cluster, context) => {
+  if (cluster.coverageHeat.status !== "observed") return;
+
+  cluster.coverageHeat.markets.forEach((market, marketIndex) => {
+    const sourceAssessments = cluster.sources.flatMap((source) => (
+      source.editorialMarket.status === "observed"
+      && source.editorialMarket.value.regionCode === market.regionCode
+        ? [source.editorialMarket]
+        : []
+    ));
+    if (sourceAssessments.length === 0) {
+      context.addIssue({
+        code: "custom",
+        message: "Coverage heat must be backed by an observed source editorial market.",
+        path: ["coverageHeat", "markets", marketIndex],
+      });
+      return;
+    }
+
+    if (market.coordinates !== null && !sourceAssessments.some((assessment) => {
+      const coordinates = assessment.value.coordinates;
+      return coordinates !== undefined
+        && coordinates.latitude === market.coordinates?.latitude
+        && coordinates.longitude === market.coordinates?.longitude;
+    })) {
+      context.addIssue({
+        code: "custom",
+        message: "Coverage heat coordinates must come from an observed source editorial market.",
+        path: ["coverageHeat", "markets", marketIndex, "coordinates"],
+      });
+    }
+  });
 });
 
 export const intelligenceSnapshotSchema = z.object({

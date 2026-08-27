@@ -19,15 +19,16 @@ service. `VITE_MAP_STYLE_URL` may opt into a richer MapLibre provider style; Atl
 keeps the reference geography beneath its news layers.
 
 The runtime validator in `src/api.ts` is the canonical UI-side contract. It keeps
-event locations, publisher origins, cited outlet coverage markets, and measured
-audience exposure as separate dimensions and refuses malformed records. Source
-framing/tone and cluster conflict/omission signals carry an observed/unknown or
-assessed/not-assessed status with confidence, method, evidence, and reason.
-Event-region prominence declares its basis and denominators; coverage heat is
-unavailable unless source records contain cited coverage-market evidence. A
-coverage-heat coordinate remains null unless that same market assessment
+event locations, publisher origins, and each source's singular primary editorial
+market as separate dimensions and refuses malformed records. An observed
+editorial market carries one region, confidence, method, and cited evidence;
+otherwise it remains explicitly unknown. Source framing/tone and cluster
+conflict/omission signals likewise carry assessed status and provenance.
+Event-region prominence declares its basis and denominators; story heat is
+unavailable unless source records contain observed editorial-market evidence. A
+heat coordinate remains null unless that same editorial-market assessment
 supplied coordinates with confidence, method, and evidence. Event markers and
-publisher origins are never coordinate fallbacks. A
+publisher origins are never heat or coordinate fallbacks. A
 missing endpoint renders a visible connection-pending state. It never falls back to
 mock news; deterministic records live only in test files.
 

@@ -13,7 +13,13 @@ import { feature } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import countriesTopologyJson from "world-atlas/countries-110m.json";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { ProminenceMode, RegionDominance, StoryCluster } from "./types";
+import type {
+  EditorialMarketEvidence,
+  EditorialMarketMethod,
+  ProminenceMode,
+  RegionDominance,
+  StoryCluster,
+} from "./types";
 
 // Vite's production bundle cannot safely use MapLibre's implicit blob worker:
 // it starts, but GeoJSON messages never complete. A separately bundled module
@@ -28,6 +34,9 @@ export interface CoverageHeatPoint {
   rawProminence: number;
   normalizedProminence: number;
   evidenceCount: number;
+  confidence: number;
+  method: EditorialMarketMethod;
+  evidence: EditorialMarketEvidence[];
 }
 
 interface GlobeMapProps {
@@ -46,7 +55,7 @@ type InlineMapStyle = Exclude<
   string
 >;
 
-const COVERAGE_SOURCE = "atlas-coverage-markets";
+const COVERAGE_SOURCE = "atlas-editorial-markets";
 const COVERAGE_HEAT = "atlas-coverage-heat";
 const COVERAGE_POINTS = "atlas-coverage-points";
 const REFERENCE_OCEAN_LAYER = "atlas-reference-ocean";
@@ -262,6 +271,49 @@ function heatCollection(points: CoverageHeatPoint[], mode: ProminenceMode) {
   };
 }
 
+function humanizeEditorialMarketValue(value: string) {
+  return value.replaceAll("_", " ");
+}
+
+export function EditorialMarketHeatLegend({ points }: { points: CoverageHeatPoint[] }) {
+  return (
+    <div className="editorial-heat-legend" aria-label="Primary editorial-market heat evidence">
+      <div className="map-key-summary">
+        <span className="map-key-heat" />
+        <span>Primary editorial-market intensity</span>
+        <span className="map-key-line" />
+        <span className="map-key-anchor" />
+        <span>Event locations</span>
+      </div>
+      {points.length > 0 && (
+        <details className="heat-evidence-legend">
+          <summary>{points.length} evidenced {points.length === 1 ? "market" : "markets"} · inspect basis</summary>
+          <ul>
+            {points.map((point) => (
+              <li key={point.id}>
+                <strong>{point.label}</strong>
+                <small>
+                  {Math.round(point.confidence * 100)}% confidence · {humanizeEditorialMarketValue(point.method)} · {point.evidenceCount} {point.evidenceCount === 1 ? "record" : "records"}
+                </small>
+                <ul>
+                  {point.evidence.map((evidence, index) => (
+                    <li key={`${evidence.url}-${evidence.articleId ?? index}`}>
+                      <a href={evidence.url} target="_blank" rel="noreferrer">
+                        {humanizeEditorialMarketValue(evidence.kind)}
+                      </a>
+                      <q>{evidence.quote}</q>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
 export function GlobeMap({
   clusters,
   regions,
@@ -445,13 +497,13 @@ export function GlobeMap({
         className="globe-map"
         aria-label={
           viewMode === "story"
-            ? "Interactive globe for one story. Heat shows only evidence-backed coverage markets; outlined markers show cited event locations."
+            ? "Interactive globe for one story. Heat shows only evidence-backed primary editorial markets; outlined markers separately show cited event locations."
             : "Interactive globe showing verified event locations. Use the story feed for a fully keyboard-accessible alternative."
         }
       />
-      <div className={`map-key is-${viewMode}`} aria-hidden="true">
+      <div className={`map-key is-${viewMode}`} aria-hidden={viewMode === "overview" || undefined}>
         {viewMode === "story" ? (
-          <><span className="map-key-heat" /> Coverage-market intensity <span className="map-key-line" /><span className="map-key-anchor" /> Event locations</>
+          <EditorialMarketHeatLegend points={coverageHeatPoints} />
         ) : (
           <><span className="map-key-dot" /> Event location <span className="map-key-line" /> Relative prominence</>
         )}

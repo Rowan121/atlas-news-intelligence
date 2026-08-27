@@ -1,11 +1,46 @@
 import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { createElement } from "react";
 import { getWorkerUrl, type Map as MapLibreMap } from "maplibre-gl";
 import {
   applyLightBasemapContrast,
   createReferenceGraticule,
   createReferenceMapStyle,
+  EditorialMarketHeatLegend,
   installReferenceGeography,
 } from "./GlobeMap";
+
+describe("editorial-market heat legend", () => {
+  it("discloses each market's confidence, method, and cited evidence", () => {
+    render(createElement(EditorialMarketHeatLegend, {
+      points: [{
+        id: "AU",
+        label: "Australia",
+        latitude: -25.3,
+        longitude: 133.8,
+        rawProminence: 3,
+        normalizedProminence: 0.75,
+        evidenceCount: 1,
+        confidence: 0.93,
+        method: "documented_outlet_market",
+        evidence: [{
+          kind: "outlet_market_documentation",
+          url: "https://example.com/about",
+          quote: "Our Australian newsroom serves a national market.",
+        }],
+      }],
+    }));
+
+    expect(screen.getByLabelText("Primary editorial-market heat evidence")).toBeInTheDocument();
+    expect(screen.getByText("Primary editorial-market intensity")).toBeInTheDocument();
+    expect(screen.getByText("93% confidence · documented outlet market · 1 record")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "outlet market documentation" })).toHaveAttribute(
+      "href",
+      "https://example.com/about",
+    );
+    expect(screen.getByText("Our Australian newsroom serves a national market.")).toBeInTheDocument();
+  });
+});
 
 describe("light basemap contrast", () => {
   it("makes the default globe's land, water, and borders distinguishable", () => {

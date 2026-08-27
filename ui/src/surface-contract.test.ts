@@ -45,7 +45,7 @@ describe("live GDELT → Surface → UI contract", () => {
       },
       coverageHeat: {
         status: "unavailable",
-        basis: "coverage_market",
+        basis: "editorial_market",
         markets: [],
       },
       signals: {
@@ -57,12 +57,11 @@ describe("live GDELT → Surface → UI contract", () => {
           publisher: "Wire One",
           language: "und",
           publisherOrigin: { status: "unknown" },
-          coverageMarkets: { status: "unknown" },
-          audienceExposure: { status: "unknown" },
+          editorialMarket: { status: "unknown" },
           framing: { status: "unknown" },
           tone: { status: "unknown" },
         },
-        { publisher: "Wire Two", language: "und", audienceExposure: { status: "unknown" } },
+        { publisher: "Wire Two", language: "und", editorialMarket: { status: "unknown" } },
       ],
     });
     expect(parsed.data.clusters[0]!.eventLocations[0]).toMatchObject({

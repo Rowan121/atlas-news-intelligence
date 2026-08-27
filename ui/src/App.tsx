@@ -97,6 +97,10 @@ function publisherInitials(publisher: string) {
   return normalized.slice(0, 2).toLocaleUpperCase();
 }
 
+function humanizeAssessmentValue(value: string) {
+  return value.replaceAll("_", " ");
+}
+
 function RegionRail({
   regions,
   selectedId,
@@ -208,14 +212,11 @@ function SourceVariantCard({ source }: { source: SourceCoverage }) {
   const publisherOrigin = source.publisherOrigin.status === "observed"
     ? source.publisherOrigin.value.label
     : "Not verified";
-  const coverageMarkets = source.coverageMarkets.status === "observed"
-    ? source.coverageMarkets.value.map((market) => market.label).join(", ")
+  const editorialMarket = source.editorialMarket.status === "observed"
+    ? source.editorialMarket.value.label
     : "Not evidenced in this record";
-  const audienceExposure = source.audienceExposure.status === "observed"
-    ? source.audienceExposure.value.map((market) => `${market.label}${market.share === undefined ? "" : ` (${Math.round(market.share * 100)}%)`}`).join(", ")
-    : "Not measured";
   const framing = source.framing.status === "observed"
-    ? `${source.framing.value.replaceAll("_", " ")} · ${Math.round(source.framing.confidence * 100)}% confidence`
+    ? `${humanizeAssessmentValue(source.framing.value)} · ${Math.round(source.framing.confidence * 100)}% confidence`
     : "Not assessed";
   return (
     <article className="source-variant-card" style={cardStyle}>
@@ -230,10 +231,34 @@ function SourceVariantCard({ source }: { source: SourceCoverage }) {
       <h3>{source.articleTitle}</h3>
       {source.excerpt && <p className="source-excerpt">{source.excerpt}</p>}
       <dl className="geography-facts">
-        <div><dt>Coverage market</dt><dd>{coverageMarkets}</dd></div>
-        <div><dt>Audience exposure</dt><dd>{audienceExposure}</dd></div>
+        <div className="editorial-market-fact">
+          <dt>Primary editorial market</dt>
+          <dd>
+            <strong>{editorialMarket}</strong>
+            {source.editorialMarket.status === "observed" && (
+              <small>
+                {Math.round(source.editorialMarket.confidence * 100)}% confidence · {humanizeAssessmentValue(source.editorialMarket.method)}
+              </small>
+            )}
+          </dd>
+        </div>
         <div><dt>Framing</dt><dd>{framing}</dd></div>
       </dl>
+      {source.editorialMarket.status === "observed" && (
+        <div className="editorial-market-proof" aria-label={`Primary editorial market evidence for ${source.publisher}`}>
+          <strong>Editorial-market evidence</strong>
+          <ul>
+            {source.editorialMarket.evidence.map((evidence, index) => (
+              <li key={`${evidence.url}-${evidence.articleId ?? index}`}>
+                <a href={evidence.url} target="_blank" rel="noreferrer">
+                  {humanizeAssessmentValue(evidence.kind)} <ArrowUpRight size={12} />
+                </a>
+                <q>{evidence.quote}</q>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <ToneBar source={source} />
       <footer>
         <span>{formatRelativeTime(source.publishedAt).replace("Updated ", "")}</span>
@@ -266,7 +291,7 @@ function FocusedStory({ cluster }: { cluster: StoryCluster }) {
         <span><CheckCircle2 size={15} /><small>Same-story confidence</small><strong>{Math.round(cluster.membershipConfidence * 100)}%</strong></span>
       </div>
       <p className="truth-caption">
-        Verified event locations: {cluster.eventLocations.map((candidate) => candidate.label).join("; ")}. Heat appears only from separately evidenced coverage markets; it never represents reader location by assumption.
+        Verified event locations: {cluster.eventLocations.map((candidate) => candidate.label).join("; ")}. Heat appears only from sources with an evidenced primary editorial market; it never represents reader location or event geography by assumption.
       </p>
       {(cluster.signals.conflict.status === "detected" || cluster.signals.omission.status === "detected") && (
         <div className="focused-signal-summary">
@@ -338,12 +363,22 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
     if (storyListRef.current) storyListRef.current.scrollTop = 0;
   }, [focusedClusterId]);
 
-  // Only the coverageHeat contract can populate this layer. Publisher origin,
-  // event location, and audience exposure are deliberately not fallbacks.
+  // Only a coverageHeat market backed by a matching observed source editorial
+  // market can populate this layer. Publisher origin and event location are
+  // deliberately not fallbacks.
   const coverageHeatPoints: CoverageHeatPoint[] = useMemo(() => {
     if (focusedCluster?.coverageHeat.status !== "observed") return [];
     return focusedCluster.coverageHeat.markets.flatMap((market) => {
       if (market.coordinates === null) return [];
+      const hasMatchingSourceMarket = focusedCluster.sources.some((source) => {
+        if (source.editorialMarket.status !== "observed") return false;
+        const coordinates = source.editorialMarket.value.coordinates;
+        return source.editorialMarket.value.regionCode === market.regionCode
+          && coordinates !== undefined
+          && coordinates.latitude === market.coordinates?.latitude
+          && coordinates.longitude === market.coordinates?.longitude;
+      });
+      if (!hasMatchingSourceMarket) return [];
       return [{
         id: market.regionCode,
         label: market.label,
@@ -352,6 +387,9 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
         rawProminence: market.rawArticleCount,
         normalizedProminence: market.sourceNormalizedShare,
         evidenceCount: market.coordinates.evidence.length,
+        confidence: market.coordinates.confidence,
+        method: market.coordinates.method,
+        evidence: market.coordinates.evidence,
       }];
     });
   }, [focusedCluster]);
@@ -475,21 +513,21 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             <div className="map-title">
               <span className="eyebrow">Global event view</span>
               <h1>Choose a place.<br />Then compare one story.</h1>
-              <p>Start with where an event happened. Select a story to reveal every matched version, regional coverage evidence, and framing differences.</p>
+              <p>Start with where an event happened. Select a story to reveal every matched version, primary editorial-market evidence, and framing differences.</p>
             </div>
           )}
 
           {focusedCluster && coverageHeatPoints.length === 0 && (
             <div className="coverage-unavailable-note" role="note">
               <ShieldAlert size={16} />
-              <span><strong>Coverage heat withheld</strong> {focusedCluster.coverageHeat.reason ?? "No verified coverage-market coordinates are attached to this cluster yet."}</span>
+              <span><strong>Editorial-market heat withheld</strong> {focusedCluster.coverageHeat.reason ?? "No observed primary editorial-market coordinates are attached to this cluster yet."}</span>
             </div>
           )}
 
           {state.status === "loading" && !snapshot && (
             <div className="map-state-card" role="status">
               <span className="state-orbit"><Globe2 size={24} /></span>
-              <div><span className="eyebrow">Opening the live graph</span><strong>Checking verified coverage…</strong></div>
+              <div><span className="eyebrow">Opening the live graph</span><strong>Checking verified same-story coverage…</strong></div>
             </div>
           )}
 
@@ -552,7 +590,7 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
             {focusedCluster ? (
               <>
                 <span>{focusedCluster.sources.length} matched versions</span>
-                <span className="metric-explainer">Same event · different outlets and framing</span>
+                <span className="metric-explainer">Same event · different editorial markets and framing</span>
               </>
             ) : (
               <>
@@ -593,7 +631,7 @@ export default function App({ client = DEFAULT_CLIENT }: AppProps) {
           {focusedCluster && (
             <div className="comparison-footnote">
               <strong>What the map means</strong>
-              <span>Heat = evidenced outlet coverage market. Publisher origin and audience exposure stay separate and may be unknown.</span>
+              <span>Heat = evidenced primary editorial market. Publisher origin and event geography stay separate and never fill the heatmap.</span>
             </div>
           )}
         </aside>

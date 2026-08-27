@@ -75,9 +75,9 @@ const fixture = {
       },
       coverageHeat: {
         status: "unavailable",
-        basis: "coverage_market",
+        basis: "editorial_market",
         markets: [],
-        reason: "No evidence-backed coverage-market metadata.",
+        reason: "No evidence-backed primary editorial-market metadata.",
       },
       articleCount: 2,
       publisherCount: 2,
@@ -116,8 +116,7 @@ const fixture = {
             evidence: [],
             reason: null,
           },
-          coverageMarkets: unknown("No verified coverage markets."),
-          audienceExposure: unknown("No measured audience geography."),
+          editorialMarket: unknown("No verified primary editorial market."),
           framing: unknown("No framing analysis."),
           tone: unknown("No tone analysis."),
           articleTitle: "Fixture article",
@@ -185,6 +184,132 @@ describe("HttpNewsIntelligenceClient", () => {
     await expect(client.getSnapshot({ window: "6h", prominence: "raw" })).rejects.toMatchObject({
       kind: "invalid-response",
     } satisfies Partial<AtlasApiError>);
+  });
+
+  it("requires a source editorial-market assessment", () => {
+    const source = fixture.clusters[0].sources[0];
+    const legacyPayload = {
+      ...fixture,
+      clusters: [{
+        ...fixture.clusters[0],
+        sources: [{
+          ...source,
+          editorialMarket: undefined,
+        }],
+      }],
+    };
+
+    expect(intelligenceSnapshotSchema.safeParse(legacyPayload).success).toBe(false);
+  });
+
+  it("rejects editorial-market heat that is not backed by a matching source assessment", () => {
+    const unbackedHeatPayload = {
+      ...fixture,
+      clusters: [{
+        ...fixture.clusters[0],
+        coverageHeat: {
+          status: "observed" as const,
+          basis: "editorial_market" as const,
+          markets: [{
+            regionCode: "PO",
+            label: "Publisher test origin",
+            rawArticleCount: 1,
+            uniquePublisherCount: 1,
+            sourceNormalizedShare: 1,
+            coordinates: {
+              latitude: 10,
+              longitude: 20,
+              confidence: 0.9,
+              method: "documented_outlet_market" as const,
+              evidence: [{
+                kind: "outlet_market_documentation" as const,
+                url: "https://fixture.example/about",
+                quote: "Fixture Publisher serves the test market.",
+              }],
+            },
+          }],
+          reason: null,
+        },
+      }],
+    };
+
+    expect(intelligenceSnapshotSchema.safeParse(unbackedHeatPayload).success).toBe(false);
+  });
+
+  it("rejects an editorial-market method without its required evidence kinds", () => {
+    const mismatchedMethodPayload = {
+      ...fixture,
+      clusters: [{
+        ...fixture.clusters[0],
+        sources: [{
+          ...fixture.clusters[0].sources[0],
+          editorialMarket: {
+            status: "observed" as const,
+            value: { regionCode: "EM", label: "Primary test market" },
+            confidence: 0.75,
+            method: "language_and_publisher_location" as const,
+            evidence: [{
+              kind: "outlet_language" as const,
+              url: "https://fixture.example/article",
+              quote: "The article is written in the market language.",
+            }],
+            reason: null,
+          },
+        }],
+      }],
+    };
+
+    expect(intelligenceSnapshotSchema.safeParse(mismatchedMethodPayload).success).toBe(false);
+  });
+
+  it("accepts heat derived from the same observed source editorial market", () => {
+    const evidence = [{
+      kind: "outlet_market_documentation" as const,
+      url: "https://fixture.example/about",
+      quote: "Fixture Publisher serves the test market.",
+    }];
+    const observedPayload = {
+      ...fixture,
+      clusters: [{
+        ...fixture.clusters[0],
+        coverageHeat: {
+          status: "observed" as const,
+          basis: "editorial_market" as const,
+          markets: [{
+            regionCode: "EM",
+            label: "Primary test market",
+            rawArticleCount: 1,
+            uniquePublisherCount: 1,
+            sourceNormalizedShare: 1,
+            coordinates: {
+              latitude: 11,
+              longitude: 21,
+              confidence: 0.91,
+              method: "documented_outlet_market" as const,
+              evidence,
+            },
+          }],
+          reason: null,
+        },
+        sources: [{
+          ...fixture.clusters[0].sources[0],
+          editorialMarket: {
+            status: "observed" as const,
+            value: {
+              regionCode: "EM",
+              label: "Primary test market",
+              coordinates: { latitude: 11, longitude: 21 },
+            },
+            confidence: 0.91,
+            method: "documented_outlet_market" as const,
+            evidence,
+            reason: null,
+          },
+        }],
+      }],
+    };
+
+    expect(intelligenceSnapshotSchema.safeParse(observedPayload).success).toBe(true);
   });
 
   it("reports a missing endpoint as unavailable without fabricating data", async () => {

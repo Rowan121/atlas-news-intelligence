@@ -130,9 +130,9 @@ const comparisonSnapshot: IntelligenceSnapshot = {
       },
       coverageHeat: {
         status: "unavailable",
-        basis: "coverage_market",
+        basis: "editorial_market",
         markets: [],
-        reason: "No evidence-backed coverage-market metadata.",
+        reason: "No evidence-backed primary editorial-market metadata.",
       },
       articleCount: 2,
       publisherCount: 2,
@@ -150,8 +150,7 @@ const comparisonSnapshot: IntelligenceSnapshot = {
           publisher: "example.com",
           publisherDomain: "example.com",
           publisherOrigin: unknownAssessment("Publisher origin unavailable."),
-          coverageMarkets: unknownAssessment("Coverage market unavailable."),
-          audienceExposure: unknownAssessment("Audience exposure unavailable."),
+          editorialMarket: unknownAssessment("Primary editorial market unavailable."),
           framing: unknownAssessment("Framing unavailable."),
           tone: unknownAssessment("Tone unavailable."),
           articleTitle: "Queensland begins recovery after flood",
@@ -167,8 +166,7 @@ const comparisonSnapshot: IntelligenceSnapshot = {
           publisher: "another.example",
           publisherDomain: "another.example",
           publisherOrigin: unknownAssessment("Publisher origin unavailable."),
-          coverageMarkets: unknownAssessment("Coverage market unavailable."),
-          audienceExposure: unknownAssessment("Audience exposure unavailable."),
+          editorialMarket: unknownAssessment("Primary editorial market unavailable."),
           framing: unknownAssessment("Framing unavailable."),
           tone: unknownAssessment("Tone unavailable."),
           articleTitle: "Communities assess Queensland flood damage",
@@ -190,13 +188,20 @@ const observedEvidence = [{
   quote: "Emergency crews began recovery work.",
 }];
 
+const editorialMarketEvidence = [{
+  kind: "outlet_market_documentation" as const,
+  articleId: "source-1",
+  url: "https://example.com/about",
+  quote: "Our Australian newsroom covers national and regional audiences.",
+}];
+
 const observedComparisonSnapshot: IntelligenceSnapshot = {
   ...comparisonSnapshot,
   clusters: [{
     ...comparisonSnapshot.clusters[0]!,
     coverageHeat: {
       status: "observed",
-      basis: "coverage_market",
+      basis: "editorial_market",
       markets: [{
         regionCode: "AU",
         label: "Australia",
@@ -208,19 +213,19 @@ const observedComparisonSnapshot: IntelligenceSnapshot = {
           longitude: 133.8,
           confidence: 0.93,
           method: "manual_confirmed",
-          evidence: observedEvidence,
+          evidence: editorialMarketEvidence,
         },
       }],
       reason: null,
     },
     sources: comparisonSnapshot.clusters[0]!.sources.map((source, index) => ({
       ...source,
-      coverageMarkets: {
+      editorialMarket: {
         status: "observed" as const,
-        value: [{ regionCode: "AU", label: "Australia", coordinates: { latitude: -25.3, longitude: 133.8 } }],
+        value: { regionCode: "AU", label: "Australia", coordinates: { latitude: -25.3, longitude: 133.8 } },
         confidence: 0.93,
         method: "manual_confirmed" as const,
-        evidence: observedEvidence,
+        evidence: editorialMarketEvidence,
         reason: null,
       },
       framing: {
@@ -284,7 +289,7 @@ describe("App live-data states", () => {
     expect(await screen.findByRole("heading", { name: /News stories like.*Major flood response/i })).toBeInTheDocument();
     await waitFor(() => expect(storyList.scrollTop).toBe(0));
     expect(screen.getAllByText("Tone not assessed")).toHaveLength(2);
-    expect(screen.getByText("Coverage heat withheld")).toBeInTheDocument();
+    expect(screen.getByText("Editorial-market heat withheld")).toBeInTheDocument();
     expect(screen.getByText("Queensland begins recovery after flood")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
@@ -305,7 +310,7 @@ describe("App live-data states", () => {
     expect(screen.getByText(/Event: Assam, India/)).toBeInTheDocument();
   });
 
-  it("renders evidenced tone and coverage heat only inside comparison mode", async () => {
+  it("renders evidenced tone and primary editorial-market heat only inside comparison mode", async () => {
     const client: NewsIntelligenceClient = {
       getSnapshot: vi.fn().mockResolvedValue(observedComparisonSnapshot),
     };
@@ -319,7 +324,44 @@ describe("App live-data states", () => {
     expect(await screen.findByText("1 coverage heat points")).toBeInTheDocument();
     expect(screen.getByText("negative · 88% confidence")).toBeInTheDocument();
     expect(screen.getByText("positive · 88% confidence")).toBeInTheDocument();
-    expect(screen.queryByText("Coverage heat withheld")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Primary editorial market")).toHaveLength(2);
+    expect(screen.getAllByText("93% confidence · manual confirmed")).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: /outlet market documentation/i })).toHaveLength(2);
+    expect(screen.queryByText("Editorial-market heat withheld")).not.toBeInTheDocument();
+  });
+
+  it("never turns event geography or publisher origin into editorial-market heat", async () => {
+    const sourceWithoutEditorialMarket = {
+      ...comparisonSnapshot.clusters[0]!.sources[0]!,
+      publisherOrigin: {
+        status: "observed" as const,
+        value: {
+          regionCode: "AU",
+          label: "Australia",
+          coordinates: { latitude: -25.3, longitude: 133.8 },
+        },
+        confidence: 0.98,
+        method: "publisher_registry" as const,
+        evidence: observedEvidence,
+        reason: null,
+      },
+    };
+    const snapshot: IntelligenceSnapshot = {
+      ...observedComparisonSnapshot,
+      clusters: [{
+        ...observedComparisonSnapshot.clusters[0]!,
+        sources: [sourceWithoutEditorialMarket],
+      }],
+    };
+    const client: NewsIntelligenceClient = {
+      getSnapshot: vi.fn().mockResolvedValue(snapshot),
+    };
+    render(<App client={client} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /Major flood response begins in Queensland/i }));
+
+    expect(await screen.findByText("0 coverage heat points")).toBeInTheDocument();
+    expect(screen.getByText("Editorial-market heat withheld")).toBeInTheDocument();
   });
 
   it("keeps the closed mobile panel inert and restores focus to its trigger", async () => {

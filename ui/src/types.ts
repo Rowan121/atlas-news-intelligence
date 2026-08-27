@@ -24,13 +24,28 @@ export interface AssessmentEvidence {
   quote: string;
 }
 
+export type EditorialMarketEvidenceKind =
+  | "outlet_market_documentation"
+  | "outlet_language"
+  | "publisher_location";
+
+export interface EditorialMarketEvidence {
+  kind: EditorialMarketEvidenceKind;
+  url: string;
+  quote: string;
+  articleId?: string;
+}
+
+export type EditorialMarketMethod =
+  | "documented_outlet_market"
+  | "language_and_publisher_location"
+  | "manual_confirmed";
+
 export interface MarketRegion {
   regionCode: string;
   label: string;
   coordinates?: Coordinates;
 }
-
-export interface AudienceRegionExposure extends MarketRegion { share?: number }
 
 export interface UnknownAssessment {
   status: "unknown";
@@ -41,18 +56,21 @@ export interface UnknownAssessment {
   reason: string;
 }
 
-export interface ObservedAssessment<T, Method extends string> {
+export interface ObservedAssessment<
+  T,
+  Method extends string,
+  Evidence = AssessmentEvidence,
+> {
   status: "observed";
   value: T;
   confidence: number;
   method: Method;
-  evidence: AssessmentEvidence[];
+  evidence: Evidence[];
   reason: null;
 }
 
 export type PublisherOriginAssessment = UnknownAssessment | ObservedAssessment<MarketRegion, "provider_metadata" | "publisher_registry">;
-export type CoverageMarketsAssessment = UnknownAssessment | ObservedAssessment<MarketRegion[], "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed">;
-export type AudienceExposureAssessment = UnknownAssessment | ObservedAssessment<AudienceRegionExposure[], "first_party_audience_telemetry" | "provider_audience_measurement" | "manual_confirmed">;
+export type EditorialMarketAssessment = UnknownAssessment | ObservedAssessment<MarketRegion, EditorialMarketMethod, EditorialMarketEvidence>;
 export type FramingAssessment = UnknownAssessment | ObservedAssessment<"supports" | "disputes" | "straight_report" | "mixed" | "unclear", "claim_stance_comparison" | "model_analysis" | "manual_confirmed">;
 export type ToneAssessment = UnknownAssessment | ObservedAssessment<"positive" | "negative" | "neutral" | "mixed" | "unclear", "model_analysis" | "manual_confirmed">;
 
@@ -61,8 +79,7 @@ export interface SourceCoverage {
   publisher: string;
   publisherDomain: string;
   publisherOrigin: PublisherOriginAssessment;
-  coverageMarkets: CoverageMarketsAssessment;
-  audienceExposure: AudienceExposureAssessment;
+  editorialMarket: EditorialMarketAssessment;
   framing: FramingAssessment;
   tone: ToneAssessment;
   articleTitle: string;
@@ -108,7 +125,7 @@ export interface ClusterProminence {
 
 export interface CoverageHeat {
   status: "observed" | "unavailable";
-  basis: "coverage_market";
+  basis: "editorial_market";
   markets: Array<{
     regionCode: string;
     label: string;
@@ -117,8 +134,8 @@ export interface CoverageHeat {
     sourceNormalizedShare: number;
     coordinates: null | (Coordinates & {
       confidence: number;
-      method: "provider_coverage_metadata" | "publisher_registry" | "manual_confirmed";
-      evidence: AssessmentEvidence[];
+      method: EditorialMarketMethod;
+      evidence: EditorialMarketEvidence[];
     });
   }>;
   reason: string | null;
