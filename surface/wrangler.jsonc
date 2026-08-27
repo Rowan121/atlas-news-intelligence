@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "atlas-news-intelligence-api",
+  "account_id": "70311d13372e29742a6ae45f6788bcc9",
   "main": "src/index.ts",
   "compatibility_date": "2026-08-27",
   "assets": {
@@ -31,6 +32,7 @@
     "enabled": true
   },
   "vars": {
+    "BUILD_VERSION": "PENDING_FINAL_GLOBE_FIX_SHA",
     "ENVIRONMENT": "production",
     "CORS_ORIGIN": "self",
     "STALE_AFTER_SECONDS": "1800"
@@ -38,8 +40,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "atlas-news-intelligence-local",
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_name": "atlas-news-intelligence-prod",
+      "database_id": "a4b64588-32ff-4e18-950e-f603e3c7d3d2"
     }
   ]
 }
