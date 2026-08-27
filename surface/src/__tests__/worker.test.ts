@@ -44,16 +44,26 @@ describe("Atlas Worker routes", () => {
     expect(store.queries).toEqual([{ metric: "raw", limit: 20 }]);
   });
 
-  it("does not force HTTPS outside production", async () => {
-    const response = await worker.fetch!(
-      new Request("http://127.0.0.1:8787/api/stories"),
-      { ...env, ENVIRONMENT: "development" },
-      {} as ExecutionContext,
-    );
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("location")).toBe(null);
-    expect(store.queries).toEqual([{ metric: "normalized", limit: 20 }]);
+  it("allows loopback HTTP even when local Wrangler inherits the production environment", async () => {
+    const productionEnv = { ...env, ENVIRONMENT: "production" };
+    for (const url of [
+      "http://localhost:8787/api/stories",
+      "http://127.42.0.1:8787/api/stories",
+      "http://[::1]:8787/api/stories",
+    ]) {
+      const response = await worker.fetch!(
+        new Request(url),
+        productionEnv,
+        {} as ExecutionContext,
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBe(null);
+    }
+    expect(store.queries).toEqual([
+      { metric: "normalized", limit: 20 },
+      { metric: "normalized", limit: 20 },
+      { metric: "normalized", limit: 20 },
+    ]);
   });
 
   it("describes the service without reading storage", async () => {

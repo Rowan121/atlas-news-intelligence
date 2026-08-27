@@ -40,6 +40,17 @@ function parseStaleAfter(value: string | undefined): number {
   return Number.isFinite(parsed) && parsed >= 60 ? Math.floor(parsed) : 1800;
 }
 
+function isLoopbackHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  const unbracketed = normalized.startsWith("[") && normalized.endsWith("]")
+    ? normalized.slice(1, -1)
+    : normalized;
+  return normalized === "localhost"
+    || normalized.endsWith(".localhost")
+    || /^127(?:\.\d{1,3}){3}$/.test(normalized)
+    || unbracketed === "::1";
+}
+
 function methodProblem(): HttpProblem {
   return new HttpProblem(405, "method_not_allowed", "Method not allowed");
 }
@@ -98,7 +109,11 @@ export function createWorker(dependencies: RuntimeDependencies = {}): ExportedHa
   return {
     async fetch(request, env): Promise<Response> {
       const url = new URL(request.url);
-      if (env.ENVIRONMENT === "production" && url.protocol === "http:") {
+      if (
+        env.ENVIRONMENT === "production"
+        && url.protocol === "http:"
+        && !isLoopbackHostname(url.hostname)
+      ) {
         url.protocol = "https:";
         return new Response(null, { status: 308, headers: { Location: url.toString() } });
       }
