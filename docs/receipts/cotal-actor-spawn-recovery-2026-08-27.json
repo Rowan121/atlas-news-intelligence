@@ -1,0 +1,127 @@
+{
+  "receipt_version": 1,
+  "kind": "cotal_actor_spawn_recovery",
+  "observed_at": "2026-08-27T21:47:32Z",
+  "repository": {
+    "branch": "codex/ui-story-comparison",
+    "base_commit": "975b63ec88a1c27adb68ca04f988850b4ad5a032"
+  },
+  "authorized_scope": {
+    "mesh": "hack",
+    "channel": "team.rowan",
+    "actors": [
+      {
+        "actor": "atlas_data",
+        "role": "data"
+      },
+      {
+        "actor": "atlas_intelligence",
+        "role": "intelligence"
+      },
+      {
+        "actor": "atlas_product",
+        "role": "product"
+      },
+      {
+        "actor": "atlas_verify",
+        "role": "verify"
+      }
+    ],
+    "channel_read_acl": [
+      "team.rowan"
+    ],
+    "channel_write_acl": [
+      "team.rowan"
+    ],
+    "spawn_scope_per_actor": true,
+    "named_role_delegation_per_actor": true
+  },
+  "resolved_cli_syntax": {
+    "actor_grant_template": "cotal actor grant <actor> --space hack --role <role> --scope spawn,role:<role> --allow-subscribe team.rowan --allow-publish team.rowan",
+    "actor_list": "cotal actor list --space hack",
+    "spawn_template": "cotal spawn <persona> --space hack --name <actor> --role <role> --subscribe team.rowan --allow-subscribe team.rowan --allow-publish team.rowan --detach --events",
+    "verification": [
+      "cotal actor list --space hack",
+      "cotal endpoints --space hack",
+      "cotal ps --space hack --wide"
+    ],
+    "round_trip_template": "cotal send msg team.rowan <sanitized-test-message> --space hack"
+  },
+  "read_only_preflight": {
+    "cli_version": "0.33.1",
+    "actor_ledger": "empty",
+    "personas": [
+      {
+        "name": "scout",
+        "subscribe": [
+          "team.rowan"
+        ],
+        "explicit_role": null,
+        "explicit_model": null
+      }
+    ],
+    "manager_status": "unreachable"
+  },
+  "ordered_evidence": [
+    {
+      "order": 1,
+      "commands": [
+        "cotal actor --help",
+        "cotal spawn --help",
+        "cotal personas --help",
+        "cotal models --help",
+        "cotal channels --help",
+        "cotal send --help",
+        "cotal endpoints --help",
+        "cotal ps --help"
+      ],
+      "exit_code": 0,
+      "sanitized_result": "read-only help established actor ACL/scope flags, detached spawn flags, and verification commands"
+    },
+    {
+      "order": 2,
+      "command": "cotal actor list --space hack",
+      "exit_code": 0,
+      "sanitized_result": "no actors are currently granted"
+    },
+    {
+      "order": 3,
+      "commands": [
+        "cotal personas list -v --space hack",
+        "cotal personas show scout --space hack"
+      ],
+      "exit_code": 0,
+      "sanitized_result": "the existing scout persona subscribes only to team.rowan and carries no explicit role or model pin"
+    },
+    {
+      "order": 4,
+      "command": "cotal ps --space hack --wide",
+      "exit_code": 1,
+      "exact_error": "no manager reachable on the ep rails (deadline-exceeded: no reply to manager.ps within the 10000ms budget (SPEC 13.5))",
+      "effect": "mandatory immediate stop before the first actor grant"
+    }
+  ],
+  "mutation_summary": {
+    "actor_grants_attempted": 0,
+    "actor_grants_completed": 0,
+    "agents_spawned": 0,
+    "channel_or_team_mutations": 0,
+    "round_trips_attempted": 0,
+    "login_attempted": false,
+    "credential_or_key_access_attempted": false,
+    "mesh_or_account_created": false,
+    "deployment_or_repository_mutation_attempted": false
+  },
+  "status": "blocked_before_mutation",
+  "blocker": {
+    "kind": "manager_timeout",
+    "command": "cotal ps --space hack --wide",
+    "error": "no manager reachable on the ep rails (deadline-exceeded: no reply to manager.ps within the 10000ms budget (SPEC 13.5))"
+  },
+  "verification": {
+    "actor_list_after": "not_run_because_stop_condition_triggered_before_mutation",
+    "agents_visible": false,
+    "team_round_trips": 0
+  },
+  "next": "An existing authorized operator must restore the already-configured hack manager without creating or logging into anything. Then repeat the same preflight and apply the four grants and spawns atomically; do not infer success from the reachable mesh transport alone."
+}
