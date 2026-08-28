@@ -12,6 +12,10 @@ The live GDELT loader produces a validated JSON snapshot, and the deterministic 
 
 ## Architecture
 
+![Atlas architecture and agent handoff overview](docs/images/atlas-architecture-overview.png)
+
+*Original architecture and agent-handoff overview. See the [event-ecosystem usage ledger](docs/SPONSOR_USAGE.md) for the distinction between the planned architecture, build-time tools, and the integrations that reached production.*
+
 | Layer | Location | Responsibility |
 | --- | --- | --- |
 | Data and truth pipeline | `src/` | Fetch GDELT/Tavily inputs, preserve evidence, geolocate events, cluster stories, and calculate raw/normalized prominence. |
