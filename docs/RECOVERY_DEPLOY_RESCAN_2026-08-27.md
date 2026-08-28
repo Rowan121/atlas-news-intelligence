@@ -1,7 +1,9 @@
 # Atlas local recovery: deployment and rescan package
 
-This package was prepared on 2026-08-27 and was **not pushed or deployed**.
-Production scores therefore remain the stored baselines: Ora domain 50/C,
+This package was prepared on 2026-08-27 and is tracked in the repository.
+Product commit `586d818` was subsequently deployed as Cloudflare version
+`49f153cb-61ac-4584-aa8d-79323fa85e73`; this documentation audit performed no
+deployment. Production scanner scores remain the stored baselines: Ora domain 50/C,
 Ora MCP 67/C, Ora essentials 80, and IsItAgentReady level 1/5 until a
 separate approved deployment and fresh production scans occur.
 

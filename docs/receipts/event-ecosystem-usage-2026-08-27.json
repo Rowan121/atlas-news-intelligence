@@ -1,0 +1,192 @@
+{
+  "receipt_version": 1,
+  "kind": "event_ecosystem_usage_ledger",
+  "recorded_at": "2026-08-27T23:12:57Z",
+  "scope": "Atlas build, recovery, verification, event operations, and production hosting; evidence scope is stated per entry",
+  "evidence_classes": {
+    "machine_receipt": "A sanitized provider response, invocation result, or deployed-system receipt is tracked in the repository.",
+    "coordination_provider_observation": "The coordinator observed the provider performing the work and recorded it, but a portable provider invocation receipt was not retained.",
+    "authenticated_exercise": "The account or official SDK was genuinely used, but the evidence does not establish a shipped Atlas integration."
+  },
+  "used": [
+    {
+      "provider": "immersive_commons",
+      "capability": "official hackathon status reads, one approved final submission, and read-only post-lock verification",
+      "evidence_class": "machine_receipt",
+      "phase": "event_operations",
+      "artifacts": [
+        "docs/API_ACCESS.md",
+        "COORDINATION.md",
+        "docs/HACKATHON_SUBMISSION_2026-08-27.md",
+        "docs/receipts/hackathon-submission-2026-08-27.json"
+      ],
+      "observations": [
+        "Immersive Commons accepted the Atlas submission at 2026-08-27T22:59:39.587Z.",
+        "A later read-only ic_hack_me response reported event phase LOCKED and submission.locked true."
+      ],
+      "limitations": [
+        "Exactly one submission write is claimed; no later overwrite occurred.",
+        "No application, account creation, event message, or unrelated event write is claimed.",
+        "Agent tokens and member identifiers are omitted from public receipts."
+      ]
+    },
+    {
+      "provider": "cloudflare",
+      "capability": "existing Worker and D1 production hosting",
+      "evidence_class": "machine_receipt",
+      "phase": "production_runtime",
+      "artifacts": [
+        "docs/receipts/production-version-2026-08-27T2209Z.json",
+        "docs/receipts/production-smoke-2026-08-27.json",
+        "docs/PRODUCTION_RELEASE_2026-08-27.md"
+      ],
+      "limitations": [
+        "Product commit 586d818 is live; the later attribution-ledger commit is documentation-only."
+      ]
+    },
+    {
+      "provider": "cotal",
+      "capability": "hosted-agent workforce coordination through the hack mesh and team.rowan",
+      "evidence_class": "machine_receipt",
+      "phase": "build_coordination",
+      "artifacts": [
+        "COORDINATION.md",
+        "docs/receipts/cotal-recovery-2026-08-27.json",
+        "docs/receipts/cotal-actor-spawn-recovery-2026-08-27.json"
+      ],
+      "observations": [
+        "Four hosted Atlas seats were observed working during the build.",
+        "A later team.rowan recovery message was accepted by the broker."
+      ],
+      "limitations": [
+        "The later manager recovery timed out.",
+        "Recipient delivery of the recovery message was not verified.",
+        "The production ingestion run has no embedded Cotal receipt."
+      ]
+    },
+    {
+      "provider": "nebius",
+      "capability": "platform-issued model access for Cotal-hosted agents",
+      "evidence_class": "coordination_provider_observation",
+      "phase": "build_workforce",
+      "artifacts": [
+        "COORDINATION.md"
+      ],
+      "limitations": [
+        "No direct Nebius key or numeric provider usage is claimed."
+      ]
+    },
+    {
+      "provider": "tenki",
+      "capability": "sandbox substrate for Cotal-hosted Atlas agents",
+      "evidence_class": "coordination_provider_observation",
+      "phase": "build_workforce",
+      "observed_at": "2026-08-27T02:26:57.607Z",
+      "artifacts": [
+        "COORDINATION.md",
+        "docs/API_ACCESS.md"
+      ],
+      "observations": [
+        "The Cotal hosted-agent flow identified Tenki as its sandbox provider and displayed a live Atlas sandbox."
+      ],
+      "limitations": [
+        "No portable sandbox or job identifier is retained in the repository.",
+        "No before/after credit delta is claimed."
+      ]
+    },
+    {
+      "provider": "tavily",
+      "capability": "bounded current-news search, extraction, and source verification",
+      "evidence_class": "machine_receipt",
+      "phase": "local_recovery_enrichment",
+      "artifacts": [
+        "docs/receipts/tavily-recovery-2026-08-27.json",
+        "docs/receipts/data-recovery-local-2026-08-27.json",
+        "docs/receipts/cotal-pipeline-handoff-2026-08-27.json"
+      ],
+      "observations": {
+        "advanced_searches": 3,
+        "search_results": 21,
+        "successful_extracts": 6,
+        "accepted_articles": 2,
+        "rejected_candidates": 19,
+        "provider_meter_before": 2,
+        "provider_meter_after": 2,
+        "provider_meter_delta": 0
+      },
+      "limitations": [
+        "The local Tavily-enriched candidate was not deployed.",
+        "The zero meter delta does not negate the successful responses and is not converted into an invented credit charge."
+      ]
+    },
+    {
+      "provider": "mitosis_labs",
+      "capability": "authenticated account and official SDK exercise",
+      "evidence_class": "authenticated_exercise",
+      "phase": "build_tooling",
+      "observed_at": "2026-08-27T07:37:59.589Z",
+      "observations": {
+        "ready_offices_returned": 1,
+        "observed_balance": 499.651,
+        "observed_total_added": 500
+      },
+      "limitations": [
+        "The 0.349 balance difference is not attributed to Atlas.",
+        "No Mitosis capability is present in the shipped Atlas runtime.",
+        "No credential, provider request identifier, or private office metadata is stored here."
+      ]
+    },
+    {
+      "provider": "runtype",
+      "capability": "Atlas product, capability, API/MCP/A2A surfaces, and production A2A debug execution",
+      "evidence_class": "machine_receipt",
+      "phase": "agent_surface",
+      "artifacts": [
+        "docs/PRODUCTION_RELEASE_2026-08-27.md",
+        "docs/receipts/runtype-eval-gate-2026-08-27.json"
+      ],
+      "limitations": [
+        "The five named eval suites were not created or run because the provider returned HTTP 403 for the displayed eval scopes.",
+        "All Runtype surfaces remain draft and eval usage remains 0/100."
+      ]
+    },
+    {
+      "provider": "hacker_bob",
+      "capability": "one authorized production HTTP security scan",
+      "evidence_class": "machine_receipt",
+      "phase": "security_verification",
+      "artifacts": [
+        "docs/PRODUCTION_RELEASE_2026-08-27.md",
+        ".agent-readiness/final-production-verification.md"
+      ],
+      "observations": [
+        "The scan's HSTS and clickjacking observations were remediated and independently verified on production."
+      ],
+      "limitations": [
+        "The raw provider report is not committed.",
+        "The one-scan limit was respected."
+      ]
+    }
+  ],
+  "deliberately_unused": [
+    {
+      "provider": "aisa",
+      "reason": "Explicitly excluded by Rowan's later directive."
+    },
+    {
+      "provider": "hud",
+      "reason": "Explicitly excluded by Rowan's later directive."
+    }
+  ],
+  "core_infrastructure_not_counted_as_event_company_attribution": [
+    {
+      "provider": "gdelt",
+      "capability": "current-news discovery and event evidence"
+    },
+    {
+      "provider": "maplibre_gl_js",
+      "capability": "interactive globe and selected-story heat rendering"
+    }
+  ],
+  "production_run_boundary": "The frozen production D1 run has cotal_receipt null. That fact scopes the embedded production-ingestion receipt and does not erase separately evidenced build-time, event, security, agent-surface, or hosting usage."
+}

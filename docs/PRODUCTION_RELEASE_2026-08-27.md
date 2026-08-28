@@ -34,8 +34,11 @@ Event location never fills the coverage heatmap.
 No Worker, D1 database, account, or replacement external account was created.
 The only new credential was Rowan's exactly authorized Runtype eval-management
 key in the existing account, recorded below; no additional key was created.
-AIsa, HUD, Telegram, paid calls, hackathon submission, and third-party messages
-remained out of scope.
+At the time this production candidate was frozen, AIsa, HUD, Telegram, paid
+calls, hackathon submission, and third-party messages remained out of scope.
+The later, separately approved submission is recorded in
+[`HACKATHON_SUBMISSION_2026-08-27.md`](./HACKATHON_SUBMISSION_2026-08-27.md)
+and did not change the deployed Worker or D1 state.
 
 ## Production data before and after
 
@@ -179,13 +182,28 @@ is [`docs/receipts/runtype-eval-gate-2026-08-27.json`](./receipts/runtype-eval-g
 ## Other integrations and truthful limits
 
 - GDELT is the live current-news backbone; MapLibre renders the browser globe.
-- Cotal `v0.33.1` reports the `hack` mesh reachable, but this machine has no
-  user-auth material for a live mesh snapshot. `cotal endpoints` showed the
-  existing endpoints/agent idle and `cotal ps` was empty. No login, key, or
-  replacement account was requested, and no Cotal/Nebius usage claim is made.
-- Tavily, Tenki, and Mitosis access may exist, but the final production run has
-  no sanitized invocation receipts. Configuration and balances are not usage;
-  this release makes no claim for them.
+- The frozen production ingestion run has `cotal_receipt: null`; that specific
+  run therefore makes no embedded sponsor-use claim. Separate build records do
+  show four Cotal-hosted Atlas agents operating on Tenki sandboxes with
+  platform-issued Nebius model access. A later Cotal recovery proved the mesh
+  transport reachable and one `team.rowan` handoff broker-accepted, while also
+  preserving the later manager timeout and unverified recipient delivery.
+- Tavily was genuinely invoked after the frozen production run for a bounded
+  local recovery experiment: three advanced searches, 21 results, six
+  successful extracts, two accepted articles, and 19 rejected candidates. The
+  provider meter remained `2 → 2`, and the under-target candidate was not
+  deployed.
+- Mitosis was authenticated and exercised through its official SDK during the
+  build. That proves provider/tool use, not a shipped Atlas runtime integration;
+  no Mitosis request path exists in production and no credit consumption is
+  attributed to Atlas.
+- Immersive Commons supplied the official read-only event surface during this
+  frozen release workflow. A later, separately approved `ic_hack_submit` call
+  created the final Atlas entry; read-only post-lock verification confirmed it
+  without an overwrite. The sanitized receipt is linked above.
+- The full evidence-level attribution is in
+  [`SPONSOR_USAGE.md`](./SPONSOR_USAGE.md) and its
+  [machine-readable ledger](./receipts/event-ecosystem-usage-2026-08-27.json).
 - No AIsa or HUD code path was enabled.
 
 ## Independent final verification
@@ -193,7 +211,9 @@ is [`docs/receipts/runtype-eval-gate-2026-08-27.json`](./receipts/runtype-eval-g
 Verification Agent D was given the complete attached ORA/IsItAgentReady
 document at the beginning of the workflow and derived the early applicability
 checklist in [`.agent-readiness/early-applicability-checklist.md`](../.agent-readiness/early-applicability-checklist.md).
-The frozen production candidate is handed back to that same existing Agent D
-last. Its independent final report is reserved at
-`.agent-readiness/final-production-verification.md`; no implementation change
-may follow that verification without invalidating its verdict.
+The same Agent D then independently passed the exact frozen production
+candidate, with four external-authority checks explicitly blocked rather than
+invented as passes. The report is
+[`final-production-verification.md`](../.agent-readiness/final-production-verification.md).
+Subsequent repository changes are outside that frozen verdict and require a new
+exact-deployment pass after any separately approved deployment.
