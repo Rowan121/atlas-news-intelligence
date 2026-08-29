@@ -26,7 +26,7 @@ import {
 import { failure, HttpProblem, json, parsePositiveInt, parseTimestamp, success } from "./http";
 import { buildIntelligenceSnapshot, type IntelligenceWindow } from "./intelligence";
 import { handleMcp } from "./mcp";
-import type { TruthStore } from "./store";
+import type { ReadTruthStore } from "./store";
 import { D1TruthStore } from "./storage/d1";
 
 export interface Env {
@@ -41,7 +41,7 @@ export interface Env {
 export interface RuntimeDependencies {
   clock?: () => Date;
   requestId?: () => string;
-  store?: TruthStore;
+  store?: ReadTruthStore;
 }
 
 const PUBLIC_READ_LIMIT = 120;

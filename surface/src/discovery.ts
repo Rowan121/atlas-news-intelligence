@@ -91,6 +91,38 @@ function text(body: string, contentType: string, init: ResponseInit = {}): Respo
   return new Response(body, { ...init, headers });
 }
 
+/**
+ * Escape a string for an HTML text or double-quoted attribute context. The
+ * discovery HTML pages interpolate the request origin, canonical path, and
+ * fixed trust-document fields; escaping them is defense-in-depth so a future
+ * change to the source of any interpolated value cannot introduce an XSS by
+ * breaking out of an attribute or injecting markup.
+ */
+export function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      default: return "&#39;";
+    }
+  });
+}
+
+/**
+ * Prepare a request pathname for reflection into a single-backtick markdown
+ * code span on the 404 page. Backticks would close the span early and angle
+ * brackets/quotes could confuse lenient markdown renderers; control
+ * characters are stripped too. Length is capped so a pathological path
+ * cannot dominate the 404 body. The WHATWG URL parser already percent-encodes
+ * most of these characters in `pathname`; this sanitizer is defense-in-depth
+ * in case the input source ever changes.
+ */
+export function sanitizePathForMarkdown(path: string): string {
+  return path.replace(/[`<>"'\x00-\x1f\x7f]/g, "").slice(0, 200);
+}
+
 function apiLinks(): string {
   return [
     "</.well-known/api-catalog>; rel=\"api-catalog\"",
@@ -237,6 +269,7 @@ The public read API requires no authentication. Atlas does not publish mutation,
 }
 
 function documentationHtml(origin: string): string {
+  const o = escapeHtml(origin);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -244,8 +277,8 @@ function documentationHtml(origin: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Atlas News Intelligence — API documentation</title>
   <meta name="description" content="Read-only, evidence-backed global news intelligence API, MCP, and A2A documentation.">
-  <link rel="canonical" href="${origin}/docs">
-  <link rel="alternate" type="text/markdown" href="${origin}/docs.md">
+  <link rel="canonical" href="${o}/docs">
+  <link rel="alternate" type="text/markdown" href="${o}/docs.md">
 </head>
 <body>
   <main>
@@ -442,8 +475,13 @@ export function trustDocument(request: Request, kind: keyof typeof trustDocument
   if (representation === "markdown") {
     return attachDiscoveryHeaders(text(markdown, "text/markdown; charset=utf-8", { headers: CACHE_HEADERS }), markdownPath);
   }
-  const paragraphs = document.paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join("");
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${document.title}</title><meta name="description" content="${document.description}"><link rel="canonical" href="${origin}${path}"><link rel="alternate" type="text/markdown" href="${origin}${markdownPath}"></head><body><main><h1>${document.title}</h1>${paragraphs}<nav><a href="/docs">Documentation</a> · <a href="/health">Pipeline health</a> · <a href="/privacy">Privacy</a> · <a href="/security">Security</a></nav></main></body></html>`;
+  const paragraphs = document.paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join("");
+  const o = escapeHtml(origin);
+  const p = escapeHtml(path);
+  const mp = escapeHtml(markdownPath);
+  const title = escapeHtml(document.title);
+  const description = escapeHtml(document.description);
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><meta name="description" content="${description}"><link rel="canonical" href="${o}${p}"><link rel="alternate" type="text/markdown" href="${o}${mp}"></head><body><main><h1>${title}</h1>${paragraphs}<nav><a href="/docs">Documentation</a> · <a href="/health">Pipeline health</a> · <a href="/privacy">Privacy</a> · <a href="/security">Security</a></nav></main></body></html>`;
   return attachDiscoveryHeaders(text(html, "text/html; charset=utf-8", { headers: CACHE_HEADERS }), markdownPath);
 }
 
@@ -470,7 +508,7 @@ Sponsor presence is never inferred from configuration alone. A provider counts a
   if (representation === "markdown") {
     return attachDiscoveryHeaders(text(markdown, "text/markdown; charset=utf-8", { headers: CACHE_HEADERS }), "/integrations.md");
   }
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas integration provenance</title><link rel="canonical" href="${origin}/integrations"><link rel="alternate" type="text/markdown" href="${origin}/integrations.md"></head><body><main><h1>Atlas integration provenance</h1><p>Atlas uses GDELT as its current-news backbone and MapLibre for mapping. Optional sponsor services count as used only when a sanitized live receipt exists; configuration alone is not usage.</p><p>Cotal receipts preserve coordination provenance. Nebius is used only through Cotal. Tavily, Tenki, Runtype, and Mitosis are reported only from real invocations. AIsa and HUD are excluded.</p><ul><li><a href="/health">Pipeline health and latest receipt</a></li><li><a href="/docs">API documentation</a></li></ul></main></body></html>`;
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Atlas integration provenance</title><link rel="canonical" href="${escapeHtml(origin)}/integrations"><link rel="alternate" type="text/markdown" href="${escapeHtml(origin)}/integrations.md"></head><body><main><h1>Atlas integration provenance</h1><p>Atlas uses GDELT as its current-news backbone and MapLibre for mapping. Optional sponsor services count as used only when a sanitized live receipt exists; configuration alone is not usage.</p><p>Cotal receipts preserve coordination provenance. Nebius is used only through Cotal. Tavily, Tenki, Runtype, and Mitosis are reported only from real invocations. AIsa and HUD are excluded.</p><ul><li><a href="/health">Pipeline health and latest receipt</a></li><li><a href="/docs">API documentation</a></li></ul></main></body></html>`;
   return attachDiscoveryHeaders(text(html, "text/html; charset=utf-8", { headers: CACHE_HEADERS }), "/integrations.md");
 }
 
@@ -641,7 +679,8 @@ export function openApiMarkdown(origin: string): Response {
 }
 
 export function notFoundMarkdown(origin: string, path: string): Response {
-  const body = `# Atlas page not found\n\nNo public Atlas route exists at \`${path}\`.\n\n- [Documentation](${origin}/docs)\n- [Agent index](${origin}/llms.txt)\n- [Sitemap](${origin}/sitemap.xml)\n- [OpenAPI](${origin}/openapi.json)\n`;
+  const safePath = sanitizePathForMarkdown(path);
+  const body = `# Atlas page not found\n\nNo public Atlas route exists at \`${safePath}\`.\n\n- [Documentation](${origin}/docs)\n- [Agent index](${origin}/llms.txt)\n- [Sitemap](${origin}/sitemap.xml)\n- [OpenAPI](${origin}/openapi.json)\n`;
   return attachDiscoveryHeaders(text(body, "text/markdown; charset=utf-8", {
     status: 404,
     headers: { "Cache-Control": "no-store" },

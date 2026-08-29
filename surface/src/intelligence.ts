@@ -8,7 +8,7 @@ import type {
   StoryDetail,
   StorySummary,
 } from "./contracts";
-import type { TruthStore } from "./store";
+import type { ReadTruthStore } from "./store";
 
 export type IntelligenceWindow = "6h" | "24h" | "7d";
 
@@ -494,7 +494,7 @@ function mapHealth(
 }
 
 export async function buildIntelligenceSnapshot(
-  store: TruthStore,
+  store: ReadTruthStore,
   window: IntelligenceWindow,
   metric: ProminenceMetric,
   now: Date,

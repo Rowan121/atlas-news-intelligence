@@ -18,6 +18,14 @@ describe("source ingestion", () => {
     );
   });
 
+  it("rejects non-http(s) URL schemes so a provider-returned javascript:/data: URL cannot become a citation", () => {
+    expect(() => canonicalizeUrl("javascript:alert(1)//")).toThrow();
+    expect(() => canonicalizeUrl("data:text/html,<script>alert(1)</script>")).toThrow();
+    expect(() => canonicalizeUrl("blob:https://example.com/abc")).toThrow();
+    expect(canonicalizeUrl("http://example.com/x")).toBe("http://example.com/x");
+    expect(canonicalizeUrl("https://example.com/x")).toBe("https://example.com/x");
+  });
+
   it("maps GDELT publisher origin without treating it as event location", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
