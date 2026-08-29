@@ -1,6 +1,6 @@
 import type { ProminenceMetric, StoryQuery } from "./contracts";
 import { normalizeRfc3339DateTime } from "./date-time";
-import type { TruthStore } from "./store";
+import type { ReadTruthStore } from "./store";
 
 interface A2AMessage {
   messageId: string;
@@ -196,7 +196,7 @@ function operationFromLegacyMessage(message: LegacyA2AMessage): A2AOperation {
 
 async function executeOperation(
   operation: A2AOperation,
-  store: TruthStore,
+  store: ReadTruthStore,
   now: Date,
   staleAfterSeconds: number,
 ): Promise<unknown> {
@@ -282,7 +282,7 @@ function jsonRpcError(id: unknown, code: number, message: string, detail?: strin
 
 export async function handleA2aJsonRpc(
   request: Request,
-  store: TruthStore,
+  store: ReadTruthStore,
   now: Date,
   staleAfterSeconds: number,
   requestId: string,
@@ -353,7 +353,7 @@ export async function handleA2aJsonRpc(
 
 export async function handleA2aSend(
   request: Request,
-  store: TruthStore,
+  store: ReadTruthStore,
   now: Date,
   staleAfterSeconds: number,
   requestId: string,

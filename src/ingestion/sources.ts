@@ -60,6 +60,12 @@ const TRACKING_PARAMETERS = new Set([
 
 export function canonicalizeUrl(value: string): string {
   const url = new URL(value);
+  // Reject non-network schemes so a provider-returned javascript:/data:/blob:
+  // URL can never flow into a stored article URL that the UI renders in an
+  // href. http/https are the only schemes the product treats as citations.
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new TypeError(`Refusing to canonicalize a non-http(s) URL: ${url.protocol}`);
+  }
   url.hash = "";
   for (const key of [...url.searchParams.keys()]) {
     if (key.toLowerCase().startsWith("utm_") || TRACKING_PARAMETERS.has(key.toLowerCase())) {

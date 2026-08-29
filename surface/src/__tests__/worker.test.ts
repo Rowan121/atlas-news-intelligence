@@ -1,6 +1,7 @@
 import { beforeEach, describe, it } from "node:test";
 import { createWorker, type Env } from "../index";
 import { MemoryTruthStore, healthy, story } from "./fixtures";
+import { escapeHtml, sanitizePathForMarkdown, notFoundMarkdown } from "../discovery";
 import { expect } from "./expect";
 
 const now = new Date("2026-08-26T12:00:00.000Z");
@@ -1471,5 +1472,49 @@ describe("A2A surface", () => {
     );
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ supportedVersions: ["1.0"] });
+  });
+});
+
+describe("Discovery output sanitization", () => {
+  it("escapes HTML metacharacters for text and double-quoted attribute contexts", () => {
+    expect(escapeHtml(`<a href="x">O'Reilly & "co"</a>`)).toBe(
+      "&lt;a href=&quot;x&quot;&gt;O&#39;Reilly &amp; &quot;co&quot;&lt;/a&gt;",
+    );
+    expect(escapeHtml("plain text")).toBe("plain text");
+  });
+
+  it("strips backticks, quotes, angle brackets, and control characters from reflected paths", () => {
+    expect(sanitizePathForMarkdown("/never/`code`/injected")).toBe("/never/code/injected");
+    expect(sanitizePathForMarkdown("/a\x00b\x1fc\x7fd")).toBe("/abcd");
+    expect(sanitizePathForMarkdown("/has<angle>and-quote-ones")).toBe("/hasangleand-quote-ones");
+    expect(sanitizePathForMarkdown("x".repeat(300)).length).toBe(200);
+  });
+
+  it("reflects a sanitized path in the 404 markdown so backticks cannot close the code span", async () => {
+    const response = notFoundMarkdown("https://atlas.example", "/never/`code`/injected");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toContain("text/markdown");
+    const body = await response.text();
+    expect(body).toContain("`/never/code/injected`");
+    // The unescaped "`code`" code-span fragment must not survive in the body.
+    expect(body.split("`code`").length).toBe(1);
+  });
+
+  it("serves the escaped HTML trust document for /security", async () => {
+    const worker = createWorker({ store: new MemoryTruthStore(), clock: () => now, requestId: () => "request-test" });
+    const response = await worker.fetch!(
+      new Request("https://atlas.example/security", { headers: { Accept: "text/html" } }),
+      env,
+      {} as ExecutionContext,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/html");
+    const body = await response.text();
+    // Escaped canonical link uses the request origin without unescaped quotes.
+    expect(body).toContain('href="https://atlas.example/security"');
+    expect(body).toContain('href="https://atlas.example/security.md"');
+    // The page must remain a single <html> root with no raw injected markup.
+    expect(body.match(/<html/g)?.length).toBe(1);
+    expect(body.match(/<\/html>/g)?.length).toBe(1);
   });
 });

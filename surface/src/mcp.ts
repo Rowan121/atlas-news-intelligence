@@ -1,7 +1,7 @@
 import type { StoryQuery } from "./contracts";
 import { normalizeRfc3339DateTime } from "./date-time";
 import { HttpProblem } from "./http";
-import type { TruthStore } from "./store";
+import type { ReadTruthStore } from "./store";
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -119,7 +119,7 @@ function parseQuery(argumentsValue: unknown): StoryQuery {
 
 export async function handleMcp(
   request: Request,
-  store: TruthStore,
+  store: ReadTruthStore,
   now: Date,
   staleAfterSeconds: number,
 ): Promise<Record<string, unknown> | null> {
